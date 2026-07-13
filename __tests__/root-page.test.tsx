@@ -9,13 +9,14 @@ describe("RootPage", () => {
     expect(screen.getByText(/pilotent un agent de code/)).toBeInTheDocument();
   });
 
-  it("lists the 5 pipeline steps", () => {
+  it("shows the ticket pipeline tracker and the 5 stage descriptions", () => {
     render(<RootPage />);
-    expect(screen.getByText("Todo")).toBeInTheDocument();
-    expect(screen.getByText("Spec")).toBeInTheDocument();
-    expect(screen.getByText("Plan")).toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
-    expect(screen.getByText("PR")).toBeInTheDocument();
+    expect(screen.getByText("KARA-142")).toBeInTheDocument();
+    expect(screen.getByText(/file d'attente/)).toBeInTheDocument();
+    expect(screen.getByText(/rédige la spécification technique/)).toBeInTheDocument();
+    expect(screen.getByText(/découpe la spec/)).toBeInTheDocument();
+    expect(screen.getByText(/implémente le plan/)).toBeInTheDocument();
+    expect(screen.getByText(/pull request est ouverte/)).toBeInTheDocument();
   });
 
   it("links Connexion to /login and Créer un compte to /login?mode=signup", () => {

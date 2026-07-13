@@ -63,7 +63,7 @@ export default function ProjectPage() {
 
   if (created) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-paper">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Projet créé</CardTitle>
@@ -79,7 +79,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center bg-paper">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Nouveau projet</CardTitle>
@@ -100,7 +100,7 @@ export default function ProjectPage() {
                 id="agent-choice"
                 value={agentChoice}
                 onChange={(e) => setAgentChoice(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-sm border border-ink/20 bg-paper px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
               >
                 <option value="claude">claude</option>
                 <option value="aider">aider</option>
@@ -125,7 +125,7 @@ export default function ProjectPage() {
                 id="forge-provider"
                 value={forgeProvider}
                 onChange={(e) => setForgeProvider(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-sm border border-ink/20 bg-paper px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
               >
                 <option value="github">github</option>
                 <option value="gitlab">gitlab</option>
