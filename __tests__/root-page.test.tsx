@@ -3,10 +3,10 @@ import { render, screen } from "@testing-library/react";
 import RootPage from "@/app/page";
 
 describe("RootPage", () => {
-  it("shows the product title and pitch, with no explicit mention of Linear", () => {
+  it("shows the product wordmark and pitch, with no explicit mention of Linear", () => {
     render(<RootPage />);
-    expect(screen.getByRole("heading", { name: "Alexis" })).toBeInTheDocument();
-    expect(screen.getByText(/deviennent des pull requests/)).toBeInTheDocument();
+    expect(screen.getAllByText("Alexis").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /pull requests/ })).toBeInTheDocument();
     expect(screen.queryByText(/Linear/i)).not.toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe("RootPage", () => {
     expect(screen.getByRole("link", { name: "Connexion" })).toHaveAttribute("href", "/login");
 
     const signupLinks = screen.getAllByRole("link", { name: "Créer un compte" });
-    expect(signupLinks).toHaveLength(2);
+    expect(signupLinks).toHaveLength(3);
     for (const link of signupLinks) {
       expect(link).toHaveAttribute("href", "/login?mode=signup");
     }

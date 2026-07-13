@@ -35,85 +35,108 @@ const VALUE_PROPS = [
   },
 ] as const;
 
+function PipelineTrail({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap items-center gap-x-1 gap-y-2 font-mono text-xs", className)}>
+      <span className="rounded-sm bg-paper px-2 py-1 text-ink">KARA-142</span>
+      {STAGES.map((stage, i) => (
+        <span key={stage.key} className="flex items-center gap-1">
+          <span className="text-ink-muted/60">/</span>
+          <span className={cn("flex items-center gap-1.5", i === ACTIVE_STAGE_INDEX ? "text-ink" : "text-ink-muted")}>
+            {i === ACTIVE_STAGE_INDEX && (
+              <span className="h-1.5 w-1.5 rounded-full bg-signal motion-safe:animate-pulse" aria-hidden="true" />
+            )}
+            {stage.label}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function RootPage() {
   return (
-    <div className="relative mx-auto flex min-h-screen max-w-2xl flex-col items-center px-6 py-24">
+    <div className="relative w-full">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-signal/10 blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[520px] w-[820px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-signal/10 blur-3xl"
       />
 
-      <div className="flex w-full max-w-md flex-col items-center text-center">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Automatisation de développement</p>
-        <h1 className="mt-3 font-mono text-2xl font-medium tracking-tight text-ink">Alexis</h1>
-        <p className="mt-6 text-2xl font-medium leading-snug text-ink">
-          Vos tickets deviennent des pull requests.
-        </p>
-        <p className="mt-4 text-base text-ink-muted">
-          Alexis surveille votre tracker de tickets et fait avancer un agent de code à travers chaque étape de votre
-          process, jusqu&apos;à une pull request prête à relire.
-        </p>
-
-        <div className="mt-8 flex justify-center gap-3">
-          <Link href="/login" className={buttonVariants("secondary")}>
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
+        <span className="font-mono text-sm font-medium tracking-tight text-ink">Alexis</span>
+        <nav className="flex items-center gap-6">
+          <Link href="/login" className="text-sm text-ink-muted hover:text-ink">
             Connexion
           </Link>
           <Link href="/login?mode=signup" className={buttonVariants("primary")}>
             Créer un compte
           </Link>
-        </div>
-      </div>
+        </nav>
+      </header>
 
-      <div className="mt-24 w-full border-t border-rule pt-12">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Comment ça marche</p>
+      <section className="mx-auto flex w-full max-w-3xl flex-col items-center px-6 pb-20 pt-8 text-center">
+        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Automatisation de développement</p>
+        <h1 className="mt-6 text-4xl font-medium leading-tight tracking-tight text-ink sm:text-5xl">
+          Vos tickets deviennent des pull requests.
+        </h1>
+        <p className="mt-5 max-w-xl text-base text-ink-muted sm:text-lg">
+          Alexis surveille votre tracker de tickets et fait avancer un agent de code à travers chaque étape de votre
+          process, jusqu&apos;à une pull request prête à relire.
+        </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-x-1 gap-y-2 font-mono text-xs">
-          <span className="rounded-sm bg-paper-dim px-2 py-1 text-ink">KARA-142</span>
-          {STAGES.map((stage, i) => (
-            <span key={stage.key} className="flex items-center gap-1">
-              <span className="text-ink-muted/60">/</span>
-              <span
-                className={cn("flex items-center gap-1.5", i === ACTIVE_STAGE_INDEX ? "text-ink" : "text-ink-muted")}
-              >
-                {i === ACTIVE_STAGE_INDEX && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-signal motion-safe:animate-pulse" aria-hidden="true" />
-                )}
-                {stage.label}
-              </span>
-            </span>
-          ))}
-        </div>
-
-        <ul className="mt-8 space-y-6">
-          {STAGES.map((stage) => (
-            <li key={stage.key} className="flex gap-4">
-              <span className="w-12 shrink-0 font-mono text-xs uppercase tracking-widest text-ink-muted">
-                {stage.label}
-              </span>
-              <p className="text-sm text-ink-muted">{stage.description}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="mt-20 w-full border-t border-rule pt-12">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Pourquoi Alexis</p>
-        <ul className="mt-6 grid gap-8 sm:grid-cols-2">
-          {VALUE_PROPS.map((prop) => (
-            <li key={prop.title}>
-              <p className="text-sm font-medium text-ink">{prop.title}</p>
-              <p className="mt-1.5 text-sm text-ink-muted">{prop.description}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="mt-20 flex w-full flex-col items-center border-t border-rule pt-12 text-center">
-        <p className="text-lg font-medium text-ink">Prêt à connecter votre premier projet ?</p>
-        <Link href="/login?mode=signup" className={cn(buttonVariants("primary"), "mt-6")}>
+        <Link href="/login?mode=signup" className={cn(buttonVariants("primary"), "mt-8 px-6 py-3 text-base")}>
           Créer un compte
         </Link>
-      </div>
+
+        <div className="mt-16 w-full max-w-2xl rounded-sm border border-rule bg-paper-dim px-6 py-6 text-left shadow-[0_1px_2px_rgba(32,28,24,0.05),0_16px_32px_-20px_rgba(32,28,24,0.25)]">
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Suivi en direct</p>
+          <PipelineTrail className="mt-4" />
+        </div>
+      </section>
+
+      <section className="w-full border-t border-rule bg-paper-dim/40">
+        <div className="mx-auto w-full max-w-5xl px-6 py-16">
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Comment ça marche</p>
+          <ul className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+            {STAGES.map((stage) => (
+              <li key={stage.key}>
+                <p className="font-mono text-xs uppercase tracking-widest text-ink">{stage.label}</p>
+                <p className="mt-2 text-sm text-ink-muted">{stage.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="w-full border-t border-rule">
+        <div className="mx-auto w-full max-w-5xl px-6 py-16">
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Pourquoi Alexis</p>
+          <ul className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {VALUE_PROPS.map((prop) => (
+              <li key={prop.title}>
+                <p className="text-sm font-medium text-ink">{prop.title}</p>
+                <p className="mt-1.5 text-sm text-ink-muted">{prop.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="w-full border-t border-rule bg-paper-dim/40">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-6 py-16 text-center">
+          <p className="text-2xl font-medium text-ink">Prêt à connecter votre premier projet ?</p>
+          <Link href="/login?mode=signup" className={cn(buttonVariants("primary"), "mt-6 px-6 py-3 text-base")}>
+            Créer un compte
+          </Link>
+        </div>
+      </section>
+
+      <footer className="w-full border-t border-rule">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
+          <span className="font-mono text-xs text-ink-muted">Alexis</span>
+          <span className="text-xs text-ink-muted">© 2026</span>
+        </div>
+      </footer>
     </div>
   );
 }
