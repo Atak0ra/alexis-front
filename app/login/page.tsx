@@ -46,7 +46,13 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type={isLocalMode() ? "text" : "email"}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="password">Mot de passe</Label>
@@ -56,7 +62,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={isLocalMode() ? undefined : 8}
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
