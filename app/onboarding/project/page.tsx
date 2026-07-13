@@ -10,6 +10,7 @@ import { createProject, AlexisApiError, type ProjectOut } from "@/lib/api-client
 import { getApiKey } from "@/lib/session";
 import { useOnboarding } from "@/lib/onboarding-context";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
+import { isLocalMode } from "@/lib/demo-data";
 
 export default function ProjectPage() {
   const router = useRouter();
@@ -53,6 +54,11 @@ export default function ProjectPage() {
         trigger_states: DEFAULT_TRIGGER_STATES,
         models: DEFAULT_MODELS,
       });
+
+      if (isLocalMode()) {
+        router.push("/onboarding/projects");
+        return;
+      }
       setCreated(result);
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");

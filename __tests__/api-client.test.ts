@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { signup, login, listLinearTeams, createLinearTeam, createProject, AlexisApiError } from "@/lib/api-client";
+import {
+  signup,
+  login,
+  listLinearTeams,
+  createLinearTeam,
+  createProject,
+  listDemoModeProjects,
+  AlexisApiError,
+} from "@/lib/api-client";
 
 function mockFetchOnce(status: number, body: unknown) {
   global.fetch = vi.fn().mockResolvedValue({
@@ -12,6 +20,7 @@ function mockFetchOnce(status: number, body: unknown) {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("signup", () => {
@@ -89,5 +98,52 @@ describe("createProject", () => {
     const [, options] = (global.fetch as any).mock.calls[0];
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
     expect(JSON.parse(options.body)).toEqual(payload);
+  });
+});
+
+describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
+    global.fetch = vi.fn();
+  });
+
+  it("login accepts demo/passer without calling fetch", async () => {
+    const result = await login("demo", "passer");
+    expect(result).toEqual({ id: "demo-client", api_key: "demo-api-key" });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("login rejects any other credentials", async () => {
+    await expect(login("demo", "wrong")).rejects.toThrow(AlexisApiError);
+  });
+
+  it("listLinearTeams returns fake teams without calling fetch", async () => {
+    const teams = await listLinearTeams("demo-api-key", "lin_api_xxx");
+    expect(teams.length).toBeGreaterThan(0);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("createProject returns a fake project and appends it to the demo project list", async () => {
+    const before = await listDemoModeProjects();
+    const result = await createProject("demo-api-key", {
+      name: "new-demo-project",
+      repo_url: "git@github.com:acme/new-demo-project.git",
+      agent_choice: "claude",
+      agent_api_key: null,
+      agent_base_url: null,
+      linear_api_key: "lin_api_xxx",
+      linear_team_id: "team-demo-eng",
+      forge_provider: "github",
+      forge_token: "ghp_xxx",
+      states: { dev: "Dev" },
+      trigger_states: ["Dev"],
+      models: { dev: "claude-sonnet-4-5" },
+    });
+    expect(result.name).toBe("new-demo-project");
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    const after = await listDemoModeProjects();
+    expect(after.length).toBe(before.length + 1);
+    expect(after.some((p) => p.id === result.id)).toBe(true);
   });
 });

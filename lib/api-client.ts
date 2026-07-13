@@ -1,3 +1,5 @@
+import { DEMO_CREDENTIALS, DEMO_TEAMS, addDemoProject, isLocalMode, listDemoProjects } from "@/lib/demo-data";
+
 export class AlexisApiError extends Error {
   status: number;
   detail: string;
@@ -64,15 +66,27 @@ export interface ProjectOut {
   created_at: string;
 }
 
+function demoLogin(email: string, password: string): Promise<ApiKeyOut> {
+  if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
+    return Promise.resolve({ id: "demo-client", api_key: "demo-api-key" });
+  }
+  return Promise.reject(
+    new AlexisApiError(401, "Identifiants invalides (mode démo : demo / passer)")
+  );
+}
+
 export function signup(email: string, password: string): Promise<ApiKeyOut> {
+  if (isLocalMode()) return demoLogin(email, password);
   return request("/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
 export function login(email: string, password: string): Promise<ApiKeyOut> {
+  if (isLocalMode()) return demoLogin(email, password);
   return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
 export function listLinearTeams(apiKey: string, linearApiKey: string): Promise<LinearTeam[]> {
+  if (isLocalMode()) return Promise.resolve(DEMO_TEAMS);
   return request("/linear/teams", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -81,6 +95,9 @@ export function listLinearTeams(apiKey: string, linearApiKey: string): Promise<L
 }
 
 export function createLinearTeam(apiKey: string, linearApiKey: string, name: string): Promise<LinearTeam> {
+  if (isLocalMode()) {
+    return Promise.resolve({ id: `team-demo-${name.toLowerCase().replace(/\s+/g, "-")}`, name, key: name.slice(0, 3).toUpperCase() });
+  }
   return request("/linear/teams/create", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -104,9 +121,32 @@ export interface CreateProjectPayload {
 }
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {
+  if (isLocalMode()) {
+    const project: ProjectOut = {
+      id: `demo-project-${Date.now()}`,
+      name: payload.name,
+      repo_url: payload.repo_url,
+      agent_choice: payload.agent_choice,
+      agent_base_url: payload.agent_base_url,
+      linear_team_id: payload.linear_team_id,
+      forge_provider: payload.forge_provider,
+      states: payload.states,
+      trigger_states: payload.trigger_states,
+      models: payload.models,
+      run_timeout_seconds: 1800,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    addDemoProject(project);
+    return Promise.resolve(project);
+  }
   return request("/projects", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
   });
+}
+
+export function listDemoModeProjects(): Promise<ProjectOut[]> {
+  return Promise.resolve(listDemoProjects());
 }

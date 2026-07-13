@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { signup, login, AlexisApiError } from "@/lib/api-client";
 import { setApiKey } from "@/lib/session";
+import { isLocalMode } from "@/lib/demo-data";
 
 function LoginForm() {
   const router = useRouter();
@@ -65,11 +66,14 @@ function LoginForm() {
           </form>
           <button
             type="button"
-            className="mt-4 text-sm text-gray-500 underline"
+            className="mt-4 text-sm text-ink-muted underline"
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
           >
             {mode === "login" ? "Créer un compte" : "J'ai déjà un compte"}
           </button>
+          {isLocalMode() && (
+            <p className="mt-4 font-mono text-xs text-ink-muted">Mode démo local : demo / passer</p>
+          )}
         </CardContent>
       </Card>
     </div>
