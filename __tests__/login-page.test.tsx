@@ -5,13 +5,17 @@ import * as apiClient from "@/lib/api-client";
 import * as session from "@/lib/session";
 
 const pushMock = vi.fn();
+let mockSearchParams = new URLSearchParams();
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 beforeEach(() => {
   vi.restoreAllMocks();
   pushMock.mockClear();
+  mockSearchParams = new URLSearchParams();
 });
 
 describe("LoginPage", () => {
@@ -50,5 +54,14 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
     expect(await screen.findByText("Invalid credentials")).toBeInTheDocument();
+  });
+
+  it("starts in signup mode when the URL has mode=signup", () => {
+    mockSearchParams = new URLSearchParams("mode=signup");
+
+    render(<LoginPage />);
+
+    expect(screen.getByRole("heading", { name: "Créer un compte" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Créer le compte" })).toBeInTheDocument();
   });
 });
