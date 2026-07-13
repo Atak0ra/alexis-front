@@ -3,35 +3,31 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 const STAGES = [
-  { key: "todo", label: "Todo", description: "Le ticket est en file d'attente, prêt à être pris en charge." },
-  { key: "spec", label: "Spec", description: "L'agent rédige la spécification technique à partir du ticket." },
-  { key: "plan", label: "Plan", description: "L'agent découpe la spec en un plan d'implémentation détaillé." },
-  { key: "dev", label: "Dev", description: "L'agent implémente le plan, écrit et fait passer les tests." },
-  { key: "pr", label: "PR", description: "Une pull request est ouverte automatiquement, prête à être relue." },
+  { key: "todo", label: "Todo", description: "La demande attend d'être prise en charge." },
+  { key: "spec", label: "Spec", description: "Alexis rédige le besoin en détail." },
+  { key: "plan", label: "Plan", description: "Alexis prépare les étapes du travail à faire." },
+  { key: "dev", label: "Dev", description: "Alexis écrit le code et vérifie qu'il fonctionne." },
+  { key: "livraison", label: "Livraison", description: "Le code est livré, prêt à être vérifié." },
 ] as const;
 
 const ACTIVE_STAGE_INDEX = 3;
 
 const VALUE_PROPS = [
   {
-    title: "Suit votre process",
-    description:
-      "Les étapes (Todo, Spec, Plan, Dev, PR) sont celles de votre tracker de tickets, pas un workflow imposé à apprendre.",
+    title: "S'adapte à votre façon de travailler",
+    description: "Les étapes suivent l'organisation que vous utilisez déjà, sans nouvelle méthode à apprendre.",
   },
   {
     title: "Rien à préparer à la main",
-    description:
-      "Alexis crée les statuts manquants directement dans votre tracker au moment où vous branchez un projet.",
+    description: "Alexis met en place ce qu'il faut dès que vous branchez un projet.",
   },
   {
-    title: "Une vraie pull request",
-    description:
-      "Le travail se termine par une PR ouverte automatiquement sur GitHub ou GitLab, prête à être relue — pas juste du code qui traîne.",
+    title: "Un vrai résultat livré",
+    description: "Le travail se termine par du code livré et prêt à être vérifié, jamais une simple ébauche.",
   },
   {
     title: "Plusieurs projets, un seul compte",
-    description:
-      "Chaque projet garde son propre dépôt, son propre agent et ses propres accès — pilotés depuis la même interface.",
+    description: "Chaque projet garde ses propres réglages et accès, pilotés depuis la même interface.",
   },
 ] as const;
 
@@ -75,13 +71,12 @@ export default function RootPage() {
       </header>
 
       <section className="mx-auto flex w-full max-w-3xl flex-col items-center px-6 pb-20 pt-8 text-center">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Automatisation de développement</p>
+        <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Développement automatisé</p>
         <h1 className="mt-6 text-4xl font-medium leading-tight tracking-tight text-ink sm:text-5xl">
-          Vos tickets deviennent des pull requests.
+          Décrivez ce qu&apos;il faut faire, Alexis s&apos;occupe du reste.
         </h1>
         <p className="mt-5 max-w-xl text-base text-ink-muted sm:text-lg">
-          Alexis surveille votre tracker de tickets et fait avancer un agent de code à travers chaque étape de votre
-          process, jusqu&apos;à une pull request prête à relire.
+          Alexis suit vos demandes et avance, étape par étape, jusqu&apos;à un code livré et prêt à être vérifié.
         </p>
 
         <Link href="/login?mode=signup" className={cn(buttonVariants("primary"), "mt-8 px-6 py-3 text-base")}>

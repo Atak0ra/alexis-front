@@ -6,25 +6,26 @@ describe("RootPage", () => {
   it("shows the product wordmark and pitch, with no explicit mention of Linear", () => {
     render(<RootPage />);
     expect(screen.getAllByText("Alexis").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: /pull requests/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /s'occupe du reste/ })).toBeInTheDocument();
     expect(screen.queryByText(/Linear/i)).not.toBeInTheDocument();
   });
 
-  it("shows the ticket pipeline tracker and the 5 stage descriptions", () => {
+  it("shows the pipeline tracker and the 5 stage descriptions in plain language", () => {
     render(<RootPage />);
     expect(screen.getByText("KARA-142")).toBeInTheDocument();
-    expect(screen.getByText(/file d'attente/)).toBeInTheDocument();
-    expect(screen.getByText(/rédige la spécification technique/)).toBeInTheDocument();
-    expect(screen.getByText(/découpe la spec/)).toBeInTheDocument();
-    expect(screen.getByText(/implémente le plan/)).toBeInTheDocument();
-    expect(screen.getByText(/pull request est ouverte/)).toBeInTheDocument();
+    expect(screen.getByText(/attend d'être prise en charge/)).toBeInTheDocument();
+    expect(screen.getByText(/rédige le besoin/)).toBeInTheDocument();
+    expect(screen.getByText(/prépare les étapes/)).toBeInTheDocument();
+    expect(screen.getByText(/écrit le code/)).toBeInTheDocument();
+    expect(screen.getByText(/code est livré/)).toBeInTheDocument();
+    expect(screen.queryByText(/pull request/i)).not.toBeInTheDocument();
   });
 
   it("shows the value-props section", () => {
     render(<RootPage />);
-    expect(screen.getByText("Suit votre process")).toBeInTheDocument();
+    expect(screen.getByText("S'adapte à votre façon de travailler")).toBeInTheDocument();
     expect(screen.getByText("Rien à préparer à la main")).toBeInTheDocument();
-    expect(screen.getByText("Une vraie pull request")).toBeInTheDocument();
+    expect(screen.getByText("Un vrai résultat livré")).toBeInTheDocument();
     expect(screen.getByText("Plusieurs projets, un seul compte")).toBeInTheDocument();
   });
 
