@@ -14,7 +14,11 @@ const ACTIVE_STAGE_INDEX = 3;
 
 export default function RootPage() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center px-6 py-24">
+    <div className="relative mx-auto flex min-h-screen max-w-xl flex-col items-center px-6 py-24">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-signal/10 blur-3xl"
+      />
       <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">Orchestrateur de tickets</p>
       <h1 className="mt-3 font-mono text-4xl font-medium tracking-tight text-ink">Alexis</h1>
       <p className="mt-4 text-center text-base text-ink-muted">

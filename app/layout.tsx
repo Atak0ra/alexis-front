@@ -21,7 +21,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${displayMono.variable} ${bodySans.variable}`}>
-      <body className="bg-paper font-sans text-ink antialiased">{children}</body>
+      <body className="bg-[radial-gradient(ellipse_at_top,_#FCF9F2_0%,_#F7F2E9_55%)] font-sans text-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }
