@@ -1,4 +1,16 @@
-import { DEMO_CREDENTIALS, DEMO_TEAMS, addDemoProject, isLocalMode, listDemoProjects } from "@/lib/demo-data";
+import {
+  DEMO_CREDENTIALS,
+  DEMO_TEAMS,
+  addDemoProject,
+  getDemoProject,
+  getDemoProjectStats,
+  getDemoTickets,
+  getDemoContextExists,
+  startDemoContextGeneration,
+  getDemoContextStatus,
+  isLocalMode,
+  listDemoProjects,
+} from "@/lib/demo-data";
 
 export class AlexisApiError extends Error {
   status: number;
@@ -66,6 +78,30 @@ export interface ProjectOut {
   created_at: string;
 }
 
+export interface ProjectStats {
+  resolved: number;
+  in_progress: number;
+  failed: number;
+  total_cost_usd: number;
+}
+
+export type TicketStatus = "resolved" | "in_progress" | "failed";
+
+export interface Ticket {
+  id: string;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  agent: string;
+  cost_usd: number;
+  updated_at: string;
+  /** Only present when status === "resolved" */
+  pr_url?: string;
+  pr_title?: string;
+  /** Only present when status === "failed" */
+  error_message?: string;
+}
+
 function demoLogin(email: string, password: string): Promise<ApiKeyOut> {
   if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
     return Promise.resolve({ id: "demo-client", api_key: "demo-api-key" });
@@ -83,6 +119,14 @@ export function signup(email: string, password: string): Promise<ApiKeyOut> {
 export function login(email: string, password: string): Promise<ApiKeyOut> {
   if (isLocalMode()) return demoLogin(email, password);
   return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/auth/api-keys/${keyId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
 }
 
 export function listLinearTeams(apiKey: string, linearApiKey: string): Promise<LinearTeam[]> {
@@ -149,4 +193,131 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
 
 export function listDemoModeProjects(): Promise<ProjectOut[]> {
   return Promise.resolve(listDemoProjects());
+}
+
+export function listProjects(apiKey: string): Promise<ProjectOut[]> {
+  if (isLocalMode()) return Promise.resolve(listDemoProjects());
+  return request("/projects", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getProject(apiKey: string, projectId: string): Promise<ProjectOut> {
+  if (isLocalMode()) {
+    const project = getDemoProject(projectId);
+    if (!project) return Promise.reject(new AlexisApiError(404, "Projet introuvable"));
+    return Promise.resolve(project);
+  }
+  return request(`/projects/${projectId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getProjectStats(apiKey: string, projectId: string): Promise<ProjectStats> {
+  if (isLocalMode()) return Promise.resolve(getDemoProjectStats(projectId));
+  return request(`/projects/${projectId}/stats`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getProjectTickets(apiKey: string, projectId: string): Promise<Ticket[]> {
+  if (isLocalMode()) return Promise.resolve(getDemoTickets(projectId));
+  return request(`/projects/${projectId}/tickets`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+// ─── Project context (.alexis/project.md) ────────────────────────────────────
+
+export interface ProjectContextState {
+  exists: boolean;
+}
+
+export type ContextGenerationStatus = "in_progress" | "done" | "failed" | null;
+
+export interface ProjectContextStatus {
+  status: ContextGenerationStatus;
+}
+
+export function getProjectContext(
+  apiKey: string,
+  projectId: string
+): Promise<ProjectContextState> {
+  if (isLocalMode()) {
+    return Promise.resolve({ exists: getDemoContextExists(projectId) });
+  }
+  return request(`/projects/${projectId}/context`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function createProjectContext(
+  apiKey: string,
+  projectId: string,
+  brief: string
+): Promise<void> {
+  if (isLocalMode()) {
+    startDemoContextGeneration(projectId);
+    return Promise.resolve();
+  }
+  return request(`/projects/${projectId}/context`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ brief }),
+  });
+}
+
+export function getProjectContextStatus(
+  apiKey: string,
+  projectId: string
+): Promise<ProjectContextStatus> {
+  if (isLocalMode()) {
+    return Promise.resolve({ status: getDemoContextStatus(projectId) });
+  }
+  return request(`/projects/${projectId}/context/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+// ─── Project management ───────────────────────────────────────────────────────
+
+export interface UpdateProjectPayload {
+  name?: string;
+  repo_url?: string;
+  agent_choice?: string;
+  agent_api_key?: string | null;
+  agent_base_url?: string | null;
+  linear_api_key?: string;
+  linear_team_id?: string;
+  forge_provider?: string;
+  forge_token?: string;
+  states?: Record<string, string>;
+  trigger_states?: string[];
+  models?: Record<string, string>;
+  run_timeout_seconds?: number;
+}
+
+export function updateProject(
+  apiKey: string,
+  projectId: string,
+  payload: UpdateProjectPayload
+): Promise<ProjectOut> {
+  if (isLocalMode()) {
+    const project = getDemoProject(projectId);
+    if (!project) return Promise.reject(new AlexisApiError(404, "Projet introuvable"));
+    return Promise.resolve({ ...project, ...payload } as ProjectOut);
+  }
+  return request(`/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProject(apiKey: string, projectId: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
 }

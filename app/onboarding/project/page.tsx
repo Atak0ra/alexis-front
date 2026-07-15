@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createProject, AlexisApiError, type ProjectOut } from "@/lib/api-client";
+import { createProject, getProjectContext, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useOnboarding } from "@/lib/onboarding-context";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
-import { isLocalMode } from "@/lib/demo-data";
+import ProjectContextStep from "@/components/project-context-step";
 
 export default function ProjectPage() {
   const router = useRouter();
@@ -19,12 +19,13 @@ export default function ProjectPage() {
   const [repoUrl, setRepoUrl] = useState("");
   const [agentChoice, setAgentChoice] = useState("claude");
   const [agentApiKey, setAgentApiKey] = useState("");
-  const [agentBaseUrl, setAgentBaseUrl] = useState("");
   const [forgeProvider, setForgeProvider] = useState("github");
   const [forgeToken, setForgeToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [created, setCreated] = useState<ProjectOut | null>(null);
+
+  // After successful creation, if context doesn't exist we show the context step
+  const [contextProjectId, setContextProjectId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,12 +41,12 @@ export default function ProjectPage() {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Session absente");
 
-      const result = await createProject(apiKey, {
+      const project = await createProject(apiKey, {
         name,
         repo_url: repoUrl,
         agent_choice: agentChoice,
         agent_api_key: agentApiKey || null,
-        agent_base_url: agentBaseUrl || null,
+        agent_base_url: null,
         linear_api_key: linearApiKey,
         linear_team_id: linearTeamId,
         forge_provider: forgeProvider,
@@ -55,11 +56,13 @@ export default function ProjectPage() {
         models: DEFAULT_MODELS,
       });
 
-      if (isLocalMode()) {
-        router.push("/onboarding/projects");
-        return;
+      // Check whether .alexis/project.md already exists
+      const { exists } = await getProjectContext(apiKey, project.id);
+      if (exists) {
+        router.push("/dashboard");
+      } else {
+        setContextProjectId(project.id);
       }
-      setCreated(result);
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
@@ -67,25 +70,13 @@ export default function ProjectPage() {
     }
   }
 
-  if (created) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Projet créé</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>
-              {created.name} ({created.id})
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Show context step if project was created and context doesn't exist
+  if (contextProjectId) {
+    return <ProjectContextStep projectId={contextProjectId} />;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper">
+    <div className="flex min-h-screen items-center justify-center bg-surface">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Nouveau projet</CardTitle>
@@ -106,24 +97,22 @@ export default function ProjectPage() {
                 id="agent-choice"
                 value={agentChoice}
                 onChange={(e) => setAgentChoice(e.target.value)}
-                className="w-full rounded-sm border border-ink/20 bg-paper px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 <option value="claude">claude</option>
                 <option value="aider">aider</option>
               </select>
             </div>
             <div>
-              <Label htmlFor="agent-api-key">Clé API agent (optionnel)</Label>
+              <Label htmlFor="agent-api-key">Clé API agent</Label>
               <Input
                 id="agent-api-key"
                 type="password"
                 value={agentApiKey}
                 onChange={(e) => setAgentApiKey(e.target.value)}
+                required
+                placeholder="sk-ant-… ou clé aider"
               />
-            </div>
-            <div>
-              <Label htmlFor="agent-base-url">URL de base agent (optionnel)</Label>
-              <Input id="agent-base-url" value={agentBaseUrl} onChange={(e) => setAgentBaseUrl(e.target.value)} />
             </div>
             <div>
               <Label htmlFor="forge-provider">Forge</Label>
@@ -131,7 +120,7 @@ export default function ProjectPage() {
                 id="forge-provider"
                 value={forgeProvider}
                 onChange={(e) => setForgeProvider(e.target.value)}
-                className="w-full rounded-sm border border-ink/20 bg-paper px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 <option value="github">github</option>
                 <option value="gitlab">gitlab</option>
@@ -147,7 +136,7 @@ export default function ProjectPage() {
                 required
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" disabled={submitting} className="w-full">
               Créer le projet
             </Button>

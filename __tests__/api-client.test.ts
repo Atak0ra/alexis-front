@@ -6,6 +6,9 @@ import {
   createLinearTeam,
   createProject,
   listDemoModeProjects,
+  getProjectContext,
+  createProjectContext,
+  getProjectContextStatus,
   AlexisApiError,
 } from "@/lib/api-client";
 
@@ -98,6 +101,40 @@ describe("createProject", () => {
     const [, options] = (global.fetch as any).mock.calls[0];
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
     expect(JSON.parse(options.body)).toEqual(payload);
+  });
+});
+
+describe("getProjectContext", () => {
+  it("sends Bearer header and returns { exists }", async () => {
+    mockFetchOnce(200, { exists: true });
+    const result = await getProjectContext("alx_xxx", "p1");
+    expect(result).toEqual({ exists: true });
+    const [url, options] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/projects/p1/context");
+    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
+  });
+});
+
+describe("createProjectContext", () => {
+  it("posts brief with Bearer auth and accepts 202", async () => {
+    mockFetchOnce(202, {});
+    await createProjectContext("alx_xxx", "p1", "API FastAPI + Next.js");
+    const [url, options] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/projects/p1/context");
+    expect(options.method).toBe("POST");
+    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
+    expect(JSON.parse(options.body)).toEqual({ brief: "API FastAPI + Next.js" });
+  });
+});
+
+describe("getProjectContextStatus", () => {
+  it("sends Bearer header and returns status", async () => {
+    mockFetchOnce(200, { status: "done" });
+    const result = await getProjectContextStatus("alx_xxx", "p1");
+    expect(result).toEqual({ status: "done" });
+    const [url, options] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain("/projects/p1/context/status");
+    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
   });
 });
 

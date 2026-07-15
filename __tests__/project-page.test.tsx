@@ -31,6 +31,22 @@ function renderProjectPage() {
   );
 }
 
+const FAKE_PROJECT = {
+  id: "p1",
+  name: "kara",
+  repo_url: "git@github.com:acme/kara.git",
+  agent_choice: "claude",
+  agent_base_url: null,
+  linear_team_id: "team-1",
+  forge_provider: "github",
+  states: DEFAULT_STATES,
+  trigger_states: DEFAULT_TRIGGER_STATES,
+  models: DEFAULT_MODELS,
+  run_timeout_seconds: 1800,
+  is_active: true,
+  created_at: "2026-07-13T00:00:00Z",
+};
+
 beforeEach(() => {
   vi.restoreAllMocks();
   pushMock.mockClear();
@@ -39,25 +55,13 @@ beforeEach(() => {
 
 describe("ProjectPage", () => {
   it("submits the full payload including linear_team_id from context and the fixed state constants", async () => {
-    const createSpy = vi.spyOn(apiClient, "createProject").mockResolvedValue({
-      id: "p1",
-      name: "kara",
-      repo_url: "git@github.com:acme/kara.git",
-      agent_choice: "claude",
-      agent_base_url: null,
-      linear_team_id: "team-1",
-      forge_provider: "github",
-      states: DEFAULT_STATES,
-      trigger_states: DEFAULT_TRIGGER_STATES,
-      models: DEFAULT_MODELS,
-      run_timeout_seconds: 1800,
-      is_active: true,
-      created_at: "2026-07-13T00:00:00Z",
-    });
+    const createSpy = vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
 
     renderProjectPage();
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
     fireEvent.change(screen.getByLabelText("URL du repo"), { target: { value: "git@github.com:acme/kara.git" } });
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
     fireEvent.change(screen.getByLabelText("Token forge"), { target: { value: "ghp_xxx" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le projet" }));
 
@@ -66,7 +70,7 @@ describe("ProjectPage", () => {
         name: "kara",
         repo_url: "git@github.com:acme/kara.git",
         agent_choice: "claude",
-        agent_api_key: null,
+        agent_api_key: "sk-ant-xxx",
         agent_base_url: null,
         linear_api_key: "lin_api_xxx",
         linear_team_id: "team-1",
@@ -77,7 +81,39 @@ describe("ProjectPage", () => {
         models: DEFAULT_MODELS,
       })
     );
-    expect(await screen.findByText("kara (p1)")).toBeInTheDocument();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("skips the context step and redirects to /dashboard when context exists", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    renderProjectPage();
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+    fireEvent.change(screen.getByLabelText("URL du repo"), { target: { value: "git@github.com:acme/kara.git" } });
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText("Token forge"), { target: { value: "ghp_xxx" } });
+    fireEvent.click(screen.getByRole("button", { name: "Créer le projet" }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("shows the context step when context does not exist (exists=false)", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: false });
+
+    renderProjectPage();
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+    fireEvent.change(screen.getByLabelText("URL du repo"), { target: { value: "git@github.com:acme/kara.git" } });
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText("Token forge"), { target: { value: "ghp_xxx" } });
+    fireEvent.click(screen.getByRole("button", { name: "Créer le projet" }));
+
+    // Context step should appear — no redirect to /dashboard
+    await waitFor(() =>
+      expect(screen.getByText("Contexte du projet")).toBeInTheDocument()
+    );
+    expect(pushMock).not.toHaveBeenCalledWith("/dashboard");
   });
 
   it("redirects back to the team step when linear context is missing", async () => {
@@ -89,6 +125,7 @@ describe("ProjectPage", () => {
 
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
     fireEvent.change(screen.getByLabelText("URL du repo"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
     fireEvent.change(screen.getByLabelText("Token forge"), { target: { value: "ghp_xxx" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le projet" }));
 

@@ -1,27 +1,29 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const displayMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-display",
-});
-
-const bodySans = Inter({
+const bodyFont = Inter({
   subsets: ["latin"],
   variable: "--font-body",
+  display: "swap",
+});
+
+const monoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Alexis",
+  title: "Alexis — Développement automatisé",
   description: "Vos tickets Linear pilotent un agent de code, du ticket au PR.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${displayMono.variable} ${bodySans.variable}`}>
-      <body className="bg-[radial-gradient(ellipse_at_top,_#FCF9F2_0%,_#F7F2E9_55%)] font-sans text-ink antialiased">
+    <html lang="fr" className={`${bodyFont.variable} ${monoFont.variable} h-full`}>
+      <body className="h-full bg-surface font-sans text-foreground antialiased">
         {children}
       </body>
     </html>

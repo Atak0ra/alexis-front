@@ -3,38 +3,42 @@ import { render, screen } from "@testing-library/react";
 import RootPage from "@/app/page";
 
 describe("RootPage", () => {
-  it("shows the product wordmark and pitch, with no explicit mention of Linear", () => {
+  it("shows the product wordmark and pitch", () => {
     render(<RootPage />);
     expect(screen.getAllByText("Alexis").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: /s'occupe du reste/ })).toBeInTheDocument();
-    expect(screen.queryByText(/Linear/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /résolus automatiquement/i })).toBeInTheDocument();
   });
 
-  it("shows the pipeline tracker and the 5 stage descriptions in plain language", () => {
+  it("shows the pipeline stages with descriptions", () => {
     render(<RootPage />);
+    // Stage labels
+    expect(screen.getAllByText("Todo").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Spec").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Dev").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Livraison").length).toBeGreaterThan(0);
+    // Stage descriptions
+    expect(screen.getByText(/attend d'être pris en charge/)).toBeInTheDocument();
+    expect(screen.getByText(/rédige une spécification/)).toBeInTheDocument();
+    expect(screen.getAllByText(/écrit le code/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/PR est ouverte/)).toBeInTheDocument();
+    // Ticket preview
     expect(screen.getByText("KARA-142")).toBeInTheDocument();
-    expect(screen.getByText(/attend d'être prise en charge/)).toBeInTheDocument();
-    expect(screen.getByText(/rédige le besoin/)).toBeInTheDocument();
-    expect(screen.getByText(/prépare les étapes/)).toBeInTheDocument();
-    expect(screen.getByText(/écrit le code/)).toBeInTheDocument();
-    expect(screen.getByText(/code est livré/)).toBeInTheDocument();
-    expect(screen.queryByText(/pull request/i)).not.toBeInTheDocument();
   });
 
   it("shows the value-props section", () => {
     render(<RootPage />);
-    expect(screen.getByText("S'adapte à votre façon de travailler")).toBeInTheDocument();
-    expect(screen.getByText("Rien à préparer à la main")).toBeInTheDocument();
-    expect(screen.getByText("Un vrai résultat livré")).toBeInTheDocument();
-    expect(screen.getByText("Plusieurs projets, un seul compte")).toBeInTheDocument();
+    expect(screen.getByText("Zéro configuration manuelle")).toBeInTheDocument();
+    expect(screen.getByText("Du ticket au PR en autonomie")).toBeInTheDocument();
+    expect(screen.getByText("Plusieurs projets, un seul tableau de bord")).toBeInTheDocument();
+    expect(screen.getByText("Coûts transparents et traçables")).toBeInTheDocument();
   });
 
-  it("links Connexion to /login and every Créer un compte CTA to /login?mode=signup", () => {
+  it("links Connexion to /login and CTA links to /login?mode=signup", () => {
     render(<RootPage />);
     expect(screen.getByRole("link", { name: "Connexion" })).toHaveAttribute("href", "/login");
 
-    const signupLinks = screen.getAllByRole("link", { name: "Créer un compte" });
-    expect(signupLinks).toHaveLength(3);
+    const signupLinks = screen.getAllByRole("link", { name: /commencer gratuitement|créer un compte gratuit/i });
+    expect(signupLinks.length).toBeGreaterThanOrEqual(2);
     for (const link of signupLinks) {
       expect(link).toHaveAttribute("href", "/login?mode=signup");
     }

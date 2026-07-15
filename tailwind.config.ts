@@ -5,16 +5,53 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#F7F2E9",
-        "paper-dim": "#EEE4D2",
-        ink: "#201C18",
-        "ink-muted": "#6B6055",
-        rule: "#E2D6C3",
-        signal: "#B0653A",
+        // Backgrounds
+        surface: "#F8FAFC",
+        "surface-raised": "#FFFFFF",
+        "surface-sunken": "#F1F5F9",
+        // Borders
+        border: "#E2E8F0",
+        "border-strong": "#CBD5E1",
+        // Text
+        foreground: "#0F172A",
+        "foreground-muted": "#64748B",
+        "foreground-subtle": "#94A3B8",
+        // Brand / accent
+        brand: "#4F46E5",
+        "brand-hover": "#4338CA",
+        "brand-light": "#EEF2FF",
+        "brand-muted": "#818CF8",
+        // Status
+        success: "#16A34A",
+        "success-bg": "#F0FDF4",
+        "success-border": "#BBF7D0",
+        warning: "#D97706",
+        "warning-bg": "#FFFBEB",
+        "warning-border": "#FDE68A",
+        danger: "#DC2626",
+        "danger-bg": "#FEF2F2",
+        "danger-border": "#FECACA",
+        // Sidebar
+        sidebar: "#1E293B",
+        "sidebar-hover": "#334155",
+        "sidebar-active": "#4F46E5",
+        "sidebar-text": "#CBD5E1",
+        "sidebar-text-active": "#FFFFFF",
       },
       fontFamily: {
         sans: ["var(--font-body)", "system-ui", "sans-serif"],
-        mono: ["var(--font-display)", "ui-monospace", "monospace"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
+      boxShadow: {
+        card: "0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.10), 0 2px 4px -1px rgb(0 0 0 / 0.06)",
+        modal: "0 20px 60px -10px rgb(0 0 0 / 0.20)",
+      },
+      borderRadius: {
+        DEFAULT: "0.5rem",
+        sm: "0.375rem",
+        lg: "0.75rem",
+        xl: "1rem",
       },
     },
   },

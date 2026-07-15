@@ -19,12 +19,13 @@ beforeEach(() => {
 });
 
 describe("LoginPage", () => {
-  it("logs in and redirects to /onboarding/team on success", async () => {
+  it("logs in and redirects to /onboarding/team when the account has no projects yet", async () => {
     vi.spyOn(apiClient, "login").mockResolvedValue({ id: "abc", api_key: "alx_xxx" });
+    vi.spyOn(apiClient, "listProjects").mockResolvedValue([]);
     const setApiKeySpy = vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
@@ -32,24 +33,41 @@ describe("LoginPage", () => {
     expect(setApiKeySpy).toHaveBeenCalledWith("alx_xxx");
   });
 
-  it("shows the signup form after toggling and calls signup", async () => {
+  it("signs up and redirects to /dashboard when the account already has projects", async () => {
     vi.spyOn(apiClient, "signup").mockResolvedValue({ id: "abc", api_key: "alx_yyy" });
+    vi.spyOn(apiClient, "listProjects").mockResolvedValue([
+      {
+        id: "p1",
+        name: "kara",
+        repo_url: "git@github.com:acme/kara.git",
+        agent_choice: "claude",
+        agent_base_url: null,
+        linear_team_id: "team-1",
+        forge_provider: "github",
+        states: {},
+        trigger_states: [],
+        models: {},
+        run_timeout_seconds: 1800,
+        is_active: true,
+        created_at: "2026-07-13T00:00:00Z",
+      },
+    ]);
     vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
     render(<LoginPage />);
     fireEvent.click(screen.getByText("Créer un compte"));
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "new@b.com" } });
+    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "new@b.com" } });
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/onboarding/team"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
   });
 
   it("displays the backend error detail on failure", async () => {
     vi.spyOn(apiClient, "login").mockRejectedValue(new apiClient.AlexisApiError(401, "Invalid credentials"));
 
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "wrong" } });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
