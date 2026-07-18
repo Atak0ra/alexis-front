@@ -3,10 +3,17 @@
 ## Contexte
 
 `app/dashboard/[id]/page.tsx` affiche aujourd'hui un Kanban technique
-(`components/kanban-board.tsx`) avec 12 états dev bruts (backlog, spec,
-spec_review, spec_failed, plan, plan_review, plan_failed, dev, dev_failed,
-to_merge, done). Cette vue est destinée à des développeurs, pas aux
-utilisateurs finaux d'Alexis (solopreneurs, porteurs de projet non-tech).
+(`components/kanban-board.tsx`) sur les états dev bruts définis par
+`lib/project-defaults.ts` (`DEFAULT_STATES`, 14 clés : backlog, todo,
+spec, spec_review, spec_failed, plan, plan_review, plan_failed, dev,
+dev_review, dev_failed, to_merge, to_merge_failed, done). Cette vue est
+destinée à des développeurs, pas aux utilisateurs finaux d'Alexis
+(solopreneurs, porteurs de projet non-tech).
+
+Note : le `COLUMN_ORDER` actuel de `kanban-board.tsx` n'en liste que 12
+(il oublie `dev_review` et `to_merge_failed`, qui n'apparaissent donc
+dans aucune colonne aujourd'hui). Le nouveau mapping ci-dessous corrige
+cet oubli et couvre les 14 clés.
 
 Cette refonte remplace le Kanban par :
 1. une **liste de demandes** lisible et épurée
@@ -61,8 +68,8 @@ changement de valeurs de tokens. Exceptions à corriger manuellement :
 ```
 1. Demandé          ← backlog, todo
 2. Analyse            ← spec, spec_review, spec_failed, plan, plan_review, plan_failed
-3. En développement  ← dev, dev_failed
-4. Terminé            ← to_merge (étape courante, pulse), done (complété)
+3. En développement  ← dev, dev_review, dev_failed
+4. Terminé            ← to_merge, to_merge_failed (étape courante, pulse), done (complété)
 ```
 
 Règles d'affichage par étape :
