@@ -11,7 +11,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   ghost:
     "bg-transparent text-foreground-muted hover:bg-surface-sunken hover:text-foreground",
   danger:
-    "bg-danger text-white hover:bg-red-700 shadow-sm",
+    "bg-danger text-white hover:bg-danger/90 shadow-sm",
 };
 
 export function buttonVariants(variant: ButtonVariant = "primary"): string {
