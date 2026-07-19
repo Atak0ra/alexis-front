@@ -1,10 +1,12 @@
 import {
   DEMO_CREDENTIALS,
-  DEMO_TEAMS,
   addDemoProject,
   getDemoProject,
   getDemoProjectStats,
-  getDemoTickets,
+  getDemoIssues,
+  addDemoIssue,
+  updateDemoIssue,
+  deleteDemoIssue,
   getDemoContextExists,
   startDemoContextGeneration,
   getDemoContextStatus,
@@ -35,10 +37,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!resp.ok) {
-    let detail = resp.statusText;
+    let detail: string = resp.statusText;
     try {
       const body = await resp.json();
-      detail = body.detail ?? detail;
+      if (typeof body.detail === "string") {
+        detail = body.detail;
+      } else if (Array.isArray(body.detail)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        detail = body.detail.map((e: any) => e.msg ?? String(e)).join(", ");
+      } else if (body.detail != null) {
+        detail = JSON.stringify(body.detail);
+      }
     } catch {
       // corps non-JSON — on garde statusText
     }
@@ -56,19 +65,13 @@ export interface ApiKeyOut {
   api_key: string;
 }
 
-export interface LinearTeam {
-  id: string;
-  name: string;
-  key: string;
-}
-
 export interface ProjectOut {
   id: string;
   name: string;
   repo_url: string;
   agent_choice: string;
   agent_base_url: string | null;
-  linear_team_id: string | null;
+  issue_prefix: string | null;
   forge_provider: string;
   states: Record<string, string>;
   trigger_states: string[];
@@ -85,22 +88,43 @@ export interface ProjectStats {
   total_cost_usd: number;
 }
 
-export type TicketStatus = "resolved" | "in_progress" | "failed";
+// ─── Issues (tracker natif) ───────────────────────────────────────────────────
 
-export interface Ticket {
+export interface IssueComment {
   id: string;
+  body: string;
+  author: string;
+  created_at: string;
+}
+
+export interface Issue {
+  id: string;
+  identifier: string;
+  number: number;
   title: string;
   description: string;
-  status: TicketStatus;
-  agent: string;
-  cost_usd: number;
+  state: string;
+  labels: string[];
+  created_at: string;
   updated_at: string;
-  /** Only present when status === "resolved" */
-  pr_url?: string;
-  pr_title?: string;
-  /** Only present when status === "failed" */
-  error_message?: string;
+  comments: IssueComment[];
 }
+
+export interface IssueCreate {
+  title: string;
+  description?: string;
+  state?: string;
+  labels?: string[];
+}
+
+export interface IssueUpdate {
+  title?: string;
+  description?: string;
+  state?: string;
+  labels?: string[];
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 function demoLogin(email: string, password: string): Promise<ApiKeyOut> {
   if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
@@ -129,25 +153,28 @@ export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
   });
 }
 
-export function listLinearTeams(apiKey: string, linearApiKey: string): Promise<LinearTeam[]> {
-  if (isLocalMode()) return Promise.resolve(DEMO_TEAMS);
-  return request("/linear/teams", {
+// ─── Forge validation ─────────────────────────────────────────────────────────
+
+export interface ForgeValidation {
+  valid: boolean;
+  account: string;
+}
+
+export function validateForge(
+  apiKey: string,
+  payload: { forge_provider: string; forge_token: string; repo_url?: string }
+): Promise<ForgeValidation> {
+  if (isLocalMode()) {
+    return Promise.resolve({ valid: true, account: "demo-user" });
+  }
+  return request("/forge/validate", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ linear_api_key: linearApiKey }),
+    body: JSON.stringify(payload),
   });
 }
 
-export function createLinearTeam(apiKey: string, linearApiKey: string, name: string): Promise<LinearTeam> {
-  if (isLocalMode()) {
-    return Promise.resolve({ id: `team-demo-${name.toLowerCase().replace(/\s+/g, "-")}`, name, key: name.slice(0, 3).toUpperCase() });
-  }
-  return request("/linear/teams/create", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ linear_api_key: linearApiKey, name }),
-  });
-}
+// ─── Projects ─────────────────────────────────────────────────────────────────
 
 export interface CreateProjectPayload {
   name: string;
@@ -155,10 +182,9 @@ export interface CreateProjectPayload {
   agent_choice: string;
   agent_api_key: string | null;
   agent_base_url: string | null;
-  linear_api_key: string;
-  linear_team_id: string;
   forge_provider: string;
   forge_token: string;
+  issue_prefix?: string | null;
   states: Record<string, string>;
   trigger_states: string[];
   models: Record<string, string>;
@@ -172,7 +198,7 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
       repo_url: payload.repo_url,
       agent_choice: payload.agent_choice,
       agent_base_url: payload.agent_base_url,
-      linear_team_id: payload.linear_team_id,
+      issue_prefix: payload.issue_prefix ?? null,
       forge_provider: payload.forge_provider,
       states: payload.states,
       trigger_states: payload.trigger_states,
@@ -189,10 +215,6 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
     headers: { Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
   });
-}
-
-export function listDemoModeProjects(): Promise<ProjectOut[]> {
-  return Promise.resolve(listDemoProjects());
 }
 
 export function listProjects(apiKey: string): Promise<ProjectOut[]> {
@@ -220,20 +242,198 @@ export function getProjectStats(apiKey: string, projectId: string): Promise<Proj
   });
 }
 
-export function getProjectTickets(apiKey: string, projectId: string): Promise<Ticket[]> {
-  if (isLocalMode()) return Promise.resolve(getDemoTickets(projectId));
-  return request(`/projects/${projectId}/tickets`, {
+export interface UpdateProjectPayload {
+  name?: string;
+  repo_url?: string;
+  agent_choice?: string;
+  agent_api_key?: string | null;
+  agent_base_url?: string | null;
+  forge_provider?: string;
+  forge_token?: string;
+  issue_prefix?: string | null;
+  states?: Record<string, string>;
+  trigger_states?: string[];
+  models?: Record<string, string>;
+  run_timeout_seconds?: number;
+}
+
+export function updateProject(
+  apiKey: string,
+  projectId: string,
+  payload: UpdateProjectPayload
+): Promise<ProjectOut> {
+  if (isLocalMode()) {
+    const project = getDemoProject(projectId);
+    if (!project) return Promise.reject(new AlexisApiError(404, "Projet introuvable"));
+    return Promise.resolve({ ...project, ...payload } as ProjectOut);
+  }
+  return request(`/projects/${projectId}`, {
+    method: "PATCH",
     headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProject(apiKey: string, projectId: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function purgeProject(apiKey: string, projectId: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}?hard=true`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+// ─── Issues ───────────────────────────────────────────────────────────────────
+
+export function listIssues(apiKey: string, projectId: string): Promise<Issue[]> {
+  if (isLocalMode()) return Promise.resolve(getDemoIssues(projectId));
+  return request(`/projects/${projectId}/issues`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function createIssue(
+  apiKey: string,
+  projectId: string,
+  payload: IssueCreate
+): Promise<Issue> {
+  if (isLocalMode()) {
+    const issues = getDemoIssues(projectId);
+    const number = (issues.reduce((m, i) => Math.max(m, i.number), 0)) + 1;
+    const project = getDemoProject(projectId);
+    const prefix = project?.issue_prefix ?? "PROJ";
+    const issue: Issue = {
+      id: `demo-issue-${Date.now()}`,
+      identifier: `${prefix}-${number}`,
+      number,
+      title: payload.title,
+      description: payload.description ?? "",
+      state: payload.state ?? "Backlog",
+      labels: payload.labels ?? [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      comments: [],
+    };
+    addDemoIssue(projectId, issue);
+    return Promise.resolve(issue);
+  }
+  return request(`/projects/${projectId}/issues`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateIssue(
+  apiKey: string,
+  projectId: string,
+  issueId: string,
+  payload: IssueUpdate
+): Promise<Issue> {
+  if (isLocalMode()) {
+    const updated = updateDemoIssue(projectId, issueId, payload);
+    if (!updated) return Promise.reject(new AlexisApiError(404, "Issue introuvable"));
+    return Promise.resolve(updated);
+  }
+  return request(`/projects/${projectId}/issues/${issueId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteIssue(
+  apiKey: string,
+  projectId: string,
+  issueId: string
+): Promise<void> {
+  if (isLocalMode()) {
+    deleteDemoIssue(projectId, issueId);
+    return Promise.resolve();
+  }
+  return request(`/projects/${projectId}/issues/${issueId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function createIssueComment(
+  apiKey: string,
+  projectId: string,
+  issueId: string,
+  body: string
+): Promise<IssueComment> {
+  if (isLocalMode()) {
+    const comment: IssueComment = {
+      id: `demo-comment-${Date.now()}`,
+      body,
+      author: "user",
+      created_at: new Date().toISOString(),
+    };
+    return Promise.resolve(comment);
+  }
+  return request(`/projects/${projectId}/issues/${issueId}/comments`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ body }),
   });
 }
 
 // ─── Project context (.alexis/project.md) ────────────────────────────────────
 
+export interface RepoSummaryEnqueue {
+  job_id: string;
+}
+
+export interface RepoSummaryResult {
+  has_code: boolean;
+  file_count: number;
+  languages: string[];
+}
+
+export type RepoSummaryJobStatus = "pending" | "done" | "failed";
+
+export interface RepoSummaryStatus {
+  status: RepoSummaryJobStatus;
+  result?: RepoSummaryResult;
+  error?: string;
+}
+
+export function enqueueRepoSummary(apiKey: string, projectId: string): Promise<RepoSummaryEnqueue> {
+  if (isLocalMode()) {
+    return Promise.resolve({ job_id: "demo-job" });
+  }
+  return request(`/projects/${projectId}/context/repo-summary`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getRepoSummaryStatus(
+  apiKey: string,
+  projectId: string,
+  jobId: string
+): Promise<RepoSummaryStatus> {
+  if (isLocalMode()) {
+    return Promise.resolve({ status: "done", result: { has_code: false, file_count: 0, languages: [] } });
+  }
+  return request(`/projects/${projectId}/context/repo-summary/${jobId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 export interface ProjectContextState {
   exists: boolean;
 }
 
-export type ContextGenerationStatus = "in_progress" | "done" | "failed" | null;
+export type ContextGenerationStatus = "in_progress" | "draft_ready" | "done" | "failed" | null;
 
 export interface ProjectContextStatus {
   status: ContextGenerationStatus;
@@ -279,45 +479,68 @@ export function getProjectContextStatus(
   });
 }
 
-// ─── Project management ───────────────────────────────────────────────────────
-
-export interface UpdateProjectPayload {
-  name?: string;
-  repo_url?: string;
-  agent_choice?: string;
-  agent_api_key?: string | null;
-  agent_base_url?: string | null;
-  linear_api_key?: string;
-  linear_team_id?: string;
-  forge_provider?: string;
-  forge_token?: string;
-  states?: Record<string, string>;
-  trigger_states?: string[];
-  models?: Record<string, string>;
-  run_timeout_seconds?: number;
+export interface ProjectContextDraft {
+  content: string;
 }
 
-export function updateProject(
+export function getProjectContextDraft(
   apiKey: string,
-  projectId: string,
-  payload: UpdateProjectPayload
-): Promise<ProjectOut> {
+  projectId: string
+): Promise<ProjectContextDraft> {
   if (isLocalMode()) {
-    const project = getDemoProject(projectId);
-    if (!project) return Promise.reject(new AlexisApiError(404, "Projet introuvable"));
-    return Promise.resolve({ ...project, ...payload } as ProjectOut);
+    return Promise.resolve({
+      content: "# Contexte projet\n\n## Stack technique\n[Projet démo]\n",
+    });
   }
-  return request(`/projects/${projectId}`, {
-    method: "PATCH",
+  return request(`/projects/${projectId}/context/draft`, {
     headers: { Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(payload),
   });
 }
 
-export function deleteProject(apiKey: string, projectId: string): Promise<void> {
-  if (isLocalMode()) return Promise.resolve();
-  return request(`/projects/${projectId}`, {
-    method: "DELETE",
+export function commitProjectContext(
+  apiKey: string,
+  projectId: string,
+  content: string
+): Promise<void> {
+  if (isLocalMode()) {
+    return Promise.resolve();
+  }
+  return request(`/projects/${projectId}/context/commit`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ content }),
+  });
+}
+
+export interface ProjectContextContent {
+  status: "ready" | "loading";
+  content: string | null;
+}
+
+const DEMO_CONTEXT_CONTENT = `# Contexte projet (démo)
+
+## Objectif
+Application de gestion de tickets pour solopreneurs.
+
+## Stack technique
+- Backend : Python / FastAPI
+- Frontend : Next.js / TypeScript
+- Base de données : PostgreSQL
+- Déploiement : Railway
+
+## Contraintes
+- Tests obligatoires avant chaque PR
+- Ne pas modifier les migrations existantes
+`;
+
+export function getProjectContextContent(
+  apiKey: string,
+  projectId: string
+): Promise<ProjectContextContent> {
+  if (isLocalMode()) {
+    return Promise.resolve({ status: "ready", content: DEMO_CONTEXT_CONTENT });
+  }
+  return request(`/projects/${projectId}/context/content`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 }

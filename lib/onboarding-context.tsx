@@ -1,22 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
+// Contexte minimal pour l'onboarding (plus de champs Linear)
 interface OnboardingState {
-  linearApiKey: string | null;
-  linearTeamId: string | null;
-  setLinearApiKey: (key: string) => void;
-  setLinearTeamId: (id: string) => void;
+  // Extensible si besoin de partager de l'état entre les étapes
 }
 
-const OnboardingContext = createContext<OnboardingState | null>(null);
+const OnboardingContext = createContext<OnboardingState | null>({});
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const [linearApiKey, setLinearApiKey] = useState<string | null>(null);
-  const [linearTeamId, setLinearTeamId] = useState<string | null>(null);
-
   return (
-    <OnboardingContext.Provider value={{ linearApiKey, linearTeamId, setLinearApiKey, setLinearTeamId }}>
+    <OnboardingContext.Provider value={{}}>
       {children}
     </OnboardingContext.Provider>
   );

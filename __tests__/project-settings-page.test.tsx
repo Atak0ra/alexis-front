@@ -66,9 +66,9 @@ describe("ProjectSettingsPage", () => {
       expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
     );
 
-    // Trois indicateurs "Clé configurée" (agent, linear, forge)
+    // Deux indicateurs "Clé configurée" (agent + forge — Linear supprimé)
     const indicators = screen.getAllByText("Clé configurée");
-    expect(indicators).toHaveLength(3);
+    expect(indicators).toHaveLength(2);
   });
 
   it("submits only non-empty secrets and all classic fields", async () => {

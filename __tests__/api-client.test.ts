@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   signup,
   login,
-  listLinearTeams,
-  createLinearTeam,
   createProject,
-  listDemoModeProjects,
+  listProjects,
+  createIssue,
+  updateIssue,
+  deleteIssue,
   getProjectContext,
   createProjectContext,
   getProjectContextStatus,
@@ -58,27 +59,6 @@ describe("login", () => {
   });
 });
 
-describe("listLinearTeams", () => {
-  it("sends Bearer header and linear_api_key body", async () => {
-    mockFetchOnce(200, [{ id: "t1", name: "Engineering", key: "ENG" }]);
-    const result = await listLinearTeams("alx_xxx", "lin_api_xxx");
-    expect(result).toEqual([{ id: "t1", name: "Engineering", key: "ENG" }]);
-    const [, options] = (global.fetch as any).mock.calls[0];
-    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
-    expect(JSON.parse(options.body)).toEqual({ linear_api_key: "lin_api_xxx" });
-  });
-});
-
-describe("createLinearTeam", () => {
-  it("sends linear_api_key and name", async () => {
-    mockFetchOnce(201, { id: "t2", name: "Alexis-Engineering", key: "ALE" });
-    const result = await createLinearTeam("alx_xxx", "lin_api_xxx", "Alexis-Engineering");
-    expect(result.id).toBe("t2");
-    const [, options] = (global.fetch as any).mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({ linear_api_key: "lin_api_xxx", name: "Alexis-Engineering" });
-  });
-});
-
 describe("createProject", () => {
   it("posts the full payload with Bearer auth", async () => {
     mockFetchOnce(201, { id: "p1", name: "kara" });
@@ -88,19 +68,81 @@ describe("createProject", () => {
       agent_choice: "claude",
       agent_api_key: null,
       agent_base_url: null,
-      linear_api_key: "lin_api_xxx",
-      linear_team_id: "team-1",
-      forge_provider: "github",
+      forge_provider: "github" as const,
       forge_token: "ghp_xxx",
+      issue_prefix: "KARA",
       states: { dev: "Dev" },
       trigger_states: ["Dev"],
       models: { dev: "claude-sonnet-4-5" },
     };
     const result = await createProject("alx_xxx", payload);
     expect(result.name).toBe("kara");
-    const [, options] = (global.fetch as any).mock.calls[0];
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
     expect(JSON.parse(options.body)).toEqual(payload);
+  });
+});
+
+describe("createIssue", () => {
+  it("posts to /projects/{id}/issues with Bearer auth", async () => {
+    mockFetchOnce(201, {
+      id: "issue-1",
+      identifier: "KARA-1",
+      number: 1,
+      title: "Fix bug",
+      description: "",
+      state: "Backlog",
+      labels: [],
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      comments: [],
+    });
+    const result = await createIssue("alx_xxx", "p1", { title: "Fix bug" });
+    expect(result.identifier).toBe("KARA-1");
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/projects/p1/issues");
+    expect(options.method).toBe("POST");
+    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
+    expect(JSON.parse(options.body)).toEqual({ title: "Fix bug" });
+  });
+});
+
+describe("updateIssue", () => {
+  it("patches state with Bearer auth", async () => {
+    mockFetchOnce(200, {
+      id: "issue-1",
+      identifier: "KARA-1",
+      number: 1,
+      title: "Fix bug",
+      description: "",
+      state: "Todo",
+      labels: [],
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      comments: [],
+    });
+    const result = await updateIssue("alx_xxx", "p1", "issue-1", { state: "Todo" });
+    expect(result.state).toBe("Todo");
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/projects/p1/issues/issue-1");
+    expect(options.method).toBe("PATCH");
+    expect(JSON.parse(options.body)).toEqual({ state: "Todo" });
+  });
+});
+
+describe("deleteIssue", () => {
+  it("sends DELETE with Bearer auth", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      statusText: "",
+      json: async () => ({}),
+    } as Response);
+    await deleteIssue("alx_xxx", "p1", "issue-1");
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/projects/p1/issues/issue-1");
+    expect(options.method).toBe("DELETE");
+    expect(options.headers.Authorization).toBe("Bearer alx_xxx");
   });
 });
 
@@ -109,7 +151,7 @@ describe("getProjectContext", () => {
     mockFetchOnce(200, { exists: true });
     const result = await getProjectContext("alx_xxx", "p1");
     expect(result).toEqual({ exists: true });
-    const [url, options] = (global.fetch as any).mock.calls[0];
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/projects/p1/context");
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
   });
@@ -119,7 +161,7 @@ describe("createProjectContext", () => {
   it("posts brief with Bearer auth and accepts 202", async () => {
     mockFetchOnce(202, {});
     await createProjectContext("alx_xxx", "p1", "API FastAPI + Next.js");
-    const [url, options] = (global.fetch as any).mock.calls[0];
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/projects/p1/context");
     expect(options.method).toBe("POST");
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
@@ -132,7 +174,7 @@ describe("getProjectContextStatus", () => {
     mockFetchOnce(200, { status: "done" });
     const result = await getProjectContextStatus("alx_xxx", "p1");
     expect(result).toEqual({ status: "done" });
-    const [url, options] = (global.fetch as any).mock.calls[0];
+    const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/projects/p1/context/status");
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
   });
@@ -154,24 +196,17 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     await expect(login("demo", "wrong")).rejects.toThrow(AlexisApiError);
   });
 
-  it("listLinearTeams returns fake teams without calling fetch", async () => {
-    const teams = await listLinearTeams("demo-api-key", "lin_api_xxx");
-    expect(teams.length).toBeGreaterThan(0);
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it("createProject returns a fake project and appends it to the demo project list", async () => {
-    const before = await listDemoModeProjects();
+  it("createProject returns a fake project without calling fetch", async () => {
+    const before = await listProjects("demo-api-key");
     const result = await createProject("demo-api-key", {
       name: "new-demo-project",
       repo_url: "git@github.com:acme/new-demo-project.git",
       agent_choice: "claude",
       agent_api_key: null,
       agent_base_url: null,
-      linear_api_key: "lin_api_xxx",
-      linear_team_id: "team-demo-eng",
       forge_provider: "github",
       forge_token: "ghp_xxx",
+      issue_prefix: "NEW",
       states: { dev: "Dev" },
       trigger_states: ["Dev"],
       models: { dev: "claude-sonnet-4-5" },
@@ -179,8 +214,30 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     expect(result.name).toBe("new-demo-project");
     expect(global.fetch).not.toHaveBeenCalled();
 
-    const after = await listDemoModeProjects();
+    const after = await listProjects("demo-api-key");
     expect(after.length).toBe(before.length + 1);
     expect(after.some((p) => p.id === result.id)).toBe(true);
+  });
+
+  it("createIssue returns a fake issue without calling fetch", async () => {
+    const result = await createIssue("demo-api-key", "demo-project-1", {
+      title: "Test issue",
+      description: "Test description",
+    });
+    expect(result.title).toBe("Test issue");
+    expect(result.state).toBe("Backlog");
+    expect(result.identifier).toMatch(/^KARA-\d+$/);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("updateIssue updates state in demo mode without calling fetch", async () => {
+    const created = await createIssue("demo-api-key", "demo-project-1", {
+      title: "Issue to update",
+    });
+    const updated = await updateIssue("demo-api-key", "demo-project-1", created.id, {
+      state: "Todo",
+    });
+    expect(updated.state).toBe("Todo");
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

@@ -17,7 +17,7 @@ const monoFont = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Alexis — Développement automatisé",
-  description: "Vos tickets Linear pilotent un agent de code, du ticket au PR.",
+  description: "Vos tickets pilotent un agent de code, du ticket au PR.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

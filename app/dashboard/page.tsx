@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/onboarding/team"
+          href="/projects/new/repo"
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -276,11 +276,11 @@ export default function DashboardPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-foreground">Aucun projet connecté</h3>
             <p className="mt-2 max-w-sm text-sm text-foreground-muted">
-              Connectez un dépôt et une équipe Linear pour qu&apos;Alexis commence à traiter vos tickets automatiquement.
+              Connectez un dépôt pour qu&apos;Alexis commence à traiter vos tickets automatiquement.
             </p>
             <Link
-              href="/onboarding/team"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
+            href="/projects/new/repo"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

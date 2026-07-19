@@ -19,9 +19,8 @@ beforeEach(() => {
 });
 
 describe("LoginPage", () => {
-  it("logs in and redirects to /onboarding/team when the account has no projects yet", async () => {
+  it("logs in and redirects to /dashboard", async () => {
     vi.spyOn(apiClient, "login").mockResolvedValue({ id: "abc", api_key: "alx_xxx" });
-    vi.spyOn(apiClient, "listProjects").mockResolvedValue([]);
     const setApiKeySpy = vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
     render(<LoginPage />);
@@ -29,29 +28,12 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/onboarding/team"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
     expect(setApiKeySpy).toHaveBeenCalledWith("alx_xxx");
   });
 
-  it("signs up and redirects to /dashboard when the account already has projects", async () => {
+  it("signs up and redirects to /dashboard", async () => {
     vi.spyOn(apiClient, "signup").mockResolvedValue({ id: "abc", api_key: "alx_yyy" });
-    vi.spyOn(apiClient, "listProjects").mockResolvedValue([
-      {
-        id: "p1",
-        name: "kara",
-        repo_url: "git@github.com:acme/kara.git",
-        agent_choice: "claude",
-        agent_base_url: null,
-        linear_team_id: "team-1",
-        forge_provider: "github",
-        states: {},
-        trigger_states: [],
-        models: {},
-        run_timeout_seconds: 1800,
-        is_active: true,
-        created_at: "2026-07-13T00:00:00Z",
-      },
-    ]);
     vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
     render(<LoginPage />);

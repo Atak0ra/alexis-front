@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import OnboardingLayout from "@/app/onboarding/layout";
+import NewProjectLayout from "@/app/projects/new/layout";
 import * as session from "@/lib/session";
 
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+  usePathname: () => "/projects/new/repo",
 }));
 
 beforeEach(() => {
@@ -13,14 +14,14 @@ beforeEach(() => {
   replaceMock.mockClear();
 });
 
-describe("OnboardingLayout", () => {
+describe("NewProjectLayout", () => {
   it("redirects to /login when no api key is stored", async () => {
     vi.spyOn(session, "getApiKey").mockReturnValue(null);
 
     render(
-      <OnboardingLayout>
+      <NewProjectLayout>
         <div>child</div>
-      </OnboardingLayout>
+      </NewProjectLayout>
     );
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/login"));
@@ -31,12 +32,40 @@ describe("OnboardingLayout", () => {
     vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
 
     render(
-      <OnboardingLayout>
+      <NewProjectLayout>
         <div>child</div>
-      </OnboardingLayout>
+      </NewProjectLayout>
     );
 
     expect(await screen.findByText("child")).toBeInTheDocument();
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("renders the AppHeader (logo Alexis) when authenticated", async () => {
+    vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+
+    render(
+      <NewProjectLayout>
+        <div>child</div>
+      </NewProjectLayout>
+    );
+
+    await screen.findByText("child");
+    // AppHeader renders the "Alexis" wordmark
+    expect(screen.getByText("Alexis")).toBeInTheDocument();
+  });
+
+  it("renders the vertical stepper rail on the left when authenticated", async () => {
+    vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+
+    render(
+      <NewProjectLayout>
+        <div>child</div>
+      </NewProjectLayout>
+    );
+
+    await screen.findByText("child");
+    // The stepper labels should be present (rendered in the aside rail)
+    expect(screen.getAllByText("Dépôt").length).toBeGreaterThan(0);
   });
 });

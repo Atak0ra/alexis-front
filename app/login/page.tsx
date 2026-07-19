@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signup, login, listProjects, AlexisApiError } from "@/lib/api-client";
+import { signup, login, AlexisApiError } from "@/lib/api-client";
 import { setApiKey, setKeyId } from "@/lib/session";
 import { isLocalMode } from "@/lib/demo-data";
 
@@ -26,8 +26,7 @@ function LoginForm() {
       const result = mode === "login" ? await login(email, password) : await signup(email, password);
       setApiKey(result.api_key);
       setKeyId(result.id);
-      const projects = await listProjects(result.api_key);
-      router.push(projects.length > 0 ? "/dashboard" : "/onboarding/team");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
@@ -53,7 +52,7 @@ function LoginForm() {
             &ldquo;Du ticket à la PR, sans intervention manuelle.&rdquo;
           </blockquote>
           <p className="mt-4 text-sm text-white/50">
-            Connectez Linear et GitHub/GitLab. Alexis s&apos;occupe du reste.
+            Connectez votre repo GitHub/GitLab. Alexis s&apos;occupe du reste.
           </p>
 
           {/* Mini stats */}

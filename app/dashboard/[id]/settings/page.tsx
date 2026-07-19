@@ -7,12 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getProject, updateProject, AlexisApiError, type ProjectOut } from "@/lib/api-client";
+import {
+  getProject,
+  updateProject,
+  getProjectContext,
+  purgeProject,
+  AlexisApiError,
+  type ProjectOut,
+} from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
+import ProjectContextStep from "@/components/project-context-step";
 
 // ─── Secret field ─────────────────────────────────────────────────────────────
-// Les secrets ne sont jamais renvoyés par l'API. On affiche un indicateur
-// "Clé configurée" et un champ vide = "ne pas modifier".
 
 function SecretField({
   id,
@@ -64,20 +70,28 @@ export default function ProjectSettingsPage() {
   const [project, setProject] = useState<ProjectOut | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Champs classiques (préremplis)
+  // Champs classiques
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [agentChoice, setAgentChoice] = useState("claude");
   const [forgeProvider, setForgeProvider] = useState("github");
 
-  // Secrets (write-only — jamais préremplis)
+  // Secrets (write-only)
   const [agentApiKey, setAgentApiKey] = useState("");
-  const [linearApiKey, setLinearApiKey] = useState("");
   const [forgeToken, setForgeToken] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Contexte
+  const [contextExists, setContextExists] = useState<boolean | null>(null);
+  const [showContextStep, setShowContextStep] = useState(false);
+
+  // Danger Zone
+  const [purgeConfirmName, setPurgeConfirmName] = useState("");
+  const [purging, setPurging] = useState(false);
+  const [purgeError, setPurgeError] = useState<string | null>(null);
 
   useEffect(() => {
     const apiKey = getApiKey();
@@ -93,6 +107,10 @@ export default function ProjectSettingsPage() {
       .catch((err) =>
         setLoadError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue")
       );
+
+    getProjectContext(apiKey, projectId)
+      .then(({ exists }) => setContextExists(exists))
+      .catch(() => setContextExists(null));
   }, [projectId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -100,32 +118,40 @@ export default function ProjectSettingsPage() {
     setSaveError(null);
     setSaveSuccess(false);
     setSaving(true);
-
     try {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Session absente");
-
-      // On n'envoie les secrets que s'ils ont été remplis
       const payload: Parameters<typeof updateProject>[2] = {
         name,
         repo_url: repoUrl,
         agent_choice: agentChoice,
         forge_provider: forgeProvider,
         ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
-        ...(linearApiKey ? { linear_api_key: linearApiKey } : {}),
         ...(forgeToken ? { forge_token: forgeToken } : {}),
       };
-
       await updateProject(apiKey, projectId, payload);
       setSaveSuccess(true);
-      // Réinitialiser les champs secrets après sauvegarde
       setAgentApiKey("");
-      setLinearApiKey("");
       setForgeToken("");
     } catch (err) {
       setSaveError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePurge() {
+    if (!project || purgeConfirmName !== project.name) return;
+    setPurgeError(null);
+    setPurging(true);
+    try {
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("Session absente");
+      await purgeProject(apiKey, projectId);
+      router.push("/dashboard");
+    } catch (err) {
+      setPurgeError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setPurging(false);
     }
   }
 
@@ -170,134 +196,194 @@ export default function ProjectSettingsPage() {
               ))}
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ── Infos générales ── */}
-              <section>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Général
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nom du projet</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
+            <div className="space-y-8">
+              {/* ── Settings form ── */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Général */}
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                    Général
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Nom du projet</Label>
+                      <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="repo-url">URL du repo</Label>
+                      <Input id="repo-url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} required />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Agent */}
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                    Agent
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="agent-choice">Agent CLI</Label>
+                      <select
+                        id="agent-choice"
+                        value={agentChoice}
+                        onChange={(e) => setAgentChoice(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      >
+                        <option value="claude">claude</option>
+                        <option value="aider">aider</option>
+                      </select>
+                    </div>
+                    <SecretField
+                      id="agent-api-key"
+                      label="Clé API agent"
+                      placeholder="sk-ant-… ou clé aider"
+                      value={agentApiKey}
+                      onChange={setAgentApiKey}
+                      isConfigured={true}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="repo-url">URL du repo</Label>
-                    <Input
-                      id="repo-url"
-                      value={repoUrl}
-                      onChange={(e) => setRepoUrl(e.target.value)}
-                      required
+                </section>
+
+                {/* Forge */}
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                    Forge
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="forge-provider">Forge</Label>
+                      <select
+                        id="forge-provider"
+                        value={forgeProvider}
+                        onChange={(e) => setForgeProvider(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      >
+                        <option value="github">github</option>
+                        <option value="gitlab">gitlab</option>
+                      </select>
+                    </div>
+                    <SecretField
+                      id="forge-token"
+                      label="Token forge"
+                      placeholder="ghp_… ou glpat-…"
+                      value={forgeToken}
+                      onChange={setForgeToken}
+                      isConfigured={true}
                     />
                   </div>
-                </div>
-              </section>
+                </section>
 
-              {/* ── Agent ── */}
-              <section>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Agent
+                {/* Feedback */}
+                {saveError && (
+                  <p className="rounded-lg border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger">
+                    {saveError}
+                  </p>
+                )}
+                {saveSuccess && (
+                  <p className="rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm text-success font-medium">
+                    ✓ Paramètres enregistrés
+                  </p>
+                )}
+
+                {/* Contexte du projet */}
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                    Contexte du projet
+                  </h3>
+                  {showContextStep ? (
+                    <ProjectContextStep
+                      projectId={projectId}
+                      onDone={() => { setShowContextStep(false); setContextExists(true); }}
+                      onSkip={() => setShowContextStep(false)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-surface-raised px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        {contextExists === true && (
+                          <svg className="h-4 w-4 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        {contextExists === false && (
+                          <svg className="h-4 w-4 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            <code className="font-mono">.alexis/project.md</code>
+                          </p>
+                          <p className="mt-0.5 text-xs text-foreground-muted">
+                            {contextExists === null && "Vérification…"}
+                            {contextExists === true && "Fichier présent — Alexis l'utilise à chaque run."}
+                            {contextExists === false && "Absent — Alexis travaillera mieux avec ce fichier."}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setShowContextStep(true)}
+                        disabled={contextExists === null}
+                      >
+                        {contextExists === true ? "Régénérer" : "Générer"}
+                      </Button>
+                    </div>
+                  )}
+                </section>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-2">
+                  <Link
+                    href={`/dashboard/${projectId}`}
+                    className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+                  >
+                    ← Retour au projet
+                  </Link>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Enregistrement…" : "Enregistrer"}
+                  </Button>
+                </div>
+              </form>
+
+              {/* ── Danger Zone ── */}
+              <div className="rounded-xl border border-danger-border bg-danger-bg p-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-danger uppercase tracking-wider">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Zone de danger
                 </h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="agent-choice">Agent CLI</Label>
-                    <select
-                      id="agent-choice"
-                      value={agentChoice}
-                      onChange={(e) => setAgentChoice(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                    >
-                      <option value="claude">claude</option>
-                      <option value="aider">aider</option>
-                    </select>
-                  </div>
-                  <SecretField
-                    id="agent-api-key"
-                    label="Clé API agent"
-                    placeholder="sk-ant-… ou clé aider"
-                    value={agentApiKey}
-                    onChange={setAgentApiKey}
-                    isConfigured={true}
-                  />
-                </div>
-              </section>
-
-              {/* ── Linear ── */}
-              <section>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Linear
-                </h3>
-                <div className="space-y-4">
-                  <SecretField
-                    id="linear-api-key"
-                    label="Clé API Linear"
-                    placeholder="lin_api_…"
-                    value={linearApiKey}
-                    onChange={setLinearApiKey}
-                    isConfigured={true}
-                  />
-                </div>
-              </section>
-
-              {/* ── Forge ── */}
-              <section>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Forge
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="forge-provider">Forge</Label>
-                    <select
-                      id="forge-provider"
-                      value={forgeProvider}
-                      onChange={(e) => setForgeProvider(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                    >
-                      <option value="github">github</option>
-                      <option value="gitlab">gitlab</option>
-                    </select>
-                  </div>
-                  <SecretField
-                    id="forge-token"
-                    label="Token forge"
-                    placeholder="ghp_… ou glpat-…"
-                    value={forgeToken}
-                    onChange={setForgeToken}
-                    isConfigured={true}
-                  />
-                </div>
-              </section>
-
-              {/* ── Feedback ── */}
-              {saveError && (
-                <p className="rounded-lg border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger">
-                  {saveError}
+                <p className="mt-2 text-sm text-danger/80">
+                  La suppression est <strong>irréversible</strong>. Tous les tickets, l&apos;historique des runs et les clés API chiffrées seront définitivement supprimés. Le repo cloné (volume Docker) sera également effacé.
                 </p>
-              )}
-              {saveSuccess && (
-                <p className="rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm text-success font-medium">
-                  ✓ Paramètres enregistrés
-                </p>
-              )}
 
-              {/* ── Actions ── */}
-              <div className="flex items-center justify-between pt-2">
-                <Link
-                  href={`/dashboard/${projectId}`}
-                  className="text-sm text-foreground-muted hover:text-foreground transition-colors"
-                >
-                  ← Retour au projet
-                </Link>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Enregistrement…" : "Enregistrer"}
-                </Button>
+                <div className="mt-4 space-y-3">
+                  <label className="block text-sm font-medium text-danger">
+                    Tapez <strong className="font-mono">{project.name}</strong> pour confirmer
+                  </label>
+                  <input
+                    type="text"
+                    value={purgeConfirmName}
+                    onChange={(e) => { setPurgeConfirmName(e.target.value); setPurgeError(null); }}
+                    placeholder={project.name}
+                    className="w-full rounded-xl border border-danger-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:outline-none focus:ring-2 focus:ring-danger/30"
+                  />
+                  {purgeError && (
+                    <p className="text-xs text-danger">{purgeError}</p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={purgeConfirmName !== project.name || purging}
+                    onClick={handlePurge}
+                    className="rounded-xl bg-danger px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-danger/90 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    {purging ? "Suppression…" : "Supprimer définitivement ce projet"}
+                  </button>
+                </div>
               </div>
-            </form>
+            </div>
           )}
         </CardContent>
       </Card>
