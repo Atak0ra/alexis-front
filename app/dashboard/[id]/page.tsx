@@ -276,6 +276,14 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
+          {/* ── Retour aux projets ── */}
+          <Link
+            href="/dashboard"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
+          >
+            ← Retour aux projets
+          </Link>
+
           {/* ── Project header ── */}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
