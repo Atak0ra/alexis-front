@@ -15,16 +15,15 @@ const DOT_CLASSES: Record<StepStatus, string> = {
 
 function badgeClasses(step: StepState): string {
   if (step.status === "attention") return "bg-warning/15 text-warning";
-  if (step.status === "done") return "bg-brand text-white";
   switch (step.id) {
     case "requested":
       return "bg-surface-sunken text-foreground-muted";
     case "analysis":
-      return "bg-brand/10 text-brand";
+      return "bg-blue-500/10 text-blue-600";
     case "development":
-      return "bg-brand/20 text-brand";
+      return "bg-brand/15 text-brand";
     case "done":
-      return "bg-brand/30 text-brand";
+      return "bg-success-bg text-success";
   }
 }
 
