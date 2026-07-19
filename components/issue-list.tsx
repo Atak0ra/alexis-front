@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { getIssueSteps, type StepStatus } from "@/lib/issue-steps";
+import { getIssueSteps, type StepState, type StepStatus } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
 import type { Issue } from "@/lib/api-client";
 
@@ -13,12 +13,20 @@ const DOT_CLASSES: Record<StepStatus, string> = {
   upcoming: "bg-surface-sunken border border-border-strong",
 };
 
-const BADGE_CLASSES: Record<StepStatus, string> = {
-  done: "bg-brand/15 text-brand",
-  current: "bg-brand/15 text-brand",
-  attention: "bg-warning/15 text-warning",
-  upcoming: "bg-surface-sunken text-foreground-muted",
-};
+function badgeClasses(step: StepState): string {
+  if (step.status === "attention") return "bg-warning/15 text-warning";
+  if (step.status === "done") return "bg-brand text-white";
+  switch (step.id) {
+    case "requested":
+      return "bg-surface-sunken text-foreground-muted";
+    case "analysis":
+      return "bg-brand/10 text-brand";
+    case "development":
+      return "bg-brand/20 text-brand";
+    case "done":
+      return "bg-brand/30 text-brand";
+  }
+}
 
 function relativeDate(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -80,7 +88,7 @@ export default function IssueList({ issues, states, projectId }: IssueListProps)
             <span
               className={cn(
                 "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-300",
-                BADGE_CLASSES[currentStep.status]
+                badgeClasses(currentStep)
               )}
             >
               {currentStep.label}

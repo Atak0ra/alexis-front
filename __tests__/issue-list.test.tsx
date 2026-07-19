@@ -63,4 +63,22 @@ describe("IssueList", () => {
     const badge = screen.getByText("Analyse");
     expect(badge.className).toContain("text-warning");
   });
+
+  it("gives each step badge a visually distinct color", () => {
+    const issues = [
+      makeIssue({ id: "i1", title: "A", state: "Backlog" }),
+      makeIssue({ id: "i2", title: "B", state: "Spec Review" }),
+      makeIssue({ id: "i3", title: "C", state: "Dev" }),
+      makeIssue({ id: "i4", title: "D", state: "Done" }),
+    ];
+    render(<IssueList issues={issues} states={DEFAULT_STATES} projectId="proj-1" />);
+
+    const requested = screen.getByText("Demandé").className;
+    const analysis = screen.getByText("Analyse").className;
+    const development = screen.getByText("En développement").className;
+    const done = screen.getByText("Terminé").className;
+
+    const classes = [requested, analysis, development, done];
+    expect(new Set(classes).size).toBe(4);
+  });
 });

@@ -89,6 +89,35 @@ describe("IssueTimeline", () => {
     expect(screen.getByText("Merci pour le retour")).toBeInTheDocument();
   });
 
+  it("shows the creation date under the requested step and the last-activity date under the active step", () => {
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Dev", created_at: "2026-07-08T09:30:00Z", updated_at: "2026-07-14T16:45:00Z" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onCommentAdded={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Créée le/)).toBeInTheDocument();
+    expect(screen.getByText(/Dernière activité le/)).toBeInTheDocument();
+  });
+
+  it("renders a visible connecting line between non-last steps", () => {
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Backlog" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onCommentAdded={vi.fn()}
+      />
+    );
+    const requestedStep = screen.getByTestId("issue-step-requested");
+    const line = requestedStep.querySelector(".min-h-\\[2rem\\]");
+    expect(line).not.toBeNull();
+  });
+
   it("submits a new comment and calls onCommentAdded", async () => {
     const newComment: apiClient.IssueComment = {
       id: "c2",

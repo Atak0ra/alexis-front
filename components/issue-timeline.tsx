@@ -99,8 +99,8 @@ export default function IssueTimeline({
               {!isLast && (
                 <div
                   className={cn(
-                    "mt-1 w-px flex-1 transition-all duration-300",
-                    step.status === "done" ? "bg-brand" : "bg-border"
+                    "mt-1 min-h-[2rem] w-0.5 flex-1 transition-all duration-300",
+                    step.status === "done" ? "bg-brand" : "bg-border-strong"
                   )}
                 />
               )}
@@ -116,6 +116,12 @@ export default function IssueTimeline({
                 {step.label}
               </p>
 
+              {step.id === "requested" && (
+                <p className="mt-0.5 text-xs text-foreground-subtle">
+                  Créée le {formatDate(issue.created_at)}
+                </p>
+              )}
+
               {isActive && (
                 <div className="mt-3 space-y-4 rounded-xl border border-border bg-surface-raised p-4">
                   {step.status === "attention" && (
@@ -123,6 +129,10 @@ export default function IssueTimeline({
                       Légère itération en cours — Alexis ajuste le travail.
                     </p>
                   )}
+
+                  <p className="text-xs text-foreground-subtle">
+                    Dernière activité le {formatDate(issue.updated_at)}
+                  </p>
 
                   <p className="whitespace-pre-wrap text-sm text-foreground-muted">
                     {issue.description || "Pas de description."}
