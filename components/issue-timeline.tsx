@@ -62,11 +62,10 @@ export default function IssueTimeline({
         const isActive = step.status === "current" || step.status === "attention";
 
         const dotCls = cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
           step.status === "done" && "border-brand bg-brand text-white",
-          step.status === "current" &&
-            "border-brand bg-gradient-to-br from-brand to-brand-muted text-white animate-pulse",
-          step.status === "attention" && "border-warning bg-warning text-white animate-pulse",
+          step.status === "current" && "border-brand bg-brand text-white",
+          step.status === "attention" && "border-warning bg-warning text-white",
           step.status === "upcoming" && "border-border-strong bg-surface-sunken text-foreground-subtle"
         );
 
@@ -80,6 +79,22 @@ export default function IssueTimeline({
             <div className="flex flex-col items-center">
               <div className={dotCls}>
                 <Icon className="h-4 w-4" />
+                {isActive && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
+                    <span
+                      className={cn(
+                        "absolute inline-flex h-full w-full animate-ping rounded-full opacity-60",
+                        step.status === "attention" ? "bg-warning" : "bg-brand"
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "relative inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-surface",
+                        step.status === "attention" ? "bg-warning" : "bg-brand"
+                      )}
+                    />
+                  </span>
+                )}
               </div>
               {!isLast && (
                 <div

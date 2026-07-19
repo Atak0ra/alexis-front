@@ -13,8 +13,8 @@
 
   body {
     height: 100%;
-    background-color: #020617;
-    color: #F8FAFC;
+    background-color: #FAFAF9;
+    color: #18181B;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -28,7 +28,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #334155 transparent;
+    scrollbar-color: #D4D4D8 transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
@@ -37,7 +37,7 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: #334155;
+    background-color: #D4D4D8;
     border-radius: 3px;
   }
 }
