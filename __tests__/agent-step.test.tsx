@@ -17,7 +17,6 @@ const FAKE_PROJECT = {
   repo_url: "https://github.com/acme/kara",
   agent_choice: "claude",
   agent_base_url: null,
-  linear_team_id: null,
   forge_provider: "github",
   states: {},
   trigger_states: [],
@@ -89,11 +88,6 @@ describe("AgentPage (step 2)", () => {
         repo_url: "https://github.com/acme/kara",
         agent_api_key: "sk-ant-xxx",
       })
-    );
-    // Pas de linear_api_key ni linear_team_id dans le payload
-    expect(apiClient.createProject).toHaveBeenCalledWith(
-      "alx_xxx",
-      expect.not.objectContaining({ linear_api_key: expect.anything() })
     );
   });
 

@@ -10,11 +10,6 @@ describe("NewProjectStepper — horizontal (default)", () => {
     expect(screen.getByText("Contexte")).toBeInTheDocument();
   });
 
-  it("does not render the Linear step", () => {
-    render(<NewProjectStepper current={1} />);
-    expect(screen.queryByText("Linear")).not.toBeInTheDocument();
-  });
-
   it("marks the current step with aria-current=step", () => {
     render(<NewProjectStepper current={2} />);
     const circles = screen.getAllByRole("generic").filter(
@@ -40,9 +35,8 @@ describe("NewProjectStepper — vertical", () => {
     expect(screen.getByText("Modèle IA")).toBeInTheDocument();
   });
 
-  it("does not render the Linear step", () => {
+  it("does not render an Équipe step", () => {
     render(<NewProjectStepper current={1} orientation="vertical" />);
-    expect(screen.queryByText("Linear")).not.toBeInTheDocument();
     expect(screen.queryByText("Équipe & clé API")).not.toBeInTheDocument();
   });
 

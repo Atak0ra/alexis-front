@@ -22,7 +22,6 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   repo_url: "https://github.com/acme/kara.git",
   agent_choice: "claude",
   agent_base_url: null,
-  linear_team_id: "team-1",
   forge_provider: "github",
   states: DEFAULT_STATES,
   trigger_states: DEFAULT_TRIGGER_STATES,
@@ -66,7 +65,7 @@ describe("ProjectSettingsPage", () => {
       expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
     );
 
-    // Deux indicateurs "Clé configurée" (agent + forge — Linear supprimé)
+    // Deux indicateurs "Clé configurée" (agent + forge)
     const indicators = screen.getAllByText("Clé configurée");
     expect(indicators).toHaveLength(2);
   });
@@ -90,7 +89,7 @@ describe("ProjectSettingsPage", () => {
     fireEvent.change(screen.getByLabelText("Clé API agent"), {
       target: { value: "sk-ant-new-key" },
     });
-    // Laisser linear_api_key et forge_token vides
+    // Laisser forge_token vide
 
     fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
 
@@ -101,7 +100,7 @@ describe("ProjectSettingsPage", () => {
         agent_choice: "claude",
         forge_provider: "github",
         agent_api_key: "sk-ant-new-key",
-        // linear_api_key et forge_token absents car vides
+        // forge_token absent car vide
       })
     );
   });

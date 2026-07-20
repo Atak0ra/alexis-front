@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-// Contexte minimal pour l'onboarding (plus de champs Linear)
+// Contexte minimal pour l'onboarding
 interface OnboardingState {
   // Extensible si besoin de partager de l'état entre les étapes
 }
