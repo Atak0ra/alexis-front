@@ -71,7 +71,7 @@ describe("RepoPage (step 1)", () => {
     expect(screen.getByRole("button", { name: /suivant/i })).toBeDisabled();
   });
 
-  it("navigates to /projects/new/team on Suivant click after validation", async () => {
+  it("navigates to /projects/new/agent on Suivant click after validation", async () => {
     vi.spyOn(apiClient, "validateForge").mockResolvedValue({ valid: true, account: "octocat" });
 
     renderRepoPage();
@@ -82,7 +82,34 @@ describe("RepoPage (step 1)", () => {
     await screen.findByText(/Connecté ✓/);
 
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/team"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
+  });
+
+  it("toggling 'no repo yet' hides repo/forge fields and requires a GitHub username instead", () => {
+    renderRepoPage();
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+
+    const suivant = screen.getByRole("button", { name: /suivant/i });
+    expect(suivant).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText(/je n'ai pas encore de dépôt/i));
+
+    expect(screen.queryByLabelText("URL du dépôt")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/token github/i)).not.toBeInTheDocument();
+    expect(suivant).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+    expect(suivant).not.toBeDisabled();
+  });
+
+  it("navigates to /projects/new/agent when submitting the hosted flow", async () => {
+    renderRepoPage();
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+    fireEvent.click(screen.getByLabelText(/je n'ai pas encore de dépôt/i));
+    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
   });
 
   it("resets validation state when token changes", async () => {

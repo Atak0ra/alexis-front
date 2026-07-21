@@ -5,9 +5,11 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 export interface NewProjectDraft {
   // Step 1 — Repo & Forge
   name: string;
+  hosted: boolean;
   repoUrl: string;
   forgeProvider: string;
   forgeToken: string;
+  githubUsername: string;
   issuePrefix: string;
   // Step 2 — Agent
   agentChoice: string;
@@ -17,9 +19,11 @@ export interface NewProjectDraft {
 
 interface NewProjectState extends NewProjectDraft {
   setName: (v: string) => void;
+  setHosted: (v: boolean) => void;
   setRepoUrl: (v: string) => void;
   setForgeProvider: (v: string) => void;
   setForgeToken: (v: string) => void;
+  setGithubUsername: (v: string) => void;
   setIssuePrefix: (v: string) => void;
   setAgentChoice: (v: string) => void;
   setAgentApiKey: (v: string) => void;
@@ -29,9 +33,11 @@ interface NewProjectState extends NewProjectDraft {
 
 const INITIAL_DRAFT: NewProjectDraft = {
   name: "",
+  hosted: false,
   repoUrl: "",
   forgeProvider: "github",
   forgeToken: "",
+  githubUsername: "",
   issuePrefix: "",
   agentChoice: "claude",
   agentApiKey: "",
@@ -44,9 +50,11 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<NewProjectDraft>(INITIAL_DRAFT);
 
   const setName = useCallback((v: string) => setDraft((d) => ({ ...d, name: v })), []);
+  const setHosted = useCallback((v: boolean) => setDraft((d) => ({ ...d, hosted: v })), []);
   const setRepoUrl = useCallback((v: string) => setDraft((d) => ({ ...d, repoUrl: v })), []);
   const setForgeProvider = useCallback((v: string) => setDraft((d) => ({ ...d, forgeProvider: v })), []);
   const setForgeToken = useCallback((v: string) => setDraft((d) => ({ ...d, forgeToken: v })), []);
+  const setGithubUsername = useCallback((v: string) => setDraft((d) => ({ ...d, githubUsername: v })), []);
   const setIssuePrefix = useCallback((v: string) => setDraft((d) => ({ ...d, issuePrefix: v })), []);
   const setAgentChoice = useCallback((v: string) => setDraft((d) => ({ ...d, agentChoice: v })), []);
   const setAgentApiKey = useCallback((v: string) => setDraft((d) => ({ ...d, agentApiKey: v })), []);
@@ -58,9 +66,11 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
       value={{
         ...draft,
         setName,
+        setHosted,
         setRepoUrl,
         setForgeProvider,
         setForgeToken,
+        setGithubUsername,
         setIssuePrefix,
         setAgentChoice,
         setAgentApiKey,

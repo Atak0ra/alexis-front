@@ -17,6 +17,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
   name: "Kara",
   repo_url: "https://github.com/acme/kara.git",
+  is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
   issue_prefix: null,

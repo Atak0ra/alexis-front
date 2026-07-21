@@ -20,6 +20,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-123",
   name: "Kara",
   repo_url: "https://github.com/acme/kara.git",
+  is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
   forge_provider: "github",
@@ -29,6 +30,12 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   run_timeout_seconds: 1800,
   is_active: true,
   created_at: "2026-07-15T00:00:00Z",
+};
+
+const FAKE_HOSTED_PROJECT: apiClient.ProjectOut = {
+  ...FAKE_PROJECT,
+  repo_url: "https://github.com/compeel-alexis/acme-kara-abc123.git",
+  is_hosted: true,
 };
 
 beforeEach(() => {
@@ -171,5 +178,54 @@ describe("ProjectSettingsPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Données invalides")).toBeInTheDocument()
     );
+  });
+
+  it("shows no hosted badge or transfer section for a BYO project", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
+    );
+
+    expect(screen.queryByText("Hébergé par Alexis")).not.toBeInTheDocument();
+    expect(screen.queryByText("Repo hébergé")).not.toBeInTheDocument();
+  });
+
+  it("shows the hosted badge and a read-only repo URL for a hosted project", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_HOSTED_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Hébergé par Alexis")).toBeInTheDocument()
+    );
+    expect(screen.getByLabelText("URL du repo")).toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Transférer mon repo" })).toBeInTheDocument();
+  });
+
+  it("transfers the hosted repo after confirmation", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_HOSTED_PROJECT);
+    const transferSpy = vi
+      .spyOn(apiClient, "transferRepo")
+      .mockResolvedValue({ new_owner: "octocat" });
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Transférer mon repo" })).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Transférer mon repo" }));
+
+    fireEvent.change(screen.getByLabelText(/compte github cible/i), {
+      target: { value: "octocat" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmer le transfert" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Transfert lancé vers/)).toBeInTheDocument()
+    );
+    expect(transferSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", { new_owner: "octocat" });
   });
 });

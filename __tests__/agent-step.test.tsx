@@ -15,6 +15,7 @@ const FAKE_PROJECT = {
   id: "proj-1",
   name: "kara",
   repo_url: "https://github.com/acme/kara",
+  is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
   forge_provider: "github",
@@ -119,6 +120,45 @@ describe("AgentPage (step 2)", () => {
     // Should show the context step component (ProjectContextStep)
     await waitFor(() =>
       expect(screen.getByText(/Analyse du repo en cours|Décris ton nouveau projet|Contexte du projet/)).toBeInTheDocument()
+    );
+  });
+
+  it("submits hosted payload with repo_url/forge_token null and github_username set", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function FilledHostedAgentPage() {
+      const ctx = useNewProject();
+      if (!ctx.name) {
+        ctx.setName("kara");
+        ctx.setHosted(true);
+        ctx.setGithubUsername("octocat");
+      }
+      return <AgentPage />;
+    }
+
+    render(
+      <Provider>
+        <FilledHostedAgentPage />
+      </Provider>
+    );
+
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(apiClient.createProject).toHaveBeenCalledWith(
+      "alx_xxx",
+      expect.objectContaining({
+        name: "kara",
+        repo_url: null,
+        forge_token: null,
+        forge_provider: "github",
+        hosted: true,
+        github_username: "octocat",
+      })
     );
   });
 

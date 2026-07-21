@@ -12,6 +12,7 @@ import {
   updateProject,
   getProjectContext,
   purgeProject,
+  transferRepo,
   AlexisApiError,
   type ProjectOut,
 } from "@/lib/api-client";
@@ -93,6 +94,13 @@ export default function ProjectSettingsPage() {
   const [purging, setPurging] = useState(false);
   const [purgeError, setPurgeError] = useState<string | null>(null);
 
+  // Repo hébergé — transfert
+  const [transferConfirming, setTransferConfirming] = useState(false);
+  const [transferOwner, setTransferOwner] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferredTo, setTransferredTo] = useState<string | null>(null);
+
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
@@ -100,7 +108,7 @@ export default function ProjectSettingsPage() {
       .then((p) => {
         setProject(p);
         setName(p.name);
-        setRepoUrl(p.repo_url);
+        setRepoUrl(p.repo_url ?? "");
         setAgentChoice(p.agent_choice);
         setForgeProvider(p.forge_provider);
       })
@@ -152,6 +160,24 @@ export default function ProjectSettingsPage() {
     } catch (err) {
       setPurgeError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
       setPurging(false);
+    }
+  }
+
+  async function handleTransferRepo() {
+    setTransferError(null);
+    setTransferring(true);
+    try {
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("Session absente");
+      const result = await transferRepo(apiKey, projectId, {
+        ...(transferOwner.trim() ? { new_owner: transferOwner.trim() } : {}),
+      });
+      setTransferredTo(result.new_owner);
+      setTransferConfirming(false);
+    } catch (err) {
+      setTransferError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    } finally {
+      setTransferring(false);
     }
   }
 
@@ -210,11 +236,79 @@ export default function ProjectSettingsPage() {
                       <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
                     <div>
-                      <Label htmlFor="repo-url">URL du repo</Label>
-                      <Input id="repo-url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} required />
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="repo-url">URL du repo</Label>
+                        {project.is_hosted && (
+                          <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs font-medium text-brand">
+                            Hébergé par Alexis
+                          </span>
+                        )}
+                      </div>
+                      <Input
+                        id="repo-url"
+                        value={repoUrl}
+                        onChange={(e) => setRepoUrl(e.target.value)}
+                        readOnly={project.is_hosted}
+                        required
+                      />
                     </div>
                   </div>
                 </section>
+
+                {project.is_hosted && (
+                  <section>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                      Repo hébergé
+                    </h3>
+                    <div className="rounded-xl border border-border bg-surface-raised p-4 space-y-3">
+                      <p className="text-sm text-foreground-muted">
+                        Ce dépôt vit sous l&apos;organisation GitHub Alexis. Tu peux le transférer vers ton propre
+                        compte GitHub à tout moment — action définitive : Alexis n&apos;aura plus accès au repo une
+                        fois le transfert accepté, et ce projet s&apos;arrêtera (plus de run automatique).
+                      </p>
+
+                      {transferredTo ? (
+                        <p className="text-sm font-medium text-success">
+                          ✓ Transfert lancé vers <span className="font-mono">{transferredTo}</span> — vérifie ton
+                          compte GitHub pour l&apos;accepter.
+                        </p>
+                      ) : transferConfirming ? (
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor="transfer-owner">
+                              Compte GitHub cible{" "}
+                              <span className="text-foreground-subtle font-normal">(optionnel)</span>
+                            </Label>
+                            <Input
+                              id="transfer-owner"
+                              value={transferOwner}
+                              onChange={(e) => setTransferOwner(e.target.value)}
+                              placeholder="ton-pseudo-github"
+                            />
+                          </div>
+                          {transferError && <p className="text-sm text-danger">{transferError}</p>}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={transferring}
+                              onClick={handleTransferRepo}
+                              className="rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-danger/90 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                            >
+                              {transferring ? "Transfert…" : "Confirmer le transfert"}
+                            </button>
+                            <Button type="button" variant="secondary" onClick={() => setTransferConfirming(false)}>
+                              Annuler
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button type="button" variant="secondary" onClick={() => setTransferConfirming(true)}>
+                          Transférer mon repo
+                        </Button>
+                      )}
+                    </div>
+                  </section>
+                )}
 
                 {/* Agent */}
                 <section>

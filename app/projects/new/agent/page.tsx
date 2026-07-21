@@ -15,7 +15,7 @@ import FieldHint from "@/components/field-hint";
 export default function AgentPage() {
   const router = useRouter();
   const {
-    name, repoUrl, forgeProvider, forgeToken, issuePrefix,
+    name, hosted, repoUrl, forgeProvider, forgeToken, githubUsername, issuePrefix,
     agentChoice, setAgentChoice,
     agentApiKey, setAgentApiKey,
     agentBaseUrl, setAgentBaseUrl,
@@ -35,12 +35,14 @@ export default function AgentPage() {
 
       const project = await createProject(apiKey, {
         name,
-        repo_url: repoUrl,
+        repo_url: hosted ? null : repoUrl,
         agent_choice: agentChoice,
         agent_api_key: agentApiKey || null,
         agent_base_url: agentBaseUrl.trim() || null,
-        forge_provider: forgeProvider,
-        forge_token: forgeToken,
+        forge_provider: hosted ? "github" : forgeProvider,
+        forge_token: hosted ? null : forgeToken,
+        hosted,
+        github_username: hosted ? githubUsername : null,
         issue_prefix: issuePrefix.trim() || null,
         states: DEFAULT_STATES,
         trigger_states: DEFAULT_TRIGGER_STATES,

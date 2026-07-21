@@ -68,7 +68,8 @@ export interface ApiKeyOut {
 export interface ProjectOut {
   id: string;
   name: string;
-  repo_url: string;
+  repo_url: string | null;
+  is_hosted: boolean;
   agent_choice: string;
   agent_base_url: string | null;
   issue_prefix: string | null;
@@ -178,12 +179,14 @@ export function validateForge(
 
 export interface CreateProjectPayload {
   name: string;
-  repo_url: string;
+  repo_url: string | null;
   agent_choice: string;
   agent_api_key: string | null;
   agent_base_url: string | null;
   forge_provider: string;
-  forge_token: string;
+  forge_token: string | null;
+  hosted?: boolean;
+  github_username?: string | null;
   issue_prefix?: string | null;
   states: Record<string, string>;
   trigger_states: string[];
@@ -192,10 +195,14 @@ export interface CreateProjectPayload {
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {
   if (isLocalMode()) {
+    const isHosted = payload.hosted ?? false;
     const project: ProjectOut = {
       id: `demo-project-${Date.now()}`,
       name: payload.name,
-      repo_url: payload.repo_url,
+      repo_url: isHosted
+        ? `https://github.com/compeel-alexis/${payload.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-demo`
+        : payload.repo_url,
+      is_hosted: isHosted,
       agent_choice: payload.agent_choice,
       agent_base_url: payload.agent_base_url,
       issue_prefix: payload.issue_prefix ?? null,
@@ -287,6 +294,25 @@ export function purgeProject(apiKey: string, projectId: string): Promise<void> {
   return request(`/projects/${projectId}?hard=true`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export interface TransferRepoResult {
+  new_owner: string;
+}
+
+export function transferRepo(
+  apiKey: string,
+  projectId: string,
+  payload: { new_owner?: string }
+): Promise<TransferRepoResult> {
+  if (isLocalMode()) {
+    return Promise.resolve({ new_owner: payload.new_owner ?? "demo-user" });
+  }
+  return request(`/projects/${projectId}/transfer-repo`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
   });
 }
 
