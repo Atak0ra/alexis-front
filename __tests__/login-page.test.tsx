@@ -40,9 +40,24 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByText("Créer un compte"));
     fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "new@b.com" } });
     fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Confirmer le mot de passe"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("blocks signup and shows an error when passwords don't match", async () => {
+    const signupSpy = vi.spyOn(apiClient, "signup");
+
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText("Créer un compte"));
+    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "new@b.com" } });
+    fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Confirmer le mot de passe"), { target: { value: "different" } });
+    fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
+
+    expect(await screen.findByText("Les mots de passe ne correspondent pas.")).toBeInTheDocument();
+    expect(signupSpy).not.toHaveBeenCalled();
   });
 
   it("displays the backend error detail on failure", async () => {

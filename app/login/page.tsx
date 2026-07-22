@@ -15,12 +15,17 @@ function LoginForm() {
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
     setSubmitting(true);
     try {
       const result = mode === "login" ? await login(email, password) : await signup(email, password);
@@ -145,6 +150,24 @@ function LoginForm() {
               />
             </div>
 
+            {mode === "signup" && !isLocalMode() && (
+              <div>
+                <label htmlFor="confirm-password" className="mb-1.5 block text-sm font-medium text-foreground">
+                  Confirmer le mot de passe
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
+                />
+              </div>
+            )}
+
             {/* Error */}
             {error && (
               <div className="flex items-start gap-2 rounded-xl border border-danger-border bg-danger-bg px-4 py-3">
@@ -185,6 +208,7 @@ function LoginForm() {
               onClick={() => {
                 setMode(mode === "login" ? "signup" : "login");
                 setError(null);
+                setConfirmPassword("");
               }}
               className="font-semibold text-brand hover:text-brand-hover transition-colors"
             >
