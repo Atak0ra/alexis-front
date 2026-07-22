@@ -350,9 +350,11 @@ export function deleteDemoIssue(projectId: string, issueId: string): void {
 }
 
 // ─── Demo project context ─────────────────────────────────────────────────────
+// Modélise le même enchaînement que le backend réel :
+// in_progress (génération) → draft_ready (relecture) → [commit] → done.
 
-/** projectId → "in_progress" | "done" | "failed" | null */
-const demoContextStatus: Record<string, "in_progress" | "done" | "failed" | null> = {};
+/** projectId → "in_progress" | "draft_ready" | "done" | "failed" | null */
+const demoContextStatus: Record<string, "in_progress" | "draft_ready" | "done" | "failed" | null> = {};
 
 /** projectIds that already have a .alexis/project.md (context exists) */
 const demoContextExists = new Set<string>(["demo-project-1", "demo-project-2"]);
@@ -364,13 +366,17 @@ export function getDemoContextExists(projectId: string): boolean {
 export function startDemoContextGeneration(projectId: string): void {
   demoContextStatus[projectId] = "in_progress";
   setTimeout(() => {
-    demoContextStatus[projectId] = "done";
-    demoContextExists.add(projectId);
+    demoContextStatus[projectId] = "draft_ready";
   }, 2500);
+}
+
+export function commitDemoContext(projectId: string): void {
+  demoContextStatus[projectId] = "done";
+  demoContextExists.add(projectId);
 }
 
 export function getDemoContextStatus(
   projectId: string
-): "in_progress" | "done" | "failed" | null {
+): "in_progress" | "draft_ready" | "done" | "failed" | null {
   return demoContextStatus[projectId] ?? null;
 }

@@ -10,6 +10,7 @@ import {
   getProjectContext,
   createProjectContext,
   getProjectContextStatus,
+  commitProjectContext,
   AlexisApiError,
 } from "@/lib/api-client";
 
@@ -239,5 +240,34 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     });
     expect(updated.state).toBe("Todo");
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("context generation reaches draft_ready (not done) so the review phase is reachable", async () => {
+    vi.useFakeTimers();
+    try {
+      await createProjectContext("demo-api-key", "demo-project-new-ctx", "brief");
+      expect((await getProjectContextStatus("demo-api-key", "demo-project-new-ctx")).status).toBe("in_progress");
+
+      await vi.advanceTimersByTimeAsync(2500);
+
+      expect((await getProjectContextStatus("demo-api-key", "demo-project-new-ctx")).status).toBe("draft_ready");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("commitProjectContext moves demo status from draft_ready to done", async () => {
+    vi.useFakeTimers();
+    try {
+      await createProjectContext("demo-api-key", "demo-project-commit-ctx", "brief");
+      await vi.advanceTimersByTimeAsync(2500);
+      expect((await getProjectContextStatus("demo-api-key", "demo-project-commit-ctx")).status).toBe("draft_ready");
+
+      await commitProjectContext("demo-api-key", "demo-project-commit-ctx", "final content");
+
+      expect((await getProjectContextStatus("demo-api-key", "demo-project-commit-ctx")).status).toBe("done");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

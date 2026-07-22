@@ -9,6 +9,7 @@ import {
   deleteDemoIssue,
   getDemoContextExists,
   startDemoContextGeneration,
+  commitDemoContext,
   getDemoContextStatus,
   isLocalMode,
   listDemoProjects,
@@ -529,6 +530,7 @@ export function commitProjectContext(
   content: string
 ): Promise<void> {
   if (isLocalMode()) {
+    commitDemoContext(projectId);
     return Promise.resolve();
   }
   return request(`/projects/${projectId}/context/commit`, {
