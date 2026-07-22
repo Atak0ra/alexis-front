@@ -92,7 +92,7 @@ describe("AgentPage (step 2)", () => {
     );
   });
 
-  it("shows the context step when context does not exist (exists=false)", async () => {
+  it("navigates to /projects/new/context?projectId=... when context does not exist (exists=false)", async () => {
     vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: false });
 
@@ -117,9 +117,8 @@ describe("AgentPage (step 2)", () => {
     fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    // Should show the context step component (ProjectContextStep)
     await waitFor(() =>
-      expect(screen.getByText(/Analyse du repo en cours|Décris ton nouveau projet|Contexte du projet/)).toBeInTheDocument()
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
     );
   });
 

@@ -9,7 +9,6 @@ import { createProject, getProjectContext, AlexisApiError } from "@/lib/api-clie
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
-import ProjectContextStep from "@/components/project-context-step";
 import FieldHint from "@/components/field-hint";
 
 export default function AgentPage() {
@@ -23,7 +22,6 @@ export default function AgentPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [contextProjectId, setContextProjectId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,17 +51,13 @@ export default function AgentPage() {
       if (exists) {
         router.push("/dashboard");
       } else {
-        setContextProjectId(project.id);
+        router.push(`/projects/new/context?projectId=${project.id}`);
       }
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (contextProjectId) {
-    return <ProjectContextStep projectId={contextProjectId} />;
   }
 
   return (
