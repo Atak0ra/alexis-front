@@ -7,9 +7,10 @@ import { NewProjectProvider } from "@/lib/new-project-context";
 import { AppHeader } from "@/components/app-header";
 import NewProjectStepper from "@/components/new-project-stepper";
 
-function pathToStep(pathname: string): 1 | 2 | 3 {
-  if (pathname.includes("/agent")) return 2;
-  if (pathname.includes("/context")) return 3;
+function pathToStep(pathname: string): 1 | 2 | 3 | 4 {
+  if (pathname.includes("/repo")) return 2;
+  if (pathname.includes("/agent")) return 3;
+  if (pathname.includes("/context")) return 4;
   return 1;
 }
 

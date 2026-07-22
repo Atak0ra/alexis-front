@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/projects/new/repo"
+          href="/projects/new/choice"
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -279,7 +279,7 @@ export default function DashboardPage() {
               Connectez un dépôt pour qu&apos;Alexis commence à traiter vos tickets automatiquement.
             </p>
             <Link
-            href="/projects/new/repo"
+            href="/projects/new/choice"
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

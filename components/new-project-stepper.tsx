@@ -8,13 +8,14 @@ interface Step {
 }
 
 const STEPS: Step[] = [
+  { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
   { label: "Agent", description: "Modèle IA" },
   { label: "Contexte", description: "Description du projet" },
 ];
 
 interface NewProjectStepperProps {
-  current: 1 | 2 | 3;
+  current: 1 | 2 | 3 | 4;
   orientation?: "vertical" | "horizontal";
 }
 

@@ -85,31 +85,12 @@ describe("RepoPage (step 1)", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
   });
 
-  it("toggling 'no repo yet' hides repo/forge fields and requires a GitHub username instead", () => {
+  it("links back to the choice step to change the repo origin", () => {
     renderRepoPage();
-    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-
-    const suivant = screen.getByRole("button", { name: /suivant/i });
-    expect(suivant).toBeDisabled();
-
-    fireEvent.click(screen.getByLabelText(/je n'ai pas encore de dépôt/i));
-
-    expect(screen.queryByLabelText("URL du dépôt")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/token github/i)).not.toBeInTheDocument();
-    expect(suivant).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
-    expect(suivant).not.toBeDisabled();
-  });
-
-  it("navigates to /projects/new/agent when submitting the hosted flow", async () => {
-    renderRepoPage();
-    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.click(screen.getByLabelText(/je n'ai pas encore de dépôt/i));
-    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
-
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
+    expect(screen.getByRole("link", { name: /modifier mon choix/i })).toHaveAttribute(
+      "href",
+      "/projects/new/choice"
+    );
   });
 
   it("resets validation state when token changes", async () => {
@@ -126,5 +107,47 @@ describe("RepoPage (step 1)", () => {
     fireEvent.change(screen.getByPlaceholderText(/ghp_/), { target: { value: "ghp_new" } });
     expect(screen.queryByText(/Connecté ✓/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /suivant/i })).toBeDisabled();
+  });
+});
+
+describe("RepoPage — hosted (chosen on the previous step)", () => {
+  async function renderHostedRepoPage() {
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function PreHostedRepoPage() {
+      const ctx = useNewProject();
+      if (!ctx.hosted) ctx.setHosted(true);
+      return <RepoPage />;
+    }
+
+    return render(
+      <Provider>
+        <PreHostedRepoPage />
+      </Provider>
+    );
+  }
+
+  it("shows the GitHub username field instead of repo/forge fields, and requires it", async () => {
+    await renderHostedRepoPage();
+
+    expect(screen.queryByLabelText("URL du dépôt")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/token github/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Pseudo GitHub")).toBeInTheDocument();
+
+    const suivant = screen.getByRole("button", { name: /suivant/i });
+    expect(suivant).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+    expect(suivant).not.toBeDisabled();
+  });
+
+  it("navigates to /projects/new/agent when submitting the hosted flow", async () => {
+    await renderHostedRepoPage();
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
   });
 });

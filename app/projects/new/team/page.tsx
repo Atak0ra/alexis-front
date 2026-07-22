@@ -6,5 +6,5 @@
 import { redirect } from "next/navigation";
 
 export default function TeamPage() {
-  redirect("/projects/new/repo");
+  redirect("/projects/new/choice");
 }

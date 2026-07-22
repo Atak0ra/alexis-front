@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ export default function RepoPage() {
   const router = useRouter();
   const {
     name, setName,
-    hosted, setHosted,
+    hosted,
     repoUrl, setRepoUrl,
     forgeProvider, setForgeProvider,
     forgeToken, setForgeToken,
@@ -62,13 +63,6 @@ export default function RepoPage() {
     }
   }
 
-  function handleHostedToggle(v: boolean) {
-    setHosted(v);
-    setValidated(false);
-    setValidatedAccount(null);
-    setError(null);
-  }
-
   function handleNext(e: React.FormEvent) {
     e.preventDefault();
     router.push("/projects/new/agent");
@@ -80,9 +74,20 @@ export default function RepoPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-foreground">Dépôt &amp; Forge</h1>
+      <Link
+        href="/projects/new/choice"
+        className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground transition-colors"
+      >
+        ← Modifier mon choix de dépôt
+      </Link>
+
+      <h1 className="mt-3 text-2xl font-bold text-foreground">
+        {hosted ? "Ton compte GitHub" : "Dépôt & Forge"}
+      </h1>
       <p className="mt-1 text-sm text-foreground-muted">
-        Connectez votre dépôt Git et vérifiez l&apos;accès de votre token.
+        {hosted
+          ? "Alexis crée un dépôt privé et t'y ajoute en tant que collaborateur admin."
+          : "Connectez votre dépôt Git et vérifiez l'accès de votre token."}
       </p>
 
       <form onSubmit={handleNext} className="mt-8 space-y-5">
@@ -183,46 +188,20 @@ export default function RepoPage() {
               {error && (
                 <p className="mt-2 text-sm text-danger">{error}</p>
               )}
-
-              <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-foreground-muted">
-                <input
-                  type="checkbox"
-                  checked={hosted}
-                  onChange={(e) => handleHostedToggle(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                />
-                Je n&apos;ai pas encore de dépôt — laisser Alexis en créer un pour moi
-              </label>
             </div>
           </>
         )}
 
         {hosted && (
-          <div className="space-y-5">
-            <div className="rounded-xl border border-border bg-surface-raised px-4 py-3.5 text-sm text-foreground-muted">
-              Alexis crée un dépôt GitHub privé pour toi et t&apos;y ajoute en tant que collaborateur admin — tu en restes propriétaire, exportable à tout moment.
-            </div>
-
-            <div>
-              <Label htmlFor="github-username">Pseudo GitHub</Label>
-              <Input
-                id="github-username"
-                value={githubUsername}
-                onChange={(e) => setGithubUsername(e.target.value)}
-                placeholder="octocat"
-                required
-              />
-            </div>
-
-            <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground-muted">
-              <input
-                type="checkbox"
-                checked={hosted}
-                onChange={(e) => handleHostedToggle(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              />
-              J&apos;ai déjà un dépôt existant
-            </label>
+          <div>
+            <Label htmlFor="github-username">Pseudo GitHub</Label>
+            <Input
+              id="github-username"
+              value={githubUsername}
+              onChange={(e) => setGithubUsername(e.target.value)}
+              placeholder="octocat"
+              required
+            />
           </div>
         )}
 

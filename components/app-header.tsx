@@ -54,7 +54,7 @@ export function AppHeader({ projectName }: AppHeaderProps) {
       <div className="ml-auto flex items-center gap-3">
         {/* New project button */}
         <Link
-          href="/projects/new/repo"
+          href="/projects/new/choice"
           className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
