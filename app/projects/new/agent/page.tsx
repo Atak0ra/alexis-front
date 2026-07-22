@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createProject, getProjectContext, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
-import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
+import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, getDefaultModels } from "@/lib/project-defaults";
 import FieldHint from "@/components/field-hint";
 
 export default function AgentPage() {
@@ -44,7 +44,7 @@ export default function AgentPage() {
         issue_prefix: issuePrefix.trim() || null,
         states: DEFAULT_STATES,
         trigger_states: DEFAULT_TRIGGER_STATES,
-        models: DEFAULT_MODELS,
+        models: getDefaultModels(agentChoice),
       });
 
       const { exists } = await getProjectContext(apiKey, project.id);

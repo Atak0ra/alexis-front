@@ -92,6 +92,41 @@ describe("AgentPage (step 2)", () => {
     );
   });
 
+  it("sends OpenAI-compatible default models when the agent is aider (not Claude model names)", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function FilledAiderAgentPage() {
+      const ctx = useNewProject();
+      if (!ctx.name) {
+        ctx.setName("kara");
+        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setForgeToken("ghp_xxx");
+        ctx.setAgentChoice("aider");
+      }
+      return <AgentPage />;
+    }
+
+    render(
+      <Provider>
+        <FilledAiderAgentPage />
+      </Provider>
+    );
+
+    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-proj-xxx" } });
+    fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(apiClient.createProject).toHaveBeenCalledWith(
+      "alx_xxx",
+      expect.objectContaining({
+        models: { spec: "gpt-4o", plan: "gpt-4o", dev: "gpt-4o" },
+      })
+    );
+  });
+
   it("navigates to /projects/new/context?projectId=... when context does not exist (exists=false)", async () => {
     vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: false });

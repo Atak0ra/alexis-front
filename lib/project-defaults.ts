@@ -22,3 +22,16 @@ export const DEFAULT_MODELS: Record<string, string> = {
   plan: "claude-opus-4-5",
   dev: "claude-sonnet-4-5",
 };
+
+export const AIDER_DEFAULT_MODELS: Record<string, string> = {
+  spec: "gpt-4o",
+  plan: "gpt-4o",
+  dev: "gpt-4o",
+};
+
+/** Modèles par défaut cohérents avec l'agent choisi — un projet "aider" avec une
+ * clé OpenAI ne peut pas utiliser des noms de modèle Claude (agent_api_key est
+ * injecté comme OPENAI_API_KEY, pas ANTHROPIC_API_KEY). */
+export function getDefaultModels(agentChoice: string): Record<string, string> {
+  return agentChoice === "aider" ? AIDER_DEFAULT_MODELS : DEFAULT_MODELS;
+}

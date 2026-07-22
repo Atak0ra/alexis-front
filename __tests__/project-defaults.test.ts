@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
+import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS, getDefaultModels } from "@/lib/project-defaults";
 
 describe("project defaults", () => {
   it("has all 14 states matching the CLI's DEFAULT_STATES", () => {
@@ -17,6 +17,18 @@ describe("project defaults", () => {
       spec: "claude-sonnet-4-5",
       plan: "claude-opus-4-5",
       dev: "claude-sonnet-4-5",
+    });
+  });
+
+  it("getDefaultModels returns Claude names for the claude agent", () => {
+    expect(getDefaultModels("claude")).toEqual(DEFAULT_MODELS);
+  });
+
+  it("getDefaultModels returns OpenAI-compatible names for the aider agent", () => {
+    expect(getDefaultModels("aider")).toEqual({
+      spec: "gpt-4o",
+      plan: "gpt-4o",
+      dev: "gpt-4o",
     });
   });
 });
