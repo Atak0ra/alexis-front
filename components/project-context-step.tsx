@@ -92,7 +92,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       try {
         const apiKey = getApiKey();
         if (!apiKey) return;
-        const { status } = await getProjectContextStatus(apiKey, projectId);
+        const { status, error: statusError } = await getProjectContextStatus(apiKey, projectId);
         if (status === "draft_ready") {
           clearInterval(intervalRef.current!);
           // Récupérer le draft pour prévisualisation
@@ -107,7 +107,11 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
         } else if (status === "failed") {
           clearInterval(intervalRef.current!);
           setPhase("failed");
-          setError("La génération du fichier de contexte a échoué. Vous pouvez réessayer ou passer cette étape.");
+          setError(
+            statusError
+              ? `La génération du fichier de contexte a échoué : ${statusError}`
+              : "La génération du fichier de contexte a échoué. Vous pouvez réessayer ou passer cette étape."
+          );
         }
       } catch {
         // network error — keep polling silently
@@ -122,14 +126,18 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       try {
         const apiKey = getApiKey();
         if (!apiKey) return;
-        const { status } = await getProjectContextStatus(apiKey, projectId);
+        const { status, error: statusError } = await getProjectContextStatus(apiKey, projectId);
         if (status === "done") {
           clearInterval(intervalRef.current!);
           setPhase("done");
         } else if (status === "failed") {
           clearInterval(intervalRef.current!);
           setPhase("review"); // retour review pour réessayer
-          setError("Le commit a échoué. Vérifiez vos droits sur le repo et réessayez.");
+          setError(
+            statusError
+              ? `Le commit a échoué : ${statusError}`
+              : "Le commit a échoué. Vérifiez vos droits sur le repo et réessayez."
+          );
         }
       } catch {
         // network error — keep polling silently

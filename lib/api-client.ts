@@ -464,6 +464,7 @@ export type ContextGenerationStatus = "in_progress" | "draft_ready" | "done" | "
 
 export interface ProjectContextStatus {
   status: ContextGenerationStatus;
+  error?: string | null;
 }
 
 export function getProjectContext(

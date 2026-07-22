@@ -301,6 +301,24 @@ describe("ProjectContextStep", () => {
     expect(screen.getByRole("button", { name: /passer cette étape/i })).toBeInTheDocument();
   });
 
+  it("shows the real backend error detail when provided instead of the generic message", async () => {
+    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
+      status: "failed",
+      error: "litellm.RateLimitError: You exceeded your current quota",
+    });
+
+    renderStep();
+    await submitBrief();
+
+    await waitFor(
+      () =>
+        expect(
+          screen.getByText(/litellm\.RateLimitError: You exceeded your current quota/)
+        ).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
+  });
+
   it("Réessayer re-shows the form with the same brief text", async () => {
     vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "failed" });
 
