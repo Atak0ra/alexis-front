@@ -11,6 +11,7 @@ import {
   getRepoSummaryStatus,
   AlexisApiError,
   type RepoSummaryResult,
+  type ContextGenerationPhase,
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 
@@ -26,6 +27,60 @@ interface Props {
 
 type Phase = "detecting" | "form" | "polling" | "review" | "committing" | "done" | "failed";
 
+const GENERATION_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] = [
+  { key: "cloning", label: "Clonage du dépôt" },
+  { key: "running_agent", label: "Exécution de l'agent" },
+  { key: "reading_result", label: "Lecture du résultat" },
+];
+
+const COMMIT_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] = [
+  { key: "writing_file", label: "Écriture du fichier" },
+  { key: "committing", label: "Commit & push" },
+];
+
+function PhaseChecklist({
+  steps,
+  currentPhase,
+  elapsedSec,
+}: {
+  steps: { key: ContextGenerationPhase; label: string }[];
+  currentPhase: ContextGenerationPhase | null;
+  elapsedSec: number;
+}) {
+  const currentIdx = steps.findIndex((s) => s.key === currentPhase);
+  return (
+    <ul className="space-y-1.5">
+      {steps.map((step, idx) => {
+        const isDone = currentIdx >= 0 && idx < currentIdx;
+        const isCurrent = idx === currentIdx;
+        return (
+          <li key={step.key} className="flex items-center gap-2 text-sm">
+            <span
+              className={
+                isDone ? "text-success" : isCurrent ? "text-brand" : "text-foreground-subtle"
+              }
+            >
+              {isDone ? "✓" : isCurrent ? "●" : "○"}
+            </span>
+            <span
+              className={
+                isCurrent
+                  ? "font-medium text-foreground"
+                  : isDone
+                  ? "text-foreground-muted"
+                  : "text-foreground-subtle"
+              }
+            >
+              {step.label}
+              {isCurrent && ` (${elapsedSec}s)`}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function ProjectContextStep({ projectId, onDone, onSkip, _pollIntervalMs = 2000 }: Props) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
@@ -34,7 +89,16 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
   const [draftContent, setDraftContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [genPhase, setGenPhase] = useState<ContextGenerationPhase | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Chrono de la phase en cours (remis à zéro à chaque changement de phase) ──
+  useEffect(() => {
+    if (phase !== "polling" && phase !== "committing") return;
+    const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   // ── Detect repo content on mount (async via worker) ───────────────────────
   useEffect(() => {
@@ -92,7 +156,13 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       try {
         const apiKey = getApiKey();
         if (!apiKey) return;
-        const { status, error: statusError } = await getProjectContextStatus(apiKey, projectId);
+        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
+        if (statusPhase) {
+          setGenPhase((prev) => {
+            if (statusPhase !== prev) setElapsedSec(0);
+            return statusPhase;
+          });
+        }
         if (status === "draft_ready") {
           clearInterval(intervalRef.current!);
           // Récupérer le draft pour prévisualisation
@@ -126,7 +196,13 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       try {
         const apiKey = getApiKey();
         if (!apiKey) return;
-        const { status, error: statusError } = await getProjectContextStatus(apiKey, projectId);
+        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
+        if (statusPhase) {
+          setGenPhase((prev) => {
+            if (statusPhase !== prev) setElapsedSec(0);
+            return statusPhase;
+          });
+        }
         if (status === "done") {
           clearInterval(intervalRef.current!);
           setPhase("done");
@@ -153,6 +229,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     try {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Session absente");
+      setGenPhase(null);
+      setElapsedSec(0);
       await createProjectContext(apiKey, projectId, brief);
       setPhase("polling");
       startPolling();
@@ -170,6 +248,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     try {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Session absente");
+      setGenPhase(null);
+      setElapsedSec(0);
       await commitProjectContext(apiKey, projectId, draftContent);
       setPhase("committing");
       startCommitPolling();
@@ -297,18 +377,19 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
         {phase === "polling" && (
           <div className="mt-8 space-y-6">
             <h1 className="text-2xl font-bold text-foreground">Génération en cours…</h1>
-            <div className="flex items-center gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
-              <svg className="h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
+            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">
                   {hasCode ? "Alexis lit votre code et rédige le contexte…" : "Alexis rédige le contexte…"}
                 </p>
-                <p className="mt-0.5 text-xs text-foreground-muted">
-                  Vous pourrez relire et modifier avant de valider.
+                <p className="mt-0.5 mb-3 text-xs text-foreground-muted">
+                  Vous pourrez relire et modifier avant de valider. Ça peut prendre une à deux minutes.
                 </p>
+                <PhaseChecklist steps={GENERATION_PHASE_STEPS} currentPhase={genPhase} elapsedSec={elapsedSec} />
               </div>
             </div>
             <div className="text-right">
@@ -377,16 +458,17 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
         {phase === "committing" && (
           <div className="mt-8 space-y-6">
             <h1 className="text-2xl font-bold text-foreground">Commit en cours…</h1>
-            <div className="flex items-center gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
-              <svg className="h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
+            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
+              <svg className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">Commit et push en cours…</p>
-                <p className="mt-0.5 text-xs text-foreground-muted">
+                <p className="mt-0.5 mb-3 text-xs text-foreground-muted">
                   <code className="font-mono">.alexis/project.md</code> sera committé sur votre branche par défaut.
                 </p>
+                <PhaseChecklist steps={COMMIT_PHASE_STEPS} currentPhase={genPhase} elapsedSec={elapsedSec} />
               </div>
             </div>
             <div className="text-right">

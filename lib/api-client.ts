@@ -462,9 +462,17 @@ export interface ProjectContextState {
 
 export type ContextGenerationStatus = "in_progress" | "draft_ready" | "done" | "failed" | null;
 
+export type ContextGenerationPhase =
+  | "cloning"
+  | "running_agent"
+  | "reading_result"
+  | "writing_file"
+  | "committing";
+
 export interface ProjectContextStatus {
   status: ContextGenerationStatus;
   error?: string | null;
+  phase?: ContextGenerationPhase | null;
 }
 
 export function getProjectContext(

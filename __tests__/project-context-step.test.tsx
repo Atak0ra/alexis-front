@@ -301,6 +301,23 @@ describe("ProjectContextStep", () => {
     expect(screen.getByRole("button", { name: /passer cette étape/i })).toBeInTheDocument();
   });
 
+  it("shows the phase checklist with the current phase highlighted while generation is in progress", async () => {
+    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
+      status: "in_progress",
+      phase: "running_agent",
+    });
+
+    renderStep();
+    await submitBrief();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Exécution de l'agent/)).toBeInTheDocument(),
+      { timeout: 3000 }
+    );
+    expect(screen.getByText("Clonage du dépôt")).toBeInTheDocument();
+    expect(screen.getByText("Lecture du résultat")).toBeInTheDocument();
+  });
+
   it("shows the real backend error detail when provided instead of the generic message", async () => {
     vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
       status: "failed",
