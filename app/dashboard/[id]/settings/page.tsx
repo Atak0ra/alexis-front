@@ -75,6 +75,10 @@ export default function ProjectSettingsPage() {
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [agentChoice, setAgentChoice] = useState("claude");
+  const [agentBaseUrl, setAgentBaseUrl] = useState("");
+  const [specModel, setSpecModel] = useState("");
+  const [planModel, setPlanModel] = useState("");
+  const [devModel, setDevModel] = useState("");
   const [forgeProvider, setForgeProvider] = useState("github");
 
   // Secrets (write-only)
@@ -110,6 +114,10 @@ export default function ProjectSettingsPage() {
         setName(p.name);
         setRepoUrl(p.repo_url ?? "");
         setAgentChoice(p.agent_choice);
+        setAgentBaseUrl(p.agent_base_url ?? "");
+        setSpecModel(p.models.spec ?? "");
+        setPlanModel(p.models.plan ?? "");
+        setDevModel(p.models.dev ?? "");
         setForgeProvider(p.forge_provider);
       })
       .catch((err) =>
@@ -133,6 +141,8 @@ export default function ProjectSettingsPage() {
         name,
         repo_url: repoUrl,
         agent_choice: agentChoice,
+        agent_base_url: agentBaseUrl.trim() || null,
+        models: { spec: specModel.trim(), plan: planModel.trim(), dev: devModel.trim() },
         forge_provider: forgeProvider,
         ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
         ...(forgeToken ? { forge_token: forgeToken } : {}),
@@ -336,6 +346,46 @@ export default function ProjectSettingsPage() {
                       onChange={setAgentApiKey}
                       isConfigured={true}
                     />
+                    {agentChoice === "aider" && (
+                      <div>
+                        <Label htmlFor="agent-base-url">
+                          Base URL de l&apos;API{" "}
+                          <span className="text-foreground-subtle font-normal">(optionnel)</span>
+                        </Label>
+                        <Input
+                          id="agent-base-url"
+                          type="url"
+                          value={agentBaseUrl}
+                          onChange={(e) => setAgentBaseUrl(e.target.value)}
+                          placeholder="https://api.groq.com/openai/v1"
+                        />
+                        <p className="mt-1 text-xs text-foreground-subtle">
+                          Laisse vide pour OpenAI. Groq : https://api.groq.com/openai/v1 — OpenRouter :
+                          https://openrouter.ai/api/v1.
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium text-foreground">Modèles par étape</p>
+                      <p className="mb-2 text-xs text-foreground-subtle">
+                        Doit correspondre au fournisseur de la clé ci-dessus (ex : claude-sonnet-4-5 pour
+                        Anthropic, gpt-4o pour OpenAI, llama-3.3-70b-versatile pour Groq).
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <Label htmlFor="spec-model">Spec</Label>
+                          <Input id="spec-model" value={specModel} onChange={(e) => setSpecModel(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="plan-model">Plan</Label>
+                          <Input id="plan-model" value={planModel} onChange={(e) => setPlanModel(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="dev-model">Dev</Label>
+                          <Input id="dev-model" value={devModel} onChange={(e) => setDevModel(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
 

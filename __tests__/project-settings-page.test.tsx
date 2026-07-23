@@ -105,6 +105,8 @@ describe("ProjectSettingsPage", () => {
         name: "Kara v2",
         repo_url: "https://github.com/acme/kara.git",
         agent_choice: "claude",
+        agent_base_url: null,
+        models: { spec: "claude-sonnet-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
         forge_provider: "github",
         agent_api_key: "sk-ant-new-key",
         // forge_token absent car vide
@@ -132,9 +134,57 @@ describe("ProjectSettingsPage", () => {
         name: "Kara",
         repo_url: "https://github.com/acme/kara.git",
         agent_choice: "claude",
+        agent_base_url: null,
+        models: { spec: "claude-sonnet-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
         forge_provider: "github",
         // aucun secret
       })
+    );
+  });
+
+  it("hides the Base URL field for claude and shows it for aider", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() => expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument());
+    expect(screen.queryByLabelText(/Base URL de l'API/)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Agent CLI"), { target: { value: "aider" } });
+    expect(screen.getByLabelText(/Base URL de l'API/)).toBeInTheDocument();
+  });
+
+  it("submits edited base URL and per-step models", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    const updateSpy = vi.spyOn(apiClient, "updateProject").mockResolvedValue(FAKE_PROJECT);
+
+    render(<ProjectSettingsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Agent CLI"), { target: { value: "aider" } });
+    fireEvent.change(screen.getByLabelText(/Base URL de l'API/), {
+      target: { value: "https://api.groq.com/openai/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("Spec"), { target: { value: "llama-3.3-70b-versatile" } });
+    fireEvent.change(screen.getByLabelText("Plan"), { target: { value: "llama-3.3-70b-versatile" } });
+    fireEvent.change(screen.getByLabelText("Dev"), { target: { value: "llama-3.3-70b-versatile" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() =>
+      expect(updateSpy).toHaveBeenCalledWith(
+        "alx_xxx",
+        "proj-123",
+        expect.objectContaining({
+          agent_choice: "aider",
+          agent_base_url: "https://api.groq.com/openai/v1",
+          models: {
+            spec: "llama-3.3-70b-versatile",
+            plan: "llama-3.3-70b-versatile",
+            dev: "llama-3.3-70b-versatile",
+          },
+        })
+      )
     );
   });
 
