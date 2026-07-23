@@ -294,6 +294,7 @@ export default function ProjectContextCard({ projectId, onContextUpdated, _pollI
             </button>
             <ProjectContextStep
               projectId={projectId}
+              embedded
               onDone={handleEditDone}
               onSkip={() => setShowEditModal(false)}
               _pollIntervalMs={_pollIntervalMs}

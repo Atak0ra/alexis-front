@@ -458,4 +458,20 @@ describe("ProjectContextStep", () => {
       expect(enqueueSpy).toHaveBeenCalled();
     });
   });
+
+  // ── Embedded mode (settings page, project-detail modal) ──────────────────────
+
+  describe("embedded mode", () => {
+    it("hides the standalone-wizard step label when embedded", async () => {
+      renderStep({ embedded: true });
+      await waitForForm();
+      expect(screen.queryByText("Étape 4 sur 4")).not.toBeInTheDocument();
+    });
+
+    it("shows the standalone-wizard step label by default (not embedded)", async () => {
+      renderStep();
+      await waitForForm();
+      expect(screen.getByText("Étape 4 sur 4")).toBeInTheDocument();
+    });
+  });
 });

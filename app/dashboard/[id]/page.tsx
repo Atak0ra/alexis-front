@@ -266,6 +266,7 @@ export default function ProjectDetailPage() {
                 </button>
                 <ProjectContextStep
                   projectId={projectId}
+                  embedded
                   onDone={() => {
                     setShowContextModal(false);
                     setContextExists(true);

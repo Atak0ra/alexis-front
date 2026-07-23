@@ -369,7 +369,10 @@ export default function ProjectSettingsPage() {
                       <p className="mb-1.5 text-sm font-medium text-foreground">Modèles par étape</p>
                       <p className="mb-2 text-xs text-foreground-subtle">
                         Doit correspondre au fournisseur de la clé ci-dessus (ex : claude-sonnet-4-5 pour
-                        Anthropic, gpt-4o pour OpenAI, llama-3.3-70b-versatile pour Groq).
+                        Anthropic, gpt-4o pour OpenAI). Avec une Base URL personnalisée (Groq, OpenRouter…),
+                        préfixe le nom du modèle par <code className="font-mono">openai/</code> — ex :{" "}
+                        <code className="font-mono">openai/llama-3.3-70b-versatile</code> — sinon litellm ne sait
+                        pas quel provider utiliser.
                       </p>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div>
@@ -438,6 +441,7 @@ export default function ProjectSettingsPage() {
                   {showContextStep ? (
                     <ProjectContextStep
                       projectId={projectId}
+                      embedded
                       onDone={() => { setShowContextStep(false); setContextExists(true); }}
                       onSkip={() => setShowContextStep(false)}
                     />

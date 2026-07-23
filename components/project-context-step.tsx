@@ -23,6 +23,10 @@ interface Props {
   onSkip?: () => void;
   /** Intervalle de polling en ms. Défaut : 2000. Passer 0 dans les tests. */
   _pollIntervalMs?: number;
+  /** Rendu compact (pas de plein-écran ni "Étape 4 sur 4") pour un usage
+   * intégré dans une autre page (settings, modal projet) plutôt que
+   * l'assistant de création autonome. */
+  embedded?: boolean;
 }
 
 type Phase = "detecting" | "form" | "polling" | "review" | "committing" | "done" | "failed";
@@ -81,7 +85,7 @@ function PhaseChecklist({
   );
 }
 
-export default function ProjectContextStep({ projectId, onDone, onSkip, _pollIntervalMs = 2000 }: Props) {
+export default function ProjectContextStep({ projectId, onDone, onSkip, _pollIntervalMs = 2000, embedded = false }: Props) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
   const [phase, setPhase] = useState<Phase>("detecting");
@@ -346,11 +350,19 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
   );
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-12">
+    <div
+      className={
+        embedded
+          ? "w-full"
+          : "flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-12"
+      }
+    >
       <div className="w-full max-w-lg">
-        <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-brand">
-          Étape 4 sur 4
-        </p>
+        {!embedded && (
+          <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-brand">
+            Étape 4 sur 4
+          </p>
+        )}
 
         {/* ── DETECTING ── */}
         {phase === "detecting" && (
