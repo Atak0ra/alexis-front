@@ -73,8 +73,10 @@ export interface ProjectOut {
   is_hosted: boolean;
   agent_choice: string;
   agent_base_url: string | null;
+  has_agent_api_key: boolean;
   issue_prefix: string | null;
   forge_provider: string;
+  has_forge_token: boolean;
   states: Record<string, string>;
   trigger_states: string[];
   models: Record<string, string>;
@@ -206,8 +208,10 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
       is_hosted: isHosted,
       agent_choice: payload.agent_choice,
       agent_base_url: payload.agent_base_url,
+      has_agent_api_key: !!payload.agent_api_key,
       issue_prefix: payload.issue_prefix ?? null,
       forge_provider: payload.forge_provider,
+      has_forge_token: isHosted ? false : !!payload.forge_token,
       states: payload.states,
       trigger_states: payload.trigger_states,
       models: payload.models,
@@ -273,7 +277,12 @@ export function updateProject(
   if (isLocalMode()) {
     const project = getDemoProject(projectId);
     if (!project) return Promise.reject(new AlexisApiError(404, "Projet introuvable"));
-    return Promise.resolve({ ...project, ...payload } as ProjectOut);
+    return Promise.resolve({
+      ...project,
+      ...payload,
+      has_agent_api_key: payload.agent_api_key ? true : project.has_agent_api_key,
+      has_forge_token: payload.forge_token ? true : project.has_forge_token,
+    } as ProjectOut);
   }
   return request(`/projects/${projectId}`, {
     method: "PATCH",

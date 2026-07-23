@@ -23,7 +23,9 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
+  has_agent_api_key: true,
   forge_provider: "github",
+  has_forge_token: true,
   states: DEFAULT_STATES,
   trigger_states: DEFAULT_TRIGGER_STATES,
   models: DEFAULT_MODELS,
@@ -36,6 +38,7 @@ const FAKE_HOSTED_PROJECT: apiClient.ProjectOut = {
   ...FAKE_PROJECT,
   repo_url: "https://github.com/compeel-alexis/acme-kara-abc123.git",
   is_hosted: true,
+  has_forge_token: false,
 };
 
 beforeEach(() => {
@@ -75,6 +78,22 @@ describe("ProjectSettingsPage", () => {
     // Deux indicateurs "Clé configurée" (agent + forge)
     const indicators = screen.getAllByText("Clé configurée");
     expect(indicators).toHaveLength(2);
+  });
+
+  it("shows no 'Clé configurée' indicator for keys that aren't actually set", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue({
+      ...FAKE_PROJECT,
+      has_agent_api_key: false,
+      has_forge_token: false,
+    });
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
+    );
+
+    expect(screen.queryByText("Clé configurée")).not.toBeInTheDocument();
   });
 
   it("submits only non-empty secrets and all classic fields", async () => {
@@ -253,6 +272,39 @@ describe("ProjectSettingsPage", () => {
     );
     expect(screen.getByLabelText("URL du repo")).toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Transférer mon repo" })).toBeInTheDocument();
+  });
+
+  it("hides the Forge section for a hosted project (token managed by Alexis)", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_HOSTED_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Hébergé par Alexis")).toBeInTheDocument()
+    );
+
+    expect(screen.queryByLabelText("Forge")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Token forge")).not.toBeInTheDocument();
+  });
+
+  it("does not send forge_provider when saving a hosted project", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_HOSTED_PROJECT);
+    const updateSpy = vi
+      .spyOn(apiClient, "updateProject")
+      .mockResolvedValue(FAKE_HOSTED_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled());
+    const sentPayload = updateSpy.mock.calls[0][2];
+    expect(sentPayload).not.toHaveProperty("forge_provider");
+    expect(sentPayload).not.toHaveProperty("forge_token");
   });
 
   it("transfers the hosted repo after confirmation", async () => {

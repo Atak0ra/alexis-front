@@ -143,9 +143,9 @@ export default function ProjectSettingsPage() {
         agent_choice: agentChoice,
         agent_base_url: agentBaseUrl.trim() || null,
         models: { spec: specModel.trim(), plan: planModel.trim(), dev: devModel.trim() },
-        forge_provider: forgeProvider,
+        ...(project?.is_hosted ? {} : { forge_provider: forgeProvider }),
         ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
-        ...(forgeToken ? { forge_token: forgeToken } : {}),
+        ...(!project?.is_hosted && forgeToken ? { forge_token: forgeToken } : {}),
       };
       await updateProject(apiKey, projectId, payload);
       setSaveSuccess(true);
@@ -344,7 +344,7 @@ export default function ProjectSettingsPage() {
                       placeholder="sk-ant-… ou clé aider"
                       value={agentApiKey}
                       onChange={setAgentApiKey}
-                      isConfigured={true}
+                      isConfigured={project.has_agent_api_key}
                     />
                     {agentChoice === "aider" && (
                       <div>
@@ -393,34 +393,38 @@ export default function ProjectSettingsPage() {
                   </div>
                 </section>
 
-                {/* Forge */}
-                <section>
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                    Forge
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="forge-provider">Forge</Label>
-                      <select
-                        id="forge-provider"
-                        value={forgeProvider}
-                        onChange={(e) => setForgeProvider(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                      >
-                        <option value="github">github</option>
-                        <option value="gitlab">gitlab</option>
-                      </select>
+                {/* Forge — masqué pour un projet hébergé : le token est géré par
+                    Alexis (GitHub App), forge_provider est toujours github et
+                    n'est pas modifiable (voir la garde côté API sur PATCH). */}
+                {!project.is_hosted && (
+                  <section>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                      Forge
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="forge-provider">Forge</Label>
+                        <select
+                          id="forge-provider"
+                          value={forgeProvider}
+                          onChange={(e) => setForgeProvider(e.target.value)}
+                          className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        >
+                          <option value="github">github</option>
+                          <option value="gitlab">gitlab</option>
+                        </select>
+                      </div>
+                      <SecretField
+                        id="forge-token"
+                        label="Token forge"
+                        placeholder="ghp_… ou glpat-…"
+                        value={forgeToken}
+                        onChange={setForgeToken}
+                        isConfigured={project.has_forge_token}
+                      />
                     </div>
-                    <SecretField
-                      id="forge-token"
-                      label="Token forge"
-                      placeholder="ghp_… ou glpat-…"
-                      value={forgeToken}
-                      onChange={setForgeToken}
-                      isConfigured={true}
-                    />
-                  </div>
-                </section>
+                  </section>
+                )}
 
                 {/* Feedback */}
                 {saveError && (
