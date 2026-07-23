@@ -76,7 +76,7 @@ export function getDemoProjectStats(projectId: string): DemoProjectStats {
   return { resolved, in_progress, failed, total_cost_usd };
 }
 
-// ─── Demo issues (tracker natif — 12 états du workflow) ──────────────────────
+// ─── Demo issues (tracker natif — 14 états du workflow) ──────────────────────
 
 let demoIssues: Record<string, Issue[]> = {
   "demo-project-1": [
