@@ -281,7 +281,7 @@ export default function ProjectContextCard({ projectId, onContextUpdated, _pollI
       {/* ── Modal Modifier ── */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="relative w-full max-w-lg rounded-2xl bg-surface shadow-xl overflow-y-auto max-h-[90vh]">
+          <div className="relative w-full max-w-lg rounded-2xl bg-surface shadow-xl overflow-y-auto max-h-[90vh] p-6 sm:p-8">
             <button
               type="button"
               onClick={() => setShowEditModal(false)}
