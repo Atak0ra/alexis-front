@@ -29,6 +29,13 @@ beforeEach(() => {
   });
 });
 
+// The component checks GET /context/status on mount to resume an in-flight
+// job across a refresh. This is "nothing to resume" — chain it before a
+// test's own mockResolvedValue(...) (which governs the *polling* phase,
+// after submit) so the resume check doesn't short-circuit straight to a
+// terminal phase before the form ever renders.
+const NOTHING_TO_RESUME: apiClient.ProjectContextStatus = { status: null, error: null, phase: null };
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -131,7 +138,9 @@ describe("ProjectContextStep", () => {
   // ── REVIEW phase (draft_ready) ───────────────────────────────────────────────
 
   it("shows review phase with draft content when status becomes draft_ready", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "draft_ready" });
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
 
     renderStep();
@@ -149,7 +158,9 @@ describe("ProjectContextStep", () => {
   });
 
   it("allows editing the draft content before committing", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "draft_ready" });
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
 
     renderStep();
@@ -163,7 +174,9 @@ describe("ProjectContextStep", () => {
   });
 
   it("Régénérer returns to form phase", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "draft_ready" });
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
 
     renderStep();
@@ -178,7 +191,9 @@ describe("ProjectContextStep", () => {
   });
 
   it("Passer cette étape redirects to /dashboard from review phase", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "draft_ready" });
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
 
     renderStep();
@@ -192,7 +207,9 @@ describe("ProjectContextStep", () => {
   // ── COMMITTING phase ─────────────────────────────────────────────────────────
 
   it("clicking Valider et committer enters committing phase", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "draft_ready" });
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
 
@@ -218,6 +235,7 @@ describe("ProjectContextStep", () => {
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
       .mockResolvedValueOnce({ status: "draft_ready" })
       .mockResolvedValue({ status: "done" });
 
@@ -242,6 +260,7 @@ describe("ProjectContextStep", () => {
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
       .mockResolvedValueOnce({ status: "draft_ready" })
       .mockResolvedValue({ status: "done" });
     const onDone = vi.fn();
@@ -267,6 +286,7 @@ describe("ProjectContextStep", () => {
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
       .mockResolvedValueOnce({ status: "draft_ready" })
       .mockResolvedValue({ status: "done" });
 
@@ -288,7 +308,9 @@ describe("ProjectContextStep", () => {
   // ── FAILED phase ─────────────────────────────────────────────────────────────
 
   it("shows error and Réessayer button when generation status is failed", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "failed" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "failed" });
 
     renderStep();
     await submitBrief();
@@ -302,10 +324,9 @@ describe("ProjectContextStep", () => {
   });
 
   it("shows the phase checklist with the current phase highlighted while generation is in progress", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
-      status: "in_progress",
-      phase: "running_agent",
-    });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "in_progress", phase: "running_agent" });
 
     renderStep();
     await submitBrief();
@@ -319,10 +340,12 @@ describe("ProjectContextStep", () => {
   });
 
   it("shows the real backend error detail when provided instead of the generic message", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
-      status: "failed",
-      error: "litellm.RateLimitError: You exceeded your current quota",
-    });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({
+        status: "failed",
+        error: "litellm.RateLimitError: You exceeded your current quota",
+      });
 
     renderStep();
     await submitBrief();
@@ -337,7 +360,9 @@ describe("ProjectContextStep", () => {
   });
 
   it("Réessayer re-shows the form with the same brief text", async () => {
-    vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "failed" });
+    vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce(NOTHING_TO_RESUME)
+      .mockResolvedValue({ status: "failed" });
 
     renderStep();
     await submitBrief("Mon projet.");
@@ -351,5 +376,86 @@ describe("ProjectContextStep", () => {
 
     const ta = screen.getByLabelText("Décris ton projet en quelques phrases") as HTMLTextAreaElement;
     expect(ta.value).toBe("Mon projet.");
+  });
+
+  // ── Resuming a job across a refresh ───────────────────────────────────────────
+  // A refresh remounts the component from scratch — without checking the
+  // backend's real status first, it would always restart the repo-detection
+  // flow, no matter how far a previous attempt had gotten.
+
+  describe("resuming an in-flight job on mount", () => {
+    it("jumps straight to the polling phase when a generation is already in_progress, skipping repo detection", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
+        status: "in_progress",
+        phase: "cloning",
+      });
+      const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary");
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(screen.getByText("Génération en cours…")).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+      expect(screen.queryByLabelText("Décris ton projet en quelques phrases")).not.toBeInTheDocument();
+      expect(enqueueSpy).not.toHaveBeenCalled();
+    });
+
+    it("jumps straight to the committing phase when a commit is already in_progress", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
+        status: "in_progress",
+        phase: "committing",
+      });
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(screen.getByText("Commit en cours…")).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+    });
+
+    it("jumps straight to the review phase with the draft when status is already draft_ready", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "draft_ready" });
+      vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(screen.getByText("Relire et valider")).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+      const draftTextarea = screen.getByLabelText(/Contenu de/) as HTMLTextAreaElement;
+      expect(draftTextarea.value).toBe(DRAFT_CONTENT);
+    });
+
+    it("shows the previous failure directly when status is already failed, without re-detecting the repo", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
+        status: "failed",
+        error: "litellm.RateLimitError: You exceeded your current quota",
+      });
+      const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary");
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(
+          screen.getByText(/La génération précédente a échoué : litellm\.RateLimitError/)
+        ).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+      expect(screen.getByRole("button", { name: "Réessayer" })).toBeInTheDocument();
+      expect(enqueueSpy).not.toHaveBeenCalled();
+    });
+
+    it("falls back to normal repo detection when there is nothing to resume", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: null });
+      const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "test-job-id" });
+
+      renderStep();
+      await waitForForm();
+
+      expect(enqueueSpy).toHaveBeenCalled();
+    });
   });
 });

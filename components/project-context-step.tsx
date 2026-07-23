@@ -100,16 +100,16 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     return () => clearInterval(id);
   }, [phase]);
 
-  // ── Detect repo content on mount (async via worker) ───────────────────────
+  // ── Reprendre un job en cours, ou détecter le repo si rien à reprendre ─────
+  // Résiste à un refresh en plein milieu : sans ça, rafraîchir pendant
+  // "detecting"/"polling" perdait tout l'état local et renvoyait l'utilisateur
+  // au formulaire vide, donnant l'impression que ça boucle indéfiniment.
   useEffect(() => {
     let cancelled = false;
-    async function detect() {
-      try {
-        const apiKey = getApiKey();
-        if (!apiKey) { setPhase("form"); return; }
-        const key = apiKey;
 
-        const { job_id } = await enqueueRepoSummary(key, projectId);
+    async function detectRepo(apiKey: string) {
+      try {
+        const { job_id } = await enqueueRepoSummary(apiKey, projectId);
 
         let attempts = 0;
         const maxAttempts = 30;
@@ -118,7 +118,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
             if (cancelled) { resolve(); return; }
             attempts++;
             try {
-              const res = await getRepoSummaryStatus(key, projectId, job_id);
+              const res = await getRepoSummaryStatus(apiKey, projectId, job_id);
               if (res.status === "done") {
                 if (!cancelled && res.result) setRepoSummary(res.result);
                 resolve(); return;
@@ -138,7 +138,56 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
         if (!cancelled) setPhase("form");
       }
     }
-    detect();
+
+    async function resumeOrDetect() {
+      const apiKey = getApiKey();
+      if (!apiKey) { setPhase("form"); return; }
+
+      try {
+        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
+        if (cancelled) return;
+
+        if (status === "in_progress") {
+          setGenPhase(statusPhase ?? null);
+          if (statusPhase === "writing_file" || statusPhase === "committing") {
+            setPhase("committing");
+            startCommitPolling();
+          } else {
+            setPhase("polling");
+            startPolling();
+          }
+          return;
+        }
+
+        if (status === "draft_ready") {
+          try {
+            const { content } = await getProjectContextDraft(apiKey, projectId);
+            if (cancelled) return;
+            setDraftContent(content);
+            setPhase("review");
+          } catch {
+            if (!cancelled) await detectRepo(apiKey);
+          }
+          return;
+        }
+
+        if (status === "failed") {
+          setError(
+            statusError
+              ? `La génération précédente a échoué : ${statusError}`
+              : "La génération précédente a échoué. Vous pouvez réessayer ou passer cette étape."
+          );
+          setPhase("failed");
+          return;
+        }
+      } catch {
+        // Pas de statut lisible — on repart sur la détection normale ci-dessous.
+      }
+
+      if (!cancelled) await detectRepo(apiKey);
+    }
+
+    resumeOrDetect();
     return () => { cancelled = true; };
   }, [projectId]);
 

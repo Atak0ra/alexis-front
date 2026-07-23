@@ -154,6 +154,7 @@ describe("ProjectContextCard", () => {
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: "# Nouveau\n" });
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
     vi.spyOn(apiClient, "getProjectContextStatus")
+      .mockResolvedValueOnce({ status: null, error: null, phase: null }) // resume-on-mount check
       .mockResolvedValueOnce({ status: "draft_ready" })
       .mockResolvedValue({ status: "done" });
 
