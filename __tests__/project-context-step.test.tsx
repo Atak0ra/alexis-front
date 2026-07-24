@@ -509,4 +509,46 @@ describe("ProjectContextStep", () => {
       expect(screen.getByText("Étape 4 sur 4")).toBeInTheDocument();
     });
   });
+
+  describe("advanced options", () => {
+    it("prepends the compiled advanced brief to the submitted text", async () => {
+      const createSpy = vi.spyOn(apiClient, "createProjectContext").mockResolvedValue(undefined);
+      renderStep();
+      await waitForForm();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
+      fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
+      fireEvent.change(screen.getByLabelText("Stack"), { target: { value: "python_django" } });
+      fireEvent.change(screen.getByLabelText("Décris ton projet en quelques phrases"), {
+        target: { value: "Mon projet FastAPI." },
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Générer" }));
+      });
+
+      await waitFor(() => expect(createSpy).toHaveBeenCalled());
+      expect(createSpy).toHaveBeenCalledWith(
+        "alx_xxx",
+        "p1",
+        "Stack: Python + Django\nArchitecture: Monolithe\n\nMon projet FastAPI."
+      );
+    });
+
+    it("submits only the free text when advanced options is left unchecked", async () => {
+      const createSpy = vi.spyOn(apiClient, "createProjectContext").mockResolvedValue(undefined);
+      renderStep();
+      await waitForForm();
+
+      fireEvent.change(screen.getByLabelText("Décris ton projet en quelques phrases"), {
+        target: { value: "Mon projet FastAPI." },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Générer" }));
+      });
+
+      await waitFor(() => expect(createSpy).toHaveBeenCalled());
+      expect(createSpy).toHaveBeenCalledWith("alx_xxx", "p1", "Mon projet FastAPI.");
+    });
+  });
 });

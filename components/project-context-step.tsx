@@ -15,6 +15,7 @@ import {
   type ContextGenerationPhase,
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
+import ContextAdvancedOptions from "@/components/context-advanced-options";
 
 interface Props {
   projectId: string;
@@ -89,6 +90,7 @@ function PhaseChecklist({
 export default function ProjectContextStep({ projectId, onDone, onSkip, _pollIntervalMs = 2000, embedded = false }: Props) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
+  const [advancedBrief, setAdvancedBrief] = useState("");
   const [phase, setPhase] = useState<Phase>("detecting");
   const [repoSummary, setRepoSummary] = useState<RepoSummaryResult | null>(null);
   const [draftContent, setDraftContent] = useState("");
@@ -317,7 +319,10 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       if (!apiKey) throw new Error("Session absente");
       setGenPhase(null);
       setElapsedSec(0);
-      await createProjectContext(apiKey, projectId, brief);
+      const finalBrief = advancedBrief
+        ? [advancedBrief, brief.trim()].filter(Boolean).join("\n\n")
+        : brief;
+      await createProjectContext(apiKey, projectId, finalBrief);
       setPhase("polling");
       startPolling();
     } catch (err) {
@@ -425,6 +430,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
             )}
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <ContextAdvancedOptions onChange={setAdvancedBrief} />
+
               <div>
                 <label htmlFor="brief" className="mb-1.5 block text-sm font-medium text-foreground">
                   {textareaLabel}
