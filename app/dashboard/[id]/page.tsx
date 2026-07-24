@@ -9,6 +9,7 @@ import {
   getProject,
   getProjectStats,
   listIssues,
+  listTickets,
   createIssue,
   getProjectContext,
   deleteProject,
@@ -16,11 +17,12 @@ import {
   type ProjectOut,
   type ProjectStats,
   type Issue,
+  type TicketOut,
 } from "@/lib/api-client";
 import { AppHeader } from "@/components/app-header";
 import ProjectContextStep from "@/components/project-context-step";
 import ProjectContextCard from "@/components/project-context-card";
-import IssueList from "@/components/issue-list";
+import IssueList, { type TicketSummary } from "@/components/issue-list";
 import { Settings, Plus, X } from "lucide-react";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
@@ -136,6 +138,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectOut | null>(null);
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [issues, setIssues] = useState<Issue[] | null>(null);
+  const [tickets, setTickets] = useState<TicketOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [contextExists, setContextExists] = useState<boolean | null>(null);
@@ -165,7 +168,16 @@ export default function ProjectDetailPage() {
     listIssues(apiKey, projectId)
       .then(setIssues)
       .catch(() => setIssues([]));
+
+    listTickets(apiKey, projectId)
+      .then(setTickets)
+      .catch(() => setTickets([]));
   }, [projectId, apiKey]);
+
+  const ticketsByIdentifier: Record<string, TicketSummary> = {};
+  for (const t of tickets) {
+    ticketsByIdentifier[t.id] = { pr_url: t.pr_url, pr_title: t.pr_title, cost_usd: t.cost_usd };
+  }
 
   async function handleCreateIssue(title: string, description: string) {
     setCreatingIssue(true);
@@ -366,7 +378,12 @@ export default function ProjectDetailPage() {
             </div>
 
             {issues !== null && (
-              <IssueList issues={issues} states={project.states} projectId={projectId} />
+              <IssueList
+                issues={issues}
+                states={project.states}
+                projectId={projectId}
+                ticketsByIdentifier={ticketsByIdentifier}
+              />
             )}
           </div>
         </>

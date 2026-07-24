@@ -64,6 +64,50 @@ describe("IssueList", () => {
     expect(badge.className).toContain("text-warning");
   });
 
+  it("shows a PR link and cost badge when ticket data matches the issue", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Corriger la pagination" })];
+    render(
+      <IssueList
+        issues={issues}
+        states={DEFAULT_STATES}
+        projectId="proj-1"
+        ticketsByIdentifier={{
+          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/42", pr_title: "Fix pagination", cost_usd: 1.234 },
+        }}
+      />
+    );
+
+    const prLink = screen.getByRole("link", { name: /voir la pr/i });
+    expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/42");
+    expect(screen.getByText("$1.23")).toBeInTheDocument();
+  });
+
+  it("does not show a PR link or cost badge when no ticket data matches", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Corriger la pagination" })];
+    render(
+      <IssueList issues={issues} states={DEFAULT_STATES} projectId="proj-1" ticketsByIdentifier={{}} />
+    );
+
+    expect(screen.queryByRole("link", { name: /voir la pr/i })).not.toBeInTheDocument();
+  });
+
+  it("clicking the PR link does not navigate to the issue detail page", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Corriger la pagination" })];
+    render(
+      <IssueList
+        issues={issues}
+        states={DEFAULT_STATES}
+        projectId="proj-1"
+        ticketsByIdentifier={{
+          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/42", pr_title: "Fix pagination", cost_usd: 1.234 },
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: /voir la pr/i }));
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("gives each step badge a visually distinct color", () => {
     const issues = [
       makeIssue({ id: "i1", title: "A", state: "Backlog" }),

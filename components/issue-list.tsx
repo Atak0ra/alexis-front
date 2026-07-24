@@ -38,13 +38,21 @@ function relativeDate(iso: string): string {
   return `il y a ${diffD} j`;
 }
 
+export interface TicketSummary {
+  pr_url: string | null;
+  pr_title: string | null;
+  cost_usd: number;
+}
+
 interface IssueListProps {
   issues: Issue[];
   states: Record<string, string>;
   projectId: string;
+  /** Résumé run (PR, coût) par identifier — depuis GET /projects/{id}/tickets. */
+  ticketsByIdentifier?: Record<string, TicketSummary>;
 }
 
-export default function IssueList({ issues, states, projectId }: IssueListProps) {
+export default function IssueList({ issues, states, projectId, ticketsByIdentifier }: IssueListProps) {
   const router = useRouter();
 
   if (issues.length === 0) {
@@ -60,6 +68,7 @@ export default function IssueList({ issues, states, projectId }: IssueListProps)
       {issues.map((issue) => {
         const steps = getIssueSteps(issue, states);
         const currentStep = steps.find((s) => s.status !== "done") ?? steps[steps.length - 1];
+        const ticket = ticketsByIdentifier?.[issue.identifier];
 
         return (
           <button
@@ -83,6 +92,25 @@ export default function IssueList({ issues, states, projectId }: IssueListProps)
             <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
               {issue.title}
             </p>
+
+            {ticket && ticket.cost_usd > 0 && (
+              <span className="shrink-0 font-mono text-xs text-foreground-subtle">
+                ${ticket.cost_usd.toFixed(2)}
+              </span>
+            )}
+
+            {ticket?.pr_url && (
+              <a
+                href={ticket.pr_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={ticket.pr_title ?? undefined}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+              >
+                Voir la PR ↗
+              </a>
+            )}
 
             <span
               className={cn(

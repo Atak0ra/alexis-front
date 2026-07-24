@@ -341,6 +341,28 @@ export function transferRepo(
   });
 }
 
+// ─── Tickets (vue agrégée run/PR/coût, dérivée de TicketRun côté backend) ──────
+
+export interface TicketOut {
+  id: string; // identifier de l'issue (ex: KARA-42)
+  title: string;
+  description: string;
+  status: "resolved" | "in_progress" | "failed";
+  agent: string;
+  cost_usd: number;
+  updated_at: string;
+  pr_url: string | null;
+  pr_title: string | null;
+  error_message: string | null;
+}
+
+export function listTickets(apiKey: string, projectId: string): Promise<TicketOut[]> {
+  if (isLocalMode()) return Promise.resolve([]);
+  return request(`/projects/${projectId}/tickets`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 // ─── Issues ───────────────────────────────────────────────────────────────────
 
 export function listIssues(apiKey: string, projectId: string): Promise<Issue[]> {
