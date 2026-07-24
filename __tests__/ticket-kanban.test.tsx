@@ -102,6 +102,24 @@ describe("TicketKanban", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it("shows a confirmation message after clicking retry, which disappears after a few seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      const issues = [makeIssue({ id: "i1", title: "Echec dev", state: "Dev Failed" })];
+      render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+      expect(screen.queryByText(/relancé/i)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /réessayer/i }));
+      expect(screen.getByText(/relancé/i)).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(2500);
+      expect(screen.queryByText(/relancé/i)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("falls back to the Backlog column for an unrecognized state label", () => {
     const issues = [makeIssue({ id: "i1", title: "Etat inconnu", state: "Some Custom State" })];
     render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);

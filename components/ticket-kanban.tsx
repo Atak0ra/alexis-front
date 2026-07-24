@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Issue } from "@/lib/api-client";
@@ -59,6 +60,7 @@ export default function TicketKanban({
   issues, states, projectId, onMoveIssue, ticketsByIdentifier,
 }: TicketKanbanProps) {
   const router = useRouter();
+  const [justRetried, setJustRetried] = useState<string | null>(null);
 
   const byColumn: Record<string, Issue[]> = {};
   for (const col of COLUMNS) byColumn[col.key] = [];
@@ -74,6 +76,14 @@ export default function TicketKanban({
     const targetLabel = states[columnKey] ?? columnKey;
     if (issue.state === targetLabel) return;
     onMoveIssue(issueId, targetLabel);
+  }
+
+  function handleRetry(issueId: string, targetLabel: string) {
+    onMoveIssue(issueId, targetLabel);
+    setJustRetried(issueId);
+    setTimeout(() => {
+      setJustRetried((current) => (current === issueId ? null : current));
+    }, 2500);
   }
 
   return (
@@ -133,7 +143,7 @@ export default function TicketKanban({
                           aria-label="Réessayer"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onMoveIssue(issue.id, states[col.key] ?? col.label);
+                            handleRetry(issue.id, states[col.key] ?? col.label);
                           }}
                           className="text-foreground-subtle transition-colors hover:text-brand"
                         >
@@ -151,6 +161,9 @@ export default function TicketKanban({
                             />
                           </svg>
                         </button>
+                      )}
+                      {justRetried === issue.id && (
+                        <span className="text-[11px] font-medium text-success">Relancé ✓</span>
                       )}
                     </div>
                   )}
