@@ -76,6 +76,32 @@ describe("TicketKanban", () => {
     expect(devColumn).toHaveTextContent("Dev Failed");
   });
 
+  it("shows a retry button on a failed ticket that resets it to the column's primary state", () => {
+    const onMoveIssue = vi.fn();
+    const issues = [makeIssue({ id: "i1", title: "Echec dev", state: "Dev Failed" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={onMoveIssue} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /réessayer/i }));
+
+    expect(onMoveIssue).toHaveBeenCalledWith("i1", "Dev");
+  });
+
+  it("does not show a retry button on a ticket that isn't in a failed sub-state", () => {
+    const issues = [makeIssue({ id: "i1", title: "En revue", state: "Dev Review" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /réessayer/i })).not.toBeInTheDocument();
+  });
+
+  it("clicking retry does not navigate to the issue detail page", () => {
+    const issues = [makeIssue({ id: "i1", title: "Echec dev", state: "Dev Failed" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /réessayer/i }));
+
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("falls back to the Backlog column for an unrecognized state label", () => {
     const issues = [makeIssue({ id: "i1", title: "Etat inconnu", state: "Some Custom State" })];
     render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
