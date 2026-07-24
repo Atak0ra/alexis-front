@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import ProjectDetailPage from "@/app/dashboard/[id]/page";
 import * as apiClient from "@/lib/api-client";
 import * as session from "@/lib/session";
@@ -78,6 +78,35 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     const prLink = await screen.findByRole("link", { name: /voir la pr/i });
     expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/7");
+  });
+
+  it("creates a new ticket already in a trigger state, so the poller actually picks it up", async () => {
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+    const createSpy = vi.spyOn(apiClient, "createIssue").mockResolvedValue({
+      ...FAKE_ISSUE,
+      id: "issue-2",
+      title: "Nouvelle demande",
+    });
+
+    render(<ProjectDetailPage />);
+
+    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    fireEvent.click(newTicketButton);
+
+    fireEvent.change(screen.getByPlaceholderText(/corriger le bug/i), {
+      target: { value: "Nouvelle demande" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalled());
+    const payload = createSpy.mock.calls[0][2];
+    // "Backlog" n'est dans aucun trigger_states par défaut (Todo/Plan/Dev/To
+    // Merge) — le poller ne ramasse jamais un ticket créé dans cet état, et
+    // rien dans l'UI ne permet de l'en sortir ensuite : il reste bloqué
+    // indéfiniment. Le ticket doit donc être créé directement dans un état
+    // déclencheur.
+    expect(payload.state).toBe("Todo");
   });
 
   it("renders issues normally when listTickets fails", async () => {

@@ -182,7 +182,11 @@ export default function ProjectDetailPage() {
   async function handleCreateIssue(title: string, description: string) {
     setCreatingIssue(true);
     try {
-      const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
+      // "Todo" (pas "Backlog") : le poller ne déclenche un run que pour un
+      // ticket dans project.trigger_states (Todo/Plan/Dev/To Merge par défaut).
+      // Il n'existe aucune UI pour faire passer un ticket de Backlog à Todo
+      // ensuite — un ticket créé en Backlog restait donc bloqué indéfiniment.
+      const issue = await createIssue(apiKey, projectId, { title, description, state: "Todo" });
       setIssues((prev) => (prev ? [...prev, issue] : [issue]));
       setShowNewIssue(false);
     } catch {
