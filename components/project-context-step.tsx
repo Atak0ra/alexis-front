@@ -6,6 +6,7 @@ import {
   createProjectContext,
   getProjectContextStatus,
   getProjectContextDraft,
+  getProjectContextContent,
   commitProjectContext,
   enqueueRepoSummary,
   getRepoSummaryStatus,
@@ -143,6 +144,33 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       }
     }
 
+    // ── Charger le contenu déjà committé pour édition (bouton "Modifier" alors
+    // qu'un .alexis/project.md existe déjà) — sans ça resumeOrDetect tombait dans
+    // le cas générique "repo vide/nouveau" et réaffichait le formulaire de
+    // description au lieu du contenu existant.
+    async function loadExistingContent(apiKey: string) {
+      let attempts = 0;
+      const maxAttempts = 30;
+      while (!cancelled && attempts < maxAttempts) {
+        attempts++;
+        try {
+          const { status: contentStatus, content } = await getProjectContextContent(apiKey, projectId);
+          if (contentStatus === "ready") {
+            if (!cancelled) {
+              if (content) { setDraftContent(content); setPhase("review"); }
+              else await detectRepo(apiKey);
+            }
+            return;
+          }
+        } catch {
+          if (!cancelled) await detectRepo(apiKey);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, _pollIntervalMs));
+      }
+      if (!cancelled) await detectRepo(apiKey);
+    }
+
     async function resumeOrDetect() {
       const apiKey = getApiKey();
       if (!apiKey) { setPhase("form"); return; }
@@ -150,6 +178,11 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       try {
         const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
         if (cancelled) return;
+
+        if (status === "done") {
+          await loadExistingContent(apiKey);
+          return;
+        }
 
         if (status === "in_progress") {
           setGenPhase(statusPhase ?? null);

@@ -448,6 +448,41 @@ describe("ProjectContextStep", () => {
       expect(enqueueSpy).not.toHaveBeenCalled();
     });
 
+    it("shows the existing committed content for editing when status is already done", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "done" });
+      vi.spyOn(apiClient, "getProjectContextContent").mockResolvedValue({
+        status: "ready",
+        content: DRAFT_CONTENT,
+      });
+      const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary");
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(screen.getByText("Relire et valider")).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+      const draftTextarea = screen.getByLabelText(/Contenu de/) as HTMLTextAreaElement;
+      expect(draftTextarea.value).toBe(DRAFT_CONTENT);
+      // Ne doit pas retraiter le repo comme s'il était vide/nouveau.
+      expect(enqueueSpy).not.toHaveBeenCalled();
+    });
+
+    it("polls until the committed content is ready when status is done but content isn't cached yet", async () => {
+      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "done" });
+      vi.spyOn(apiClient, "getProjectContextContent")
+        .mockResolvedValueOnce({ status: "loading", content: null })
+        .mockResolvedValue({ status: "ready", content: DRAFT_CONTENT });
+
+      renderStep();
+
+      await waitFor(() =>
+        expect(screen.getByText("Relire et valider")).toBeInTheDocument(),
+        { timeout: 3000 }
+      );
+      expect((screen.getByLabelText(/Contenu de/) as HTMLTextAreaElement).value).toBe(DRAFT_CONTENT);
+    });
+
     it("falls back to normal repo detection when there is nothing to resume", async () => {
       vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: null });
       const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "test-job-id" });
