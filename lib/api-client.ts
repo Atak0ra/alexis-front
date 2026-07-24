@@ -149,6 +149,21 @@ export function login(email: string, password: string): Promise<ApiKeyOut> {
   return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
+export interface ClientProfile {
+  id: string;
+  email: string;
+  github_username: string | null;
+}
+
+export function getMe(apiKey: string): Promise<ClientProfile> {
+  if (isLocalMode()) {
+    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null });
+  }
+  return request("/auth/me", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
   if (isLocalMode()) return Promise.resolve();
   return request(`/auth/api-keys/${keyId}`, {

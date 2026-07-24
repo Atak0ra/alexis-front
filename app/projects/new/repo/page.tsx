@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { validateForge, AlexisApiError } from "@/lib/api-client";
+import { validateForge, getMe, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
 import FieldHint from "@/components/field-hint";
@@ -26,6 +26,24 @@ export default function RepoPage() {
   const [validated, setValidated] = useState(false);
   const [validatedAccount, setValidatedAccount] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pré-remplit le pseudo GitHub avec celui déjà enregistré côté client (mémorisé
+  // par le backend lors d'un précédent projet hébergé), sans écraser une saisie
+  // en cours si l'utilisateur a déjà commencé à taper.
+  const usernameTouchedRef = useRef(false);
+  useEffect(() => {
+    if (!hosted) return;
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    getMe(apiKey)
+      .then(({ github_username }) => {
+        if (github_username && !usernameTouchedRef.current && !githubUsername.trim()) {
+          setGithubUsername(github_username);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hosted]);
 
   function handleForgeProviderChange(v: string) {
     setForgeProvider(v);
@@ -198,7 +216,10 @@ export default function RepoPage() {
             <Input
               id="github-username"
               value={githubUsername}
-              onChange={(e) => setGithubUsername(e.target.value)}
+              onChange={(e) => {
+                usernameTouchedRef.current = true;
+                setGithubUsername(e.target.value);
+              }}
               placeholder="octocat"
               required
             />

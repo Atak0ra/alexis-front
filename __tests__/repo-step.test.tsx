@@ -150,4 +150,29 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
   });
+
+  it("pre-fills the GitHub username remembered from a previous hosted project", async () => {
+    vi.spyOn(apiClient, "getMe").mockResolvedValue({
+      id: "client-1", email: "a@b.com", github_username: "deSully",
+    });
+
+    await renderHostedRepoPage();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Pseudo GitHub")).toHaveValue("deSully")
+    );
+  });
+
+  it("does not overwrite a username the user already typed", async () => {
+    vi.spyOn(apiClient, "getMe").mockResolvedValue({
+      id: "client-1", email: "a@b.com", github_username: "deSully",
+    });
+
+    await renderHostedRepoPage();
+    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+
+    // Laisser le temps à un éventuel pré-remplissage tardif de s'appliquer.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByLabelText("Pseudo GitHub")).toHaveValue("octocat");
+  });
 });
