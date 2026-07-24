@@ -182,11 +182,9 @@ export default function ProjectDetailPage() {
   async function handleCreateIssue(title: string, description: string) {
     setCreatingIssue(true);
     try {
-      // "Todo" (pas "Backlog") : le poller ne déclenche un run que pour un
-      // ticket dans project.trigger_states (Todo/Plan/Dev/To Merge par défaut).
-      // Il n'existe aucune UI pour faire passer un ticket de Backlog à Todo
-      // ensuite — un ticket créé en Backlog restait donc bloqué indéfiniment.
-      const issue = await createIssue(apiKey, projectId, { title, description, state: "Todo" });
+      // Backlog par design : c'est au user de faire passer le ticket en Todo
+      // (triage manuel) via le Kanban pour déclencher le worker.
+      const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
       setIssues((prev) => (prev ? [...prev, issue] : [issue]));
       setShowNewIssue(false);
     } catch {

@@ -80,7 +80,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/7");
   });
 
-  it("creates a new ticket already in a trigger state, so the poller actually picks it up", async () => {
+  it("creates a new ticket in Backlog — triage into a trigger state is manual, via the Kanban", async () => {
     vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
     vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
     const createSpy = vi.spyOn(apiClient, "createIssue").mockResolvedValue({
@@ -101,12 +101,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     await waitFor(() => expect(createSpy).toHaveBeenCalled());
     const payload = createSpy.mock.calls[0][2];
-    // "Backlog" n'est dans aucun trigger_states par défaut (Todo/Plan/Dev/To
-    // Merge) — le poller ne ramasse jamais un ticket créé dans cet état, et
-    // rien dans l'UI ne permet de l'en sortir ensuite : il reste bloqué
-    // indéfiniment. Le ticket doit donc être créé directement dans un état
-    // déclencheur.
-    expect(payload.state).toBe("Todo");
+    expect(payload.state).toBe("Backlog");
   });
 
   it("renders issues normally when listTickets fails", async () => {
