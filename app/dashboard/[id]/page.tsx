@@ -11,6 +11,7 @@ import {
   listIssues,
   listTickets,
   createIssue,
+  updateIssue,
   getProjectContext,
   deleteProject,
   AlexisApiError,
@@ -22,7 +23,7 @@ import {
 import { AppHeader } from "@/components/app-header";
 import ProjectContextStep from "@/components/project-context-step";
 import ProjectContextCard from "@/components/project-context-card";
-import IssueList, { type TicketSummary } from "@/components/issue-list";
+import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import { Settings, Plus, X } from "lucide-react";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
@@ -192,6 +193,14 @@ export default function ProjectDetailPage() {
     } finally {
       setCreatingIssue(false);
     }
+  }
+
+  function handleMoveIssue(issueId: string, newState: string) {
+    const previous = issues;
+    setIssues((prev) => (prev ? prev.map((i) => (i.id === issueId ? { ...i, state: newState } : i)) : prev));
+    updateIssue(apiKey, projectId, issueId, { state: newState }).catch(() => {
+      setIssues(previous);
+    });
   }
 
   if (error) {
@@ -380,10 +389,11 @@ export default function ProjectDetailPage() {
             </div>
 
             {issues !== null && (
-              <IssueList
+              <TicketKanban
                 issues={issues}
                 states={project.states}
                 projectId={projectId}
+                onMoveIssue={handleMoveIssue}
                 ticketsByIdentifier={ticketsByIdentifier}
               />
             )}
