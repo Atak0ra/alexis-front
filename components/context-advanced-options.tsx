@@ -42,7 +42,7 @@ function StackSelect({
     <div>
       <Label htmlFor={id}>{label}</Label>
       <select id={id} value={choice} onChange={(e) => onChoiceChange(e.target.value)} className={selectClass}>
-        <option value="">—</option>
+        <option value="">Non spécifié</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
@@ -120,7 +120,7 @@ export default function ContextAdvancedOptions({ onChange }: Props) {
               onChange={(e) => setArchitecture(e.target.value as ArchitecturePattern | "")}
               className={selectClass}
             >
-              <option value="">—</option>
+              <option value="">Non spécifié</option>
               {ARCHITECTURE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}

@@ -381,8 +381,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     </>
   ) : (
     <>
-      Votre repo est vide ou tout nouveau. Décrivez votre projet en quelques phrases — stack
-      souhaitée, objectif, contraintes — et Alexis génère{" "}
+      Votre repo est vide ou tout nouveau. Décrivez votre projet en quelques phrases (stack
+      souhaitée, objectif, contraintes) et Alexis génère{" "}
       <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>.
     </>
   );
@@ -438,7 +438,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                 </label>
                 {!hasCode && (
                   <p className="mb-2 text-xs text-foreground-subtle">
-                    Stack technique, objectif principal, contraintes particulières — texte libre.
+                    Stack technique, objectif principal, contraintes particulières. Texte libre.
                   </p>
                 )}
                 <textarea

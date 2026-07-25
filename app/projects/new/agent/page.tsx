@@ -116,7 +116,7 @@ export default function AgentPage() {
           />
           <p className="mt-1 text-xs text-foreground-subtle">
             {agentChoice === "claude"
-              ? "Sans clé, Alexis utilise sa propre clé Anthropic pour traiter vos tickets — la facturation de l'usage agent est alors gérée par Alexis, séparément de votre abonnement."
+              ? "Sans clé, Alexis utilise sa propre clé Anthropic pour traiter vos tickets. La facturation de l'usage agent est alors gérée par Alexis, séparément de votre abonnement."
               : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
           </p>
         </div>
@@ -131,7 +131,7 @@ export default function AgentPage() {
               </Label>
               <FieldHint
                 title="Base URL de l'API"
-                description="Laissez vide pour OpenAI. Pour OpenRouter : https://openrouter.ai/api/v1 — Pour Groq : https://api.groq.com/openai/v1. Aider utilisera cette URL à la place de l'endpoint OpenAI par défaut."
+                description="Laissez vide pour OpenAI. Pour OpenRouter : https://openrouter.ai/api/v1. Pour Groq : https://api.groq.com/openai/v1. Aider utilisera cette URL à la place de l'endpoint OpenAI par défaut."
               />
             </div>
             <Input

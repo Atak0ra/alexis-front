@@ -200,7 +200,7 @@ export default function RepoPage() {
                   <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  Connecté ✓ — compte&nbsp;: <span className="font-mono font-medium">{validatedAccount}</span>
+                  Connecté ✓ · compte&nbsp;: <span className="font-mono font-medium">{validatedAccount}</span>
                 </p>
               )}
               {error && (

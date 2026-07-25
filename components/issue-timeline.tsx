@@ -127,7 +127,7 @@ export default function IssueTimeline({
                 <div className="mt-3 space-y-4 rounded-xl border border-border bg-surface-raised p-4">
                   {step.status === "attention" && (
                     <p className="text-xs font-medium text-warning">
-                      Légère itération en cours — Alexis ajuste le travail.
+                      Légère itération en cours. Alexis ajuste le travail.
                     </p>
                   )}
 

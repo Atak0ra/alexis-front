@@ -186,7 +186,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
           <p className="mt-1 text-sm text-foreground-muted">
-            Vue d&apos;ensemble de vos projets automatisés
+            Vue d&apos;ensemble de vos projets
           </p>
         </div>
         <Link
@@ -276,7 +276,7 @@ export default function DashboardPage() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-foreground">Aucun projet</h3>
             <p className="mt-2 max-w-sm text-sm text-foreground-muted">
-              Créez un projet pour qu&apos;Alexis commence à traiter vos tickets automatiquement — avec votre propre dépôt, ou un dépôt hébergé par Alexis si vous n&apos;en avez pas.
+              Créez un projet pour qu&apos;Alexis commence à traiter vos tickets, avec votre propre dépôt, ou un dépôt hébergé par Alexis si vous n&apos;en avez pas.
             </p>
             <Link
             href="/projects/new/choice"

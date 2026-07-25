@@ -54,7 +54,7 @@ function SecretField({
         type="password"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={isConfigured ? "•••••• — laisser vide pour ne pas modifier" : placeholder}
+        placeholder={isConfigured ? "•••••• (laisser vide pour ne pas modifier)" : placeholder}
         autoComplete="new-password"
       />
     </div>
@@ -276,13 +276,13 @@ export default function ProjectSettingsPage() {
                     <div className="rounded-xl border border-border bg-surface-raised p-4 space-y-3">
                       <p className="text-sm text-foreground-muted">
                         Ce dépôt vit sous l&apos;organisation GitHub Alexis. Tu peux le transférer vers ton propre
-                        compte GitHub à tout moment — action définitive : Alexis n&apos;aura plus accès au repo une
+                        compte GitHub à tout moment. Action définitive : Alexis n&apos;aura plus accès au repo une
                         fois le transfert accepté, et ce projet s&apos;arrêtera (plus de run automatique).
                       </p>
 
                       {transferredTo ? (
                         <p className="text-sm font-medium text-success">
-                          ✓ Transfert lancé vers <span className="font-mono">{transferredTo}</span> — vérifie ton
+                          ✓ Transfert lancé vers <span className="font-mono">{transferredTo}</span>. Vérifie ton
                           compte GitHub pour l&apos;accepter.
                         </p>
                       ) : transferConfirming ? (
@@ -352,7 +352,7 @@ export default function ProjectSettingsPage() {
                     {!project.has_agent_api_key && (
                       <p className="-mt-2 text-xs text-foreground-subtle">
                         {agentChoice === "claude"
-                          ? "Sans clé, Alexis utilise sa propre clé Anthropic — facturation gérée par Alexis dans ce cas."
+                          ? "Sans clé, Alexis utilise sa propre clé Anthropic. Facturation gérée par Alexis dans ce cas."
                           : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
                       </p>
                     )}
@@ -385,7 +385,7 @@ export default function ProjectSettingsPage() {
                           placeholder="https://api.groq.com/openai/v1"
                         />
                         <p className="mt-1 text-xs text-foreground-subtle">
-                          Laisse vide pour OpenAI. Groq : https://api.groq.com/openai/v1 — OpenRouter :
+                          Laisse vide pour OpenAI. Groq : https://api.groq.com/openai/v1. OpenRouter :
                           https://openrouter.ai/api/v1.
                         </p>
                       </div>
@@ -396,7 +396,7 @@ export default function ProjectSettingsPage() {
                         Doit correspondre au fournisseur de la clé ci-dessus (ex : claude-sonnet-4-5 pour
                         Anthropic, gpt-4o pour OpenAI). Avec Groq ou OpenRouter, préfixe le nom du modèle par{" "}
                         <code className="font-mono">groq/</code> ou{" "}
-                        <code className="font-mono">openrouter/</code> — ex :{" "}
+                        <code className="font-mono">openrouter/</code>, ex :{" "}
                         <code className="font-mono">groq/llama-3.3-70b-versatile</code>. Ces providers sont
                         gérés nativement, la Base URL ci-dessus n&apos;est alors pas utilisée.
                       </p>
@@ -494,8 +494,8 @@ export default function ProjectSettingsPage() {
                           </p>
                           <p className="mt-0.5 text-xs text-foreground-muted">
                             {contextExists === null && "Vérification…"}
-                            {contextExists === true && "Fichier présent — Alexis l'utilise à chaque run."}
-                            {contextExists === false && "Absent — Alexis travaillera mieux avec ce fichier."}
+                            {contextExists === true && "Fichier présent. Alexis l'utilise à chaque run."}
+                            {contextExists === false && "Absent. Alexis travaillera mieux avec ce fichier."}
                           </p>
                         </div>
                       </div>
