@@ -18,7 +18,7 @@ export const DEFAULT_STATES: Record<string, string> = {
 export const DEFAULT_TRIGGER_STATES: string[] = ["Todo", "Plan", "Dev", "To Merge"];
 
 export const DEFAULT_MODELS: Record<string, string> = {
-  spec: "claude-sonnet-4-5",
+  spec: "claude-opus-4-5",
   plan: "claude-opus-4-5",
   dev: "claude-sonnet-4-5",
 };

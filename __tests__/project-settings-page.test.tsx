@@ -125,7 +125,7 @@ describe("ProjectSettingsPage", () => {
         repo_url: "https://github.com/acme/kara.git",
         agent_choice: "claude",
         agent_base_url: null,
-        models: { spec: "claude-sonnet-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
+        models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
         forge_provider: "github",
         agent_api_key: "sk-ant-new-key",
         // forge_token absent car vide
@@ -154,7 +154,7 @@ describe("ProjectSettingsPage", () => {
         repo_url: "https://github.com/acme/kara.git",
         agent_choice: "claude",
         agent_base_url: null,
-        models: { spec: "claude-sonnet-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
+        models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
         forge_provider: "github",
         // aucun secret
       })

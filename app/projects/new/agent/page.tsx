@@ -85,7 +85,10 @@ export default function AgentPage() {
         {/* API key */}
         <div>
           <div className="flex items-center gap-2">
-            <Label htmlFor="agent-api-key">Clé API agent</Label>
+            <Label htmlFor="agent-api-key">
+              Clé API agent{" "}
+              <span className="text-foreground-subtle font-normal">(optionnel)</span>
+            </Label>
             {agentChoice === "claude" ? (
               <FieldHint
                 title="Clé API Anthropic (Claude)"
@@ -107,9 +110,13 @@ export default function AgentPage() {
             type="password"
             value={agentApiKey}
             onChange={(e) => setAgentApiKey(e.target.value)}
-            required
-            placeholder={agentChoice === "claude" ? "sk-ant-…" : "sk-… (OpenAI / OpenRouter / Groq)"}
+            placeholder={agentChoice === "claude" ? "sk-ant-… (laisser vide si non fourni)" : "sk-… (OpenAI / OpenRouter / Groq)"}
           />
+          <p className="mt-1 text-xs text-foreground-subtle">
+            {agentChoice === "claude"
+              ? "Sans clé, Alexis utilise sa propre clé Anthropic pour traiter vos tickets — la facturation de l'usage agent est alors gérée par Alexis, séparément de votre abonnement."
+              : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
+          </p>
         </div>
 
         {/* Base URL — visible uniquement pour Aider */}

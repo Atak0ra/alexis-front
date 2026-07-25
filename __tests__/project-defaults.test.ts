@@ -12,9 +12,9 @@ describe("project defaults", () => {
     expect(DEFAULT_TRIGGER_STATES).toEqual(["Todo", "Plan", "Dev", "To Merge"]);
   });
 
-  it("has models for spec/plan/dev", () => {
+  it("has models for spec/plan/dev — Opus for spec/plan, Sonnet for dev", () => {
     expect(DEFAULT_MODELS).toEqual({
-      spec: "claude-sonnet-4-5",
+      spec: "claude-opus-4-5",
       plan: "claude-opus-4-5",
       dev: "claude-sonnet-4-5",
     });

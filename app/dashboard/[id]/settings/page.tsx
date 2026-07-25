@@ -346,6 +346,13 @@ export default function ProjectSettingsPage() {
                       onChange={setAgentApiKey}
                       isConfigured={project.has_agent_api_key}
                     />
+                    {!project.has_agent_api_key && (
+                      <p className="-mt-2 text-xs text-foreground-subtle">
+                        {agentChoice === "claude"
+                          ? "Sans clé, Alexis utilise sa propre clé Anthropic — facturation gérée par Alexis dans ce cas."
+                          : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
+                      </p>
+                    )}
                     {agentChoice === "aider" && (
                       <div>
                         <Label htmlFor="agent-base-url">

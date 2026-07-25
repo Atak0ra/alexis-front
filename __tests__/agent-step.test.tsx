@@ -46,7 +46,7 @@ describe("AgentPage (step 2)", () => {
     renderAgentPage();
     expect(screen.getByRole("heading", { name: /agent ia/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Agent CLI")).toBeInTheDocument();
-    expect(screen.getByLabelText("Clé API agent")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Clé API agent/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /créer le projet/i })).toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe("AgentPage (step 2)", () => {
       </Provider>
     );
 
-    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
@@ -88,6 +88,40 @@ describe("AgentPage (step 2)", () => {
         name: "kara",
         repo_url: "https://github.com/acme/kara",
         agent_api_key: "sk-ant-xxx",
+      })
+    );
+  });
+
+  it("submits successfully with an empty agent-api-key field, sending agent_api_key: null", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function FilledAgentPage() {
+      const ctx = useNewProject();
+      if (!ctx.name) {
+        ctx.setName("kara");
+        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setForgeToken("ghp_xxx");
+      }
+      return <AgentPage />;
+    }
+
+    render(
+      <Provider>
+        <FilledAgentPage />
+      </Provider>
+    );
+
+    // Ne pas toucher au champ clé API — le laisser vide
+    fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(apiClient.createProject).toHaveBeenCalledWith(
+      "alx_xxx",
+      expect.objectContaining({
+        agent_api_key: null,
       })
     );
   });
@@ -115,7 +149,7 @@ describe("AgentPage (step 2)", () => {
       </Provider>
     );
 
-    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-proj-xxx" } });
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-proj-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
@@ -149,7 +183,7 @@ describe("AgentPage (step 2)", () => {
       </Provider>
     );
 
-    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() =>
@@ -179,7 +213,7 @@ describe("AgentPage (step 2)", () => {
       </Provider>
     );
 
-    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
@@ -219,7 +253,7 @@ describe("AgentPage (step 2)", () => {
       </Provider>
     );
 
-    fireEvent.change(screen.getByLabelText("Clé API agent"), { target: { value: "sk-ant-xxx" } });
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() =>
