@@ -6,7 +6,7 @@ describe("RootPage", () => {
   it("shows the product wordmark and pitch", () => {
     render(<RootPage />);
     expect(screen.getAllByText("Alexis").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: /résolus automatiquement/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /un projet livré/i })).toBeInTheDocument();
   });
 
   it("shows the pipeline stages with descriptions", () => {
@@ -17,10 +17,10 @@ describe("RootPage", () => {
     expect(screen.getAllByText("Dev").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Livraison").length).toBeGreaterThan(0);
     // Stage descriptions
-    expect(screen.getByText(/attend d'être pris en charge/)).toBeInTheDocument();
+    expect(screen.getByText(/prêt à être pris en charge/)).toBeInTheDocument();
     expect(screen.getByText(/rédige une spécification/)).toBeInTheDocument();
     expect(screen.getAllByText(/écrit le code/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/PR est ouverte/)).toBeInTheDocument();
+    expect(screen.getByText(/livré sur votre dépôt/)).toBeInTheDocument();
     // Ticket preview
     expect(screen.getByText("KARA-142")).toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ describe("RootPage", () => {
   it("shows the value-props section", () => {
     render(<RootPage />);
     expect(screen.getByText("Zéro configuration manuelle")).toBeInTheDocument();
-    expect(screen.getByText("Du ticket au PR en autonomie")).toBeInTheDocument();
+    expect(screen.getByText("Ticket → code testé → livré")).toBeInTheDocument();
     expect(screen.getByText("Plusieurs projets, un seul tableau de bord")).toBeInTheDocument();
     expect(screen.getByText("Coûts transparents et traçables")).toBeInTheDocument();
   });

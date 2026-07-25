@@ -6,7 +6,7 @@ const PIPELINE_STAGES = [
   {
     key: "todo",
     label: "Todo",
-    description: "Le ticket est créé et attend d'être pris en charge par l'agent.",
+    description: "Le ticket est décrit et prêt à être pris en charge.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -16,7 +16,7 @@ const PIPELINE_STAGES = [
   {
     key: "spec",
     label: "Spec",
-    description: "Alexis analyse le ticket et rédige une spécification technique détaillée.",
+    description: "Alexis rédige une spécification technique détaillée pour ce ticket.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -26,7 +26,7 @@ const PIPELINE_STAGES = [
   {
     key: "plan",
     label: "Plan",
-    description: "L'agent décompose le travail en étapes concrètes et prépare son exécution.",
+    description: "L'agent décompose le travail en étapes concrètes.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
@@ -46,7 +46,7 @@ const PIPELINE_STAGES = [
   {
     key: "livraison",
     label: "Livraison",
-    description: "Une PR est ouverte, le ticket est mis à jour. Prêt à review.",
+    description: "Le code est livré sur votre dépôt, avec ou sans relecture selon vos réglages.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -67,8 +67,8 @@ const VALUE_PROPS = [
     ),
   },
   {
-    title: "Du ticket au PR en autonomie",
-    description: "L'agent prend en charge le ticket, écrit le code, vérifie les tests et ouvre la PR. Vous n'avez qu'à valider.",
+    title: "Ticket → code testé → livré",
+    description: "L'agent écrit le code, exécute les tests, et livre le résultat sur votre dépôt. Vous validez avant que ça parte plus loin — ou pas, selon vos réglages.",
     icon: (
       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -86,7 +86,7 @@ const VALUE_PROPS = [
   },
   {
     title: "Coûts transparents et traçables",
-    description: "Chaque ticket affiche son coût d'exécution. Vous savez exactement ce que l'automatisation vous rapporte.",
+    description: "Chaque ticket affiche son coût réel. Vous savez ce que vous payez, ticket par ticket.",
     icon: (
       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
@@ -195,18 +195,19 @@ export default function RootPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand-light px-4 py-1.5 text-xs font-semibold text-brand">
             <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-            Développement automatisé par IA
+            Agent de développement, pour solopreneurs et agences
           </div>
 
           {/* Headline */}
           <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-tight tracking-tight text-foreground sm:text-6xl">
-            Vos tickets,{" "}
-            <span className="text-brand">résolus automatiquement</span>
+            Une idée.{" "}
+            <span className="text-brand">Un projet livré.</span>
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg text-foreground-muted">
-            Alexis connecte vos tickets à un agent de code. Du ticket à la PR mergée,
-            sans intervention manuelle. Vous reviewez, vous validez.
+            Décrivez ce qu'il faut faire. Alexis structure le travail, l'exécute,
+            teste le résultat, et le livre — avec ou sans relecture avant mise en
+            ligne, selon vos réglages.
           </p>
 
           {/* CTAs */}
@@ -248,10 +249,11 @@ export default function RootPage() {
               Comment ça marche
             </p>
             <h2 className="mt-3 text-3xl font-bold text-foreground">
-              Du ticket à la PR en 5 étapes
+              De l'idée au projet livré, en 5 étapes
             </h2>
             <p className="mt-3 text-foreground-muted">
-              Alexis prend en charge chaque ticket et avance de façon autonome jusqu'à la livraison.
+              Chaque projet est découpé en tickets. Chaque ticket passe par une spécification,
+              un plan, une implémentation testée, avant la livraison.
             </p>
           </div>
 
@@ -283,7 +285,7 @@ export default function RootPage() {
               Pourquoi Alexis
             </p>
             <h2 className="mt-3 text-3xl font-bold text-foreground">
-              Conçu pour les équipes qui livrent vite
+              Pensé pour livrer sans y passer vos journées
             </h2>
           </div>
 
@@ -310,10 +312,10 @@ export default function RootPage() {
       <section className="border-t border-border bg-foreground">
         <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-20 text-center">
           <h2 className="text-3xl font-bold text-white sm:text-4xl">
-            Prêt à automatiser votre développement ?
+            Créez votre premier projet
           </h2>
           <p className="mt-4 max-w-xl text-base text-white/60">
-            Connectez votre premier projet en moins de 5 minutes et laissez Alexis traiter vos tickets.
+            Avec ou sans dépôt existant, votre projet est prêt en quelques minutes.
           </p>
           <Link
             href="/login?mode=signup"
