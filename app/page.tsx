@@ -68,7 +68,7 @@ const VALUE_PROPS = [
   },
   {
     title: "Ticket → code testé → livré",
-    description: "L'agent écrit le code, exécute les tests, et livre le résultat sur votre dépôt. Vous validez avant que ça parte plus loin — ou pas, selon vos réglages.",
+    description: "L'agent écrit le code, exécute les tests, et livre le résultat sur votre dépôt. Vous validez avant que ça parte plus loin, selon vos réglages.",
     icon: (
       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -105,7 +105,7 @@ function LivePipelinePreview() {
         <div className="h-3 w-3 rounded-full bg-danger/60" />
         <div className="h-3 w-3 rounded-full bg-warning/60" />
         <div className="h-3 w-3 rounded-full bg-success/60" />
-        <span className="ml-3 font-mono text-xs text-foreground-muted">alexis — tableau de bord</span>
+        <span className="ml-3 font-mono text-xs text-foreground-muted">alexis · tableau de bord</span>
       </div>
 
       {/* Fake dashboard content */}
@@ -206,7 +206,7 @@ export default function RootPage() {
 
           <p className="mt-6 max-w-2xl text-lg text-foreground-muted">
             Décrivez ce qu'il faut faire. Alexis structure le travail, l'exécute,
-            teste le résultat, et le livre — avec ou sans relecture avant mise en
+            teste le résultat, et le livre, avec ou sans relecture avant mise en
             ligne, selon vos réglages.
           </p>
 
