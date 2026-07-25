@@ -5,6 +5,7 @@ import { Inbox, Search, Code2, CheckCircle2, AlertTriangle, type LucideIcon } fr
 import { getIssueSteps, type StepId } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
 import { createIssueComment, type Issue, type IssueComment } from "@/lib/api-client";
+import MarkdownLite from "@/components/markdown-lite";
 
 const STEP_ICONS: Record<StepId, LucideIcon> = {
   requested: Inbox,
@@ -145,7 +146,9 @@ export default function IssueTimeline({
                           <p className="text-xs font-medium text-foreground-muted">
                             {c.author} · {formatDate(c.created_at)}
                           </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{c.body}</p>
+                          <div className="mt-1 text-sm text-foreground">
+                            <MarkdownLite text={c.body} />
+                          </div>
                         </li>
                       ))}
                     </ul>
