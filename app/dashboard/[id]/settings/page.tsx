@@ -79,6 +79,7 @@ export default function ProjectSettingsPage() {
   const [specModel, setSpecModel] = useState("");
   const [planModel, setPlanModel] = useState("");
   const [devModel, setDevModel] = useState("");
+  const [codeReviewEnabled, setCodeReviewEnabled] = useState(true);
   const [forgeProvider, setForgeProvider] = useState("github");
 
   // Secrets (write-only)
@@ -118,6 +119,7 @@ export default function ProjectSettingsPage() {
         setSpecModel(p.models.spec ?? "");
         setPlanModel(p.models.plan ?? "");
         setDevModel(p.models.dev ?? "");
+        setCodeReviewEnabled(p.code_review_enabled);
         setForgeProvider(p.forge_provider);
       })
       .catch((err) =>
@@ -143,6 +145,7 @@ export default function ProjectSettingsPage() {
         agent_choice: agentChoice,
         agent_base_url: agentBaseUrl.trim() || null,
         models: { spec: specModel.trim(), plan: planModel.trim(), dev: devModel.trim() },
+        code_review_enabled: codeReviewEnabled,
         ...(project?.is_hosted ? {} : { forge_provider: forgeProvider }),
         ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
         ...(!project?.is_hosted && forgeToken ? { forge_token: forgeToken } : {}),
@@ -353,6 +356,21 @@ export default function ProjectSettingsPage() {
                           : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
                       </p>
                     )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="code-review-enabled"
+                          type="checkbox"
+                          checked={codeReviewEnabled}
+                          onChange={(e) => setCodeReviewEnabled(e.target.checked)}
+                          className="h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        />
+                        <Label htmlFor="code-review-enabled">Revue de code</Label>
+                      </div>
+                      <p className="mt-1 text-xs text-foreground-subtle">
+                        Décoché : le code part directement sur develop au prochain ticket, sans Pull Request.
+                      </p>
+                    </div>
                     {agentChoice === "aider" && (
                       <div>
                         <Label htmlFor="agent-base-url">

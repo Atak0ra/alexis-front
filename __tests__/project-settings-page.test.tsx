@@ -29,6 +29,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
   states: DEFAULT_STATES,
   trigger_states: DEFAULT_TRIGGER_STATES,
   models: DEFAULT_MODELS,
+  code_review_enabled: true,
   run_timeout_seconds: 1800,
   is_active: true,
   created_at: "2026-07-15T00:00:00Z",
@@ -126,6 +127,7 @@ describe("ProjectSettingsPage", () => {
         agent_choice: "claude",
         agent_base_url: null,
         models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
+        code_review_enabled: true,
         forge_provider: "github",
         agent_api_key: "sk-ant-new-key",
         // forge_token absent car vide
@@ -155,9 +157,34 @@ describe("ProjectSettingsPage", () => {
         agent_choice: "claude",
         agent_base_url: null,
         models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
+        code_review_enabled: true,
         forge_provider: "github",
         // aucun secret
       })
+    );
+  });
+
+  it("submits code_review_enabled: false when the checkbox is unchecked", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    const updateSpy = vi
+      .spyOn(apiClient, "updateProject")
+      .mockResolvedValue(FAKE_PROJECT);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nom du projet")).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /revue de code/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    await waitFor(() =>
+      expect(updateSpy).toHaveBeenCalledWith(
+        "alx_xxx",
+        "proj-123",
+        expect.objectContaining({ code_review_enabled: false })
+      )
     );
   });
 

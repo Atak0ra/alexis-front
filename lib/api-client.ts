@@ -284,6 +284,7 @@ export interface UpdateProjectPayload {
   states?: Record<string, string>;
   trigger_states?: string[];
   models?: Record<string, string>;
+  code_review_enabled?: boolean;
   run_timeout_seconds?: number;
 }
 
