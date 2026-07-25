@@ -126,6 +126,40 @@ describe("AgentPage (step 2)", () => {
     );
   });
 
+  it("defaults code_review_enabled to true and sends false when the checkbox is unchecked", async () => {
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function FilledAgentPage() {
+      const ctx = useNewProject();
+      if (!ctx.name) {
+        ctx.setName("kara");
+        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setForgeToken("ghp_xxx");
+      }
+      return <AgentPage />;
+    }
+
+    render(
+      <Provider>
+        <FilledAgentPage />
+      </Provider>
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /revue de code/i }));
+    fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(apiClient.createProject).toHaveBeenCalledWith(
+      "alx_xxx",
+      expect.objectContaining({
+        code_review_enabled: false,
+      })
+    );
+  });
+
   it("sends OpenAI-compatible default models when the agent is aider (not Claude model names)", async () => {
     vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });

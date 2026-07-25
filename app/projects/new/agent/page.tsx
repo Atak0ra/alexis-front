@@ -18,6 +18,7 @@ export default function AgentPage() {
     agentChoice, setAgentChoice,
     agentApiKey, setAgentApiKey,
     agentBaseUrl, setAgentBaseUrl,
+    codeReviewEnabled, setCodeReviewEnabled,
   } = useNewProject();
 
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function AgentPage() {
         states: DEFAULT_STATES,
         trigger_states: DEFAULT_TRIGGER_STATES,
         models: getDefaultModels(agentChoice),
+        code_review_enabled: codeReviewEnabled,
       });
 
       const { exists } = await getProjectContext(apiKey, project.id);
@@ -141,6 +143,24 @@ export default function AgentPage() {
             />
           </div>
         )}
+
+        {/* Revue de code */}
+        <div>
+          <div className="flex items-center gap-2">
+            <input
+              id="code-review-enabled"
+              type="checkbox"
+              checked={codeReviewEnabled}
+              onChange={(e) => setCodeReviewEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            />
+            <Label htmlFor="code-review-enabled">Revue de code</Label>
+            <FieldHint
+              title="Revue de code"
+              description="Coché : Alexis ouvre une Pull Request que vous validez avant qu'elle parte sur develop. Décoché : le code part directement sur develop, plus rapide mais sans étape de relecture."
+            />
+          </div>
+        </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
 

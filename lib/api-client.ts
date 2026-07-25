@@ -80,6 +80,7 @@ export interface ProjectOut {
   states: Record<string, string>;
   trigger_states: string[];
   models: Record<string, string>;
+  code_review_enabled: boolean;
   run_timeout_seconds: number;
   is_active: boolean;
   created_at: string;
@@ -209,6 +210,7 @@ export interface CreateProjectPayload {
   states: Record<string, string>;
   trigger_states: string[];
   models: Record<string, string>;
+  code_review_enabled?: boolean;
 }
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {
@@ -230,6 +232,7 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
       states: payload.states,
       trigger_states: payload.trigger_states,
       models: payload.models,
+      code_review_enabled: payload.code_review_enabled ?? true,
       run_timeout_seconds: 1800,
       is_active: true,
       created_at: new Date().toISOString(),

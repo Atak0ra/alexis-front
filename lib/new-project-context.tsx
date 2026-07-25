@@ -15,6 +15,7 @@ export interface NewProjectDraft {
   agentChoice: string;
   agentApiKey: string;
   agentBaseUrl: string;
+  codeReviewEnabled: boolean;
 }
 
 interface NewProjectState extends NewProjectDraft {
@@ -28,6 +29,7 @@ interface NewProjectState extends NewProjectDraft {
   setAgentChoice: (v: string) => void;
   setAgentApiKey: (v: string) => void;
   setAgentBaseUrl: (v: string) => void;
+  setCodeReviewEnabled: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -42,6 +44,7 @@ const INITIAL_DRAFT: NewProjectDraft = {
   agentChoice: "claude",
   agentApiKey: "",
   agentBaseUrl: "",
+  codeReviewEnabled: true,
 };
 
 const NewProjectContext = createContext<NewProjectState | null>(null);
@@ -59,6 +62,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const setAgentChoice = useCallback((v: string) => setDraft((d) => ({ ...d, agentChoice: v })), []);
   const setAgentApiKey = useCallback((v: string) => setDraft((d) => ({ ...d, agentApiKey: v })), []);
   const setAgentBaseUrl = useCallback((v: string) => setDraft((d) => ({ ...d, agentBaseUrl: v })), []);
+  const setCodeReviewEnabled = useCallback((v: boolean) => setDraft((d) => ({ ...d, codeReviewEnabled: v })), []);
   const reset = useCallback(() => setDraft(INITIAL_DRAFT), []);
 
   return (
@@ -75,6 +79,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
         setAgentChoice,
         setAgentApiKey,
         setAgentBaseUrl,
+        setCodeReviewEnabled,
         reset,
       }}
     >
