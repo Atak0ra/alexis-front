@@ -25,7 +25,7 @@ describe("AdminLoginPage", () => {
     fireEvent.change(screen.getByLabelText(/mot de passe/i), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/clients"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/dashboard"));
     expect(setAdminApiKeySpy).toHaveBeenCalledWith("alx_admin_xxx");
   });
 

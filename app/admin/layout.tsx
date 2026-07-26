@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { clearAdminApiKey, getAdminApiKey } from "@/lib/session";
 
 const NAV_ITEMS = [
+  { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/managed-secrets", label: "Clés gérées" },

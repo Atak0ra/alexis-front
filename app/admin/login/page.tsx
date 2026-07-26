@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
     try {
       const result = await adminLogin(email, password);
       setAdminApiKey(result.api_key);
-      router.push("/admin/clients");
+      router.push("/admin/dashboard");
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
