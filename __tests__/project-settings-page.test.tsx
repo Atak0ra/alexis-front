@@ -357,4 +357,20 @@ describe("ProjectSettingsPage", () => {
     );
     expect(transferSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", { new_owner: "octocat" });
   });
+
+  it("downloads the project as a ZIP when the download button is clicked", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    const downloadSpy = vi.spyOn(apiClient, "downloadProject").mockResolvedValue(undefined);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nom du projet")).toHaveValue("Kara")
+    );
+    fireEvent.click(screen.getByRole("button", { name: /télécharger le code/i }));
+
+    await waitFor(() =>
+      expect(downloadSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", "Kara")
+    );
+  });
 });

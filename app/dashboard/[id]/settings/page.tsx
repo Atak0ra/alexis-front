@@ -13,6 +13,7 @@ import {
   getProjectContext,
   purgeProject,
   transferRepo,
+  downloadProject,
   AlexisApiError,
   type ProjectOut,
 } from "@/lib/api-client";
@@ -176,6 +177,23 @@ export default function ProjectSettingsPage() {
     }
   }
 
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  async function handleDownload() {
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      const apiKey = getApiKey();
+      if (!apiKey || !project) throw new Error("Session absente");
+      await downloadProject(apiKey, projectId, project.name);
+    } catch (err) {
+      setDownloadError(err instanceof AlexisApiError ? err.detail : "Erreur de téléchargement");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function handleTransferRepo() {
     setTransferError(null);
     setTransferring(true);
@@ -265,6 +283,22 @@ export default function ProjectSettingsPage() {
                         required
                       />
                     </div>
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                    Code source
+                  </h3>
+                  <div className="rounded-xl border border-border bg-surface-raised p-4 space-y-3">
+                    <p className="text-sm text-foreground-muted">
+                      Récupère l&apos;état actuel du code de ce projet, à tout moment — pendant ou après
+                      l&apos;implémentation d&apos;un ticket.
+                    </p>
+                    {downloadError && <p className="text-sm text-danger">{downloadError}</p>}
+                    <Button type="button" variant="secondary" disabled={downloading} onClick={handleDownload}>
+                      {downloading ? "Préparation…" : "Télécharger le code (ZIP)"}
+                    </Button>
                   </div>
                 </section>
 

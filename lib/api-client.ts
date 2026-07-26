@@ -346,6 +346,25 @@ export function transferRepo(
   });
 }
 
+export async function downloadProject(apiKey: string, projectId: string, projectName: string): Promise<void> {
+  if (isLocalMode()) return;
+  const resp = await fetch(`${API_URL}/projects/${projectId}/download`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!resp.ok) {
+    throw new AlexisApiError(resp.status, resp.statusText);
+  }
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${projectName || "projet"}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Tickets (vue agrégée run/PR/coût, dérivée de TicketRun côté backend) ──────
 
 export interface TicketOut {
