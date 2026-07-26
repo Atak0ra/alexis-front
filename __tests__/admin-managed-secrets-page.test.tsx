@@ -23,8 +23,8 @@ describe("AdminManagedSecretsPage", () => {
     render(<AdminManagedSecretsPage />);
 
     await waitFor(() => expect(screen.getByText(/anthropic/i)).toBeInTheDocument());
-    expect(screen.getByText("● configurée")).toBeInTheDocument();
-    expect(screen.getByText("○ non configurée")).toBeInTheDocument();
+    expect(screen.getByText("Clé configurée")).toBeInTheDocument();
+    expect(screen.getByText("Aucune clé configurée")).toBeInTheDocument();
   });
 
   it("submits a new value for a managed key", async () => {

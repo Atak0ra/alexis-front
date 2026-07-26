@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { adminGetClient, AdminClientDetail, AlexisApiError } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
-import { AdminPanel, adminEyebrowClass, adminHeadingClass } from "../../_components/chrome";
+import { AdminCard } from "../../_components/chrome";
 
 export default function AdminClientDetailPage() {
   const params = useParams<{ id: string }>();
@@ -21,70 +21,67 @@ export default function AdminClientDetailPage() {
       .finally(() => setLoading(false));
   }, [params.id]);
 
-  if (loading) return <p className="font-mono text-xs text-admin-mist">Chargement…</p>;
-  if (error) return <p className="font-mono text-xs text-admin-danger">{error}</p>;
+  if (loading) return <p className="text-sm text-foreground-muted">Chargement…</p>;
+  if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!client) return null;
 
   return (
     <div>
-      <p className={adminEyebrowClass}>Compte</p>
-      <h1 className={`mt-1 ${adminHeadingClass}`}>{client.email}</h1>
+      <h1 className="text-2xl font-bold text-foreground">{client.email}</h1>
 
       <div className="mt-6 grid grid-cols-3 gap-4">
-        <AdminPanel className="p-5">
-          <p className={adminEyebrowClass}>Plan</p>
-          <p className="mt-2 font-mono text-lg text-admin-ink">{client.plan_name ?? "illimité"}</p>
-        </AdminPanel>
-        <AdminPanel className="p-5">
-          <p className={adminEyebrowClass}>Dépense ce mois</p>
-          <p className="mt-2 font-mono text-lg tabular-nums text-admin-signal">${client.monthly_spend_usd.toFixed(2)}</p>
-        </AdminPanel>
-        <AdminPanel className="p-5">
-          <p className={adminEyebrowClass}>GitHub</p>
-          <p className="mt-2 font-mono text-lg text-admin-ink">{client.github_username ?? "—"}</p>
-        </AdminPanel>
+        <AdminCard className="p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Plan</p>
+          <p className="mt-1.5 text-lg font-semibold text-foreground">{client.plan_name ?? "illimité"}</p>
+        </AdminCard>
+        <AdminCard className="p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Dépense ce mois</p>
+          <p className="mt-1.5 font-mono text-lg font-semibold text-brand">${client.monthly_spend_usd.toFixed(2)}</p>
+        </AdminCard>
+        <AdminCard className="p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">GitHub</p>
+          <p className="mt-1.5 text-lg font-semibold text-foreground">{client.github_username ?? "—"}</p>
+        </AdminCard>
       </div>
 
-      <p className={`mt-10 ${adminEyebrowClass}`}>Projets</p>
-      <AdminPanel className="mt-3">
+      <h2 className="mt-10 text-lg font-semibold text-foreground">Projets</h2>
+      <AdminCard className="mt-3 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-admin-line">
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Nom</th>
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Agent</th>
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Statut</th>
-              <th className={`px-5 py-3 text-right ${adminEyebrowClass}`}>Coût total</th>
+            <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
+              <th className="px-5 py-3 font-medium">Nom</th>
+              <th className="px-5 py-3 font-medium">Agent</th>
+              <th className="px-5 py-3 font-medium">Statut</th>
+              <th className="px-5 py-3 text-right font-medium">Coût total</th>
             </tr>
           </thead>
           <tbody>
             {client.projects.map((p) => (
-              <tr key={p.id} className="border-b border-admin-line last:border-0">
-                <td className="px-5 py-3.5 font-mono text-admin-ink">{p.name}</td>
-                <td className="px-5 py-3.5 text-admin-mist">{p.agent_choice}</td>
+              <tr key={p.id} className="border-b border-border last:border-0">
+                <td className="px-5 py-3.5 font-medium text-foreground">{p.name}</td>
+                <td className="px-5 py-3.5 text-foreground-muted">{p.agent_choice}</td>
                 <td className="px-5 py-3.5">
                   <span
-                    className={`font-mono text-[11px] uppercase tracking-widest ${
-                      p.is_active ? "text-admin-good" : "text-admin-mist"
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      p.is_active ? "bg-success-bg text-success" : "bg-surface-sunken text-foreground-subtle"
                     }`}
                   >
                     {p.is_active ? "actif" : "désactivé"}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-right font-mono tabular-nums text-admin-ink">
-                  ${p.total_cost_usd.toFixed(2)}
-                </td>
+                <td className="px-5 py-3.5 text-right font-mono text-foreground">${p.total_cost_usd.toFixed(2)}</td>
               </tr>
             ))}
             {client.projects.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-6 text-center font-mono text-xs text-admin-mist">
+                <td colSpan={4} className="px-5 py-6 text-center text-sm text-foreground-subtle">
                   Aucun projet.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </AdminPanel>
+      </AdminCard>
     </div>
   );
 }

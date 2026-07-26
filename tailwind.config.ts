@@ -37,18 +37,6 @@ const config: Config = {
         "sidebar-active": "#4F46E5",
         "sidebar-text": "#CBD5E1",
         "sidebar-text-active": "#FFFFFF",
-        // Admin back-office — identité "panneau d'instruments" distincte du
-        // reste de l'app (graphite + mono + ambre), cf. skill frontend-design.
-        "admin-bg": "#12151A",
-        "admin-panel": "#1A1E25",
-        "admin-panel-hover": "#20242C",
-        "admin-line": "#2A2F38",
-        "admin-ink": "#E4E7EC",
-        "admin-mist": "#8B93A1",
-        "admin-signal": "#F2994A",
-        "admin-signal-hover": "#FFA85C",
-        "admin-good": "#5FD98A",
-        "admin-danger": "#FF6B6B",
       },
       fontFamily: {
         sans: ["var(--font-body)", "system-ui", "sans-serif"],

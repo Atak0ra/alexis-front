@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { adminListManagedSecrets, adminUpdateManagedSecret, ManagedSecretOut, AlexisApiError } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
-import { AdminPanel, adminButtonClass, adminEyebrowClass, adminGhostButtonClass, adminHeadingClass, adminInputClass } from "../_components/chrome";
+import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
 
 const LABELS: Record<string, string> = { anthropic: "Anthropic (Claude)", groq: "Groq (aider, plan Free)" };
 
@@ -39,27 +39,22 @@ export default function AdminManagedSecretsPage() {
 
   return (
     <div>
-      <p className={adminEyebrowClass}>Facturation</p>
-      <h1 className={`mt-1 ${adminHeadingClass}`}>Clés gérées</h1>
-      <p className="mt-2 max-w-lg font-mono text-xs text-admin-mist">
+      <h1 className="text-2xl font-bold text-foreground">Clés gérées</h1>
+      <p className="mt-1 text-sm text-foreground-muted">
         Utilisées pour les projets sans clé personnelle (BYOK). Jamais affichées en clair une fois enregistrées.
       </p>
 
-      {error && <p className="mt-4 font-mono text-xs text-admin-danger">{error}</p>}
+      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
       <div className="mt-6 space-y-4">
         {secrets.map((secret) => (
-          <AdminPanel key={secret.key} className="p-6">
+          <AdminCard key={secret.key} className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-mono text-sm font-semibold text-admin-ink">{LABELS[secret.key] ?? secret.key}</p>
-                <p className="mt-1.5 font-mono text-[11px] uppercase tracking-widest">
-                  <span className={secret.has_value ? "text-admin-good" : "text-admin-mist"}>
-                    {secret.has_value ? "● configurée" : "○ non configurée"}
-                  </span>
-                  <span className="ml-3 normal-case tracking-normal text-admin-mist/70">
-                    maj {new Date(secret.updated_at).toLocaleString("fr-FR")}
-                  </span>
+                <p className="font-medium text-foreground">{LABELS[secret.key] ?? secret.key}</p>
+                <p className="mt-1 text-xs text-foreground-subtle">
+                  <span>{secret.has_value ? "Clé configurée" : "Aucune clé configurée"}</span> — mise à jour le{" "}
+                  {new Date(secret.updated_at).toLocaleString("fr-FR")}
                 </p>
               </div>
               {editingKey !== secret.key && (
@@ -69,7 +64,7 @@ export default function AdminManagedSecretsPage() {
                     setEditingKey(secret.key);
                     setValue("");
                   }}
-                  className="font-mono text-xs uppercase tracking-widest text-admin-signal hover:text-admin-signal-hover"
+                  className="text-sm text-brand hover:text-brand-hover"
                 >
                   {secret.has_value ? "Remplacer" : "Configurer"}
                 </button>
@@ -77,7 +72,7 @@ export default function AdminManagedSecretsPage() {
             </div>
 
             {editingKey === secret.key && (
-              <div className="mt-5 flex items-center gap-3">
+              <div className="mt-4 flex items-center gap-3">
                 <input
                   type="password"
                   value={value}
@@ -100,7 +95,7 @@ export default function AdminManagedSecretsPage() {
                 </button>
               </div>
             )}
-          </AdminPanel>
+          </AdminCard>
         ))}
       </div>
     </div>

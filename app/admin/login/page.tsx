@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminLogin, AlexisApiError } from "@/lib/api-client";
 import { setAdminApiKey } from "@/lib/session";
-import { AdminPanel, adminButtonClass, adminEyebrowClass, adminInputClass } from "../_components/chrome";
+import { AdminCard, adminButtonClass, adminInputClass } from "../_components/chrome";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -29,17 +29,20 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-admin-bg px-6">
+    <div className="flex min-h-screen items-center justify-center bg-surface px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <p className={adminEyebrowClass}>Alexis // Admin</p>
-          <h1 className="mt-2 font-mono text-lg font-semibold text-admin-ink">Accès console</h1>
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">
+            A
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-foreground">Back-office Alexis</h1>
+          <p className="mt-1 text-sm text-foreground-muted">Réservé aux comptes admin.</p>
         </div>
 
-        <AdminPanel className="p-7">
+        <AdminCard className="p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="admin-email" className={adminEyebrowClass}>
+              <label htmlFor="admin-email" className="mb-1.5 block text-sm font-medium text-foreground">
                 Email
               </label>
               <input
@@ -48,11 +51,11 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className={`mt-2 ${adminInputClass}`}
+                className={adminInputClass}
               />
             </div>
             <div>
-              <label htmlFor="admin-password" className={adminEyebrowClass}>
+              <label htmlFor="admin-password" className="mb-1.5 block text-sm font-medium text-foreground">
                 Mot de passe
               </label>
               <input
@@ -61,20 +64,20 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className={`mt-2 ${adminInputClass}`}
+                className={adminInputClass}
               />
             </div>
 
-            {error && <p className="font-mono text-xs text-admin-danger">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
 
             <button type="submit" disabled={submitting} className={`w-full ${adminButtonClass}`}>
-              {submitting ? "Connexion…" : "Authentifier →"}
+              {submitting ? "Connexion…" : "Se connecter"}
             </button>
           </form>
-        </AdminPanel>
+        </AdminCard>
 
-        <p className="mt-6 text-center text-xs text-admin-mist">
-          Réservé aux comptes créés via <span className="font-mono text-admin-ink/80">make create-admin</span>.
+        <p className="mt-6 text-center text-xs text-foreground-subtle">
+          Compte créé via <span className="font-mono">make create-admin</span>.
         </p>
       </div>
     </div>

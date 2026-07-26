@@ -23,7 +23,7 @@ describe("AdminLoginPage", () => {
     render(<AdminLoginPage />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "root@alexis.dev" } });
     fireEvent.change(screen.getByLabelText(/mot de passe/i), { target: { value: "password123" } });
-    fireEvent.click(screen.getByRole("button", { name: /authentifier/i }));
+    fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/admin/clients"));
     expect(setAdminApiKeySpy).toHaveBeenCalledWith("alx_admin_xxx");
@@ -35,7 +35,7 @@ describe("AdminLoginPage", () => {
     render(<AdminLoginPage />);
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "root@alexis.dev" } });
     fireEvent.change(screen.getByLabelText(/mot de passe/i), { target: { value: "wrong" } });
-    fireEvent.click(screen.getByRole("button", { name: /authentifier/i }));
+    fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
     await waitFor(() => expect(screen.getByText("Identifiants invalides")).toBeInTheDocument());
     expect(pushMock).not.toHaveBeenCalled();

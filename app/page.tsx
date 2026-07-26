@@ -338,7 +338,12 @@ export default function RootPage() {
             </span>
             Alexis
           </div>
-          <span className="text-xs text-foreground-subtle">© 2026 Alexis. Tous droits réservés.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/login" className="text-xs text-foreground-subtle hover:text-foreground-muted transition-colors">
+              Connexion admin
+            </Link>
+            <span className="text-xs text-foreground-subtle">© 2026 Alexis. Tous droits réservés.</span>
+          </div>
         </div>
       </footer>
     </div>

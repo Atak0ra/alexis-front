@@ -6,9 +6,7 @@ import {
   PlanOut, PlanPayload, AlexisApiError,
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
-import {
-  AdminPanel, adminButtonClass, adminEyebrowClass, adminGhostButtonClass, adminHeadingClass, adminInputClass,
-} from "../_components/chrome";
+import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
 
 const EMPTY_FORM: PlanPayload = {
   name: "", monthly_price_eur: 0, forced_agent_choice: null,
@@ -88,46 +86,43 @@ export default function AdminPlansPage() {
 
   return (
     <div>
-      <div className="flex items-end justify-between">
-        <div>
-          <p className={adminEyebrowClass}>Abonnements</p>
-          <h1 className={`mt-1 ${adminHeadingClass}`}>Plans</h1>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Plans</h1>
         <button type="button" onClick={startCreate} className={adminButtonClass}>
           + Nouveau plan
         </button>
       </div>
 
-      {error && <p className="mt-4 font-mono text-xs text-admin-danger">{error}</p>}
+      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
-      <AdminPanel className="mt-6">
+      <AdminCard className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-admin-line">
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Nom</th>
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Prix / mois</th>
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Agent forcé</th>
-              <th className={`px-5 py-3 ${adminEyebrowClass}`}>Plafond mensuel</th>
+            <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
+              <th className="px-5 py-3 font-medium">Nom</th>
+              <th className="px-5 py-3 font-medium">Prix / mois</th>
+              <th className="px-5 py-3 font-medium">Agent forcé</th>
+              <th className="px-5 py-3 font-medium">Plafond mensuel</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody>
             {plans.map((plan) => (
-              <tr key={plan.id} className="border-b border-admin-line last:border-0">
-                <td className="px-5 py-3.5 font-mono text-admin-ink">{plan.name}</td>
-                <td className="px-5 py-3.5 font-mono tabular-nums text-admin-ink">{plan.monthly_price_eur}€</td>
-                <td className="px-5 py-3.5 text-admin-mist">{plan.forced_agent_choice ?? "—"}</td>
-                <td className="px-5 py-3.5 font-mono tabular-nums text-admin-signal">
+              <tr key={plan.id} className="border-b border-border last:border-0">
+                <td className="px-5 py-3.5 font-medium text-foreground">{plan.name}</td>
+                <td className="px-5 py-3.5 text-foreground-muted">{plan.monthly_price_eur}€</td>
+                <td className="px-5 py-3.5 text-foreground-muted">{plan.forced_agent_choice ?? "—"}</td>
+                <td className="px-5 py-3.5 font-mono text-foreground-muted">
                   {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <button type="button" onClick={() => startEdit(plan)} className="font-mono text-xs uppercase tracking-widest text-admin-signal hover:text-admin-signal-hover">
+                  <button type="button" onClick={() => startEdit(plan)} className="text-brand hover:text-brand-hover">
                     Modifier
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(plan.id)}
-                    className="ml-4 font-mono text-xs uppercase tracking-widest text-admin-danger hover:opacity-80"
+                    className="ml-4 text-danger hover:opacity-80"
                   >
                     Supprimer
                   </button>
@@ -136,42 +131,41 @@ export default function AdminPlansPage() {
             ))}
           </tbody>
         </table>
-      </AdminPanel>
+      </AdminCard>
 
       {editingId && (
-        <AdminPanel className="mt-8 max-w-md p-7">
-          <p className={adminEyebrowClass}>{editingId === "new" ? "Création" : "Édition"}</p>
-          <h2 className="mt-1 font-mono text-lg font-semibold text-admin-ink">
+        <AdminCard className="mt-8 max-w-md p-6">
+          <h2 className="text-lg font-semibold text-foreground">
             {editingId === "new" ? "Nouveau plan" : "Modifier le plan"}
           </h2>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="plan-name" className={adminEyebrowClass}>Nom</label>
+              <label htmlFor="plan-name" className="mb-1.5 block text-sm font-medium text-foreground">Nom</label>
               <input
                 id="plan-name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={`mt-2 ${adminInputClass}`}
+                className={adminInputClass}
               />
             </div>
             <div>
-              <label htmlFor="plan-price" className={adminEyebrowClass}>Prix (€/mois)</label>
+              <label htmlFor="plan-price" className="mb-1.5 block text-sm font-medium text-foreground">Prix (€/mois)</label>
               <input
                 id="plan-price"
                 type="number"
                 value={form.monthly_price_eur}
                 onChange={(e) => setForm({ ...form, monthly_price_eur: Number(e.target.value) })}
-                className={`mt-2 ${adminInputClass}`}
+                className={adminInputClass}
               />
             </div>
             <div>
-              <label htmlFor="plan-forced-agent" className={adminEyebrowClass}>Agent forcé</label>
+              <label htmlFor="plan-forced-agent" className="mb-1.5 block text-sm font-medium text-foreground">Agent forcé</label>
               <select
                 id="plan-forced-agent"
                 value={form.forced_agent_choice ?? ""}
                 onChange={(e) => setForm({ ...form, forced_agent_choice: e.target.value || null })}
-                className={`mt-2 ${adminInputClass}`}
+                className={adminInputClass}
               >
                 <option value="">Aucun</option>
                 <option value="aider">aider</option>
@@ -180,8 +174,8 @@ export default function AdminPlansPage() {
             </div>
             {BUDGET_FIELDS.map(([id, label, field]) => (
               <div key={id}>
-                <label htmlFor={id} className={adminEyebrowClass}>
-                  {label} <span className="normal-case tracking-normal text-admin-mist/70">(vide = illimité)</span>
+                <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-foreground">
+                  {label} <span className="text-foreground-subtle font-normal">(vide = illimité)</span>
                 </label>
                 <input
                   id={id}
@@ -189,13 +183,13 @@ export default function AdminPlansPage() {
                   step="0.01"
                   value={form[field] ?? ""}
                   onChange={(e) => setForm({ ...form, [field]: toNullableNumber(e.target.value) })}
-                  className={`mt-2 ${adminInputClass}`}
+                  className={adminInputClass}
                 />
               </div>
             ))}
           </div>
 
-          <div className="mt-7 flex justify-end gap-3">
+          <div className="mt-6 flex justify-end gap-3">
             <button type="button" onClick={() => setEditingId(null)} className={adminGhostButtonClass}>
               Annuler
             </button>
@@ -203,7 +197,7 @@ export default function AdminPlansPage() {
               Enregistrer
             </button>
           </div>
-        </AdminPanel>
+        </AdminCard>
       )}
     </div>
   );
