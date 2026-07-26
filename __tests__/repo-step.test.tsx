@@ -127,25 +127,33 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
     );
   }
 
-  it("shows the GitHub username field instead of repo/forge fields, and requires it", async () => {
+  it("shows the GitHub username field instead of repo/forge fields, marked optional", async () => {
     await renderHostedRepoPage();
 
     expect(screen.queryByLabelText("URL du dépôt")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/token github/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Pseudo GitHub")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pseudo GitHub/)).toBeInTheDocument();
 
     const suivant = screen.getByRole("button", { name: /suivant/i });
     expect(suivant).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
     expect(suivant).not.toBeDisabled();
+  });
+
+  it("allows proceeding on a hosted project without ever filling a GitHub username", async () => {
+    await renderHostedRepoPage();
+
+    fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
+
+    expect(screen.getByRole("button", { name: /suivant/i })).not.toBeDisabled();
+    expect(screen.getByLabelText(/Pseudo GitHub/)).toHaveValue("");
   });
 
   it("navigates to /projects/new/agent when submitting the hosted flow", async () => {
     await renderHostedRepoPage();
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+    fireEvent.change(screen.getByLabelText(/Pseudo GitHub/), { target: { value: "octocat" } });
 
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/projects/new/agent"));
@@ -159,7 +167,7 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
     await renderHostedRepoPage();
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Pseudo GitHub")).toHaveValue("deSully")
+      expect(screen.getByLabelText(/Pseudo GitHub/)).toHaveValue("deSully")
     );
   });
 
@@ -169,10 +177,10 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
     });
 
     await renderHostedRepoPage();
-    fireEvent.change(screen.getByLabelText("Pseudo GitHub"), { target: { value: "octocat" } });
+    fireEvent.change(screen.getByLabelText(/Pseudo GitHub/), { target: { value: "octocat" } });
 
     // Laisser le temps à un éventuel pré-remplissage tardif de s'appliquer.
     await new Promise((r) => setTimeout(r, 0));
-    expect(screen.getByLabelText("Pseudo GitHub")).toHaveValue("octocat");
+    expect(screen.getByLabelText(/Pseudo GitHub/)).toHaveValue("octocat");
   });
 });

@@ -87,7 +87,7 @@ export default function RepoPage() {
   }
 
   const canNext = hosted
-    ? name.trim() !== "" && githubUsername.trim() !== ""
+    ? name.trim() !== ""
     : validated && name.trim() !== "" && repoUrl.trim() !== "";
 
   return (
@@ -104,7 +104,7 @@ export default function RepoPage() {
       </h1>
       <p className="mt-1 text-sm text-foreground-muted">
         {hosted
-          ? "Alexis crée un dépôt privé et t'y ajoute en tant que collaborateur admin."
+          ? "Alexis crée un dépôt privé pour toi. Avec un compte GitHub, tu peux y être ajouté en collaborateur — sinon, tu récupères ton code en ZIP à tout moment."
           : "Connectez votre dépôt Git et vérifiez l'accès de votre token."}
       </p>
 
@@ -212,7 +212,10 @@ export default function RepoPage() {
 
         {hosted && (
           <div>
-            <Label htmlFor="github-username">Pseudo GitHub</Label>
+            <Label htmlFor="github-username">
+              Pseudo GitHub{" "}
+              <span className="text-foreground-subtle font-normal">(optionnel)</span>
+            </Label>
             <Input
               id="github-username"
               value={githubUsername}
@@ -221,8 +224,11 @@ export default function RepoPage() {
                 setGithubUsername(e.target.value);
               }}
               placeholder="octocat"
-              required
             />
+            <p className="mt-1 text-xs text-foreground-subtle">
+              Laisse vide si tu n&apos;as pas de compte GitHub — tu pourras toujours télécharger ton code en ZIP
+              depuis les paramètres du projet.
+            </p>
           </div>
         )}
 
