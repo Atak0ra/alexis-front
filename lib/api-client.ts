@@ -753,3 +753,29 @@ export function adminUpdateManagedSecret(
     body: JSON.stringify({ value }),
   });
 }
+
+export interface AdminDashboardSummary {
+  client_count: number;
+  project_count: number;
+}
+
+export function adminGetDashboardSummary(adminApiKey: string): Promise<AdminDashboardSummary> {
+  return request("/admin/dashboard/summary", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export interface AdminSpendBucket {
+  bucket: string;
+  cost_usd: number;
+}
+
+export interface AdminSpendSeries {
+  granularity: "day" | "week" | "month";
+  total_usd: number;
+  series: AdminSpendBucket[];
+}
+
+export function adminGetSpendSeries(adminApiKey: string, start: string, end: string): Promise<AdminSpendSeries> {
+  return request(`/admin/dashboard/spend?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
