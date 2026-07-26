@@ -23,3 +23,18 @@ export function getKeyId(): string | null {
 export function setKeyId(id: string): void {
   window.localStorage.setItem(KEY_ID_STORAGE, id);
 }
+
+const ADMIN_API_KEY_STORAGE = "alexis_admin_api_key";
+
+export function getAdminApiKey(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ADMIN_API_KEY_STORAGE);
+}
+
+export function setAdminApiKey(key: string): void {
+  window.localStorage.setItem(ADMIN_API_KEY_STORAGE, key);
+}
+
+export function clearAdminApiKey(): void {
+  window.localStorage.removeItem(ADMIN_API_KEY_STORAGE);
+}

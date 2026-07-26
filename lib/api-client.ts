@@ -632,3 +632,124 @@ export function getProjectContextContent(
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 }
+
+// ─── Admin back-office ──────────────────────────────────────────────────────
+// Pas de branche isLocalMode() ici : le démo public (isLocalMode()) est une
+// vitrine client, jamais un chemin admin — ces fonctions ne sont atteignables
+// que depuis /admin/*, qui n'existe pas dans le flux démo.
+
+export interface AdminApiKeyOut {
+  id: string;
+  api_key: string;
+}
+
+export function adminLogin(email: string, password: string): Promise<AdminApiKeyOut> {
+  return request("/admin/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export interface AdminClientListItem {
+  id: string;
+  email: string;
+  plan_name: string | null;
+  project_count: number;
+  monthly_spend_usd: number;
+}
+
+export function adminListClients(adminApiKey: string): Promise<AdminClientListItem[]> {
+  return request("/admin/clients", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export interface AdminProjectSummary {
+  id: string;
+  name: string;
+  agent_choice: string;
+  is_active: boolean;
+  total_cost_usd: number;
+}
+
+export interface AdminClientDetail {
+  id: string;
+  email: string;
+  github_username: string | null;
+  plan_name: string | null;
+  monthly_spend_usd: number;
+  projects: AdminProjectSummary[];
+}
+
+export function adminGetClient(adminApiKey: string, clientId: string): Promise<AdminClientDetail> {
+  return request(`/admin/clients/${clientId}`, { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export interface PlanOut {
+  id: string;
+  name: string;
+  monthly_price_eur: number;
+  forced_agent_choice: string | null;
+  spec_max_budget_usd: number | null;
+  plan_max_budget_usd: number | null;
+  dev_max_budget_usd: number | null;
+  monthly_max_budget_usd: number | null;
+}
+
+export interface PlanPayload {
+  name: string;
+  monthly_price_eur: number;
+  forced_agent_choice?: string | null;
+  spec_max_budget_usd?: number | null;
+  plan_max_budget_usd?: number | null;
+  dev_max_budget_usd?: number | null;
+  monthly_max_budget_usd?: number | null;
+}
+
+export function adminListPlans(adminApiKey: string): Promise<PlanOut[]> {
+  return request("/admin/plans", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminCreatePlan(adminApiKey: string, payload: PlanPayload): Promise<PlanOut> {
+  return request("/admin/plans", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function adminUpdatePlan(
+  adminApiKey: string,
+  planId: string,
+  payload: Partial<PlanPayload>
+): Promise<PlanOut> {
+  return request(`/admin/plans/${planId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function adminDeletePlan(adminApiKey: string, planId: string): Promise<void> {
+  return request(`/admin/plans/${planId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface ManagedSecretOut {
+  key: string;
+  has_value: boolean;
+  updated_at: string;
+}
+
+export function adminListManagedSecrets(adminApiKey: string): Promise<ManagedSecretOut[]> {
+  return request("/admin/managed-secrets", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateManagedSecret(
+  adminApiKey: string,
+  key: string,
+  value: string | null
+): Promise<ManagedSecretOut> {
+  return request(`/admin/managed-secrets/${key}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ value }),
+  });
+}
