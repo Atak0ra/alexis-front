@@ -79,12 +79,6 @@ export default function AgentPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        {/* Agent choice + clé API — masqués pour un client sur un plan à agent
-            imposé (ex: Free/Groq) : rien à choisir, le backend force de toute
-            façon agent_choice + models côté création (défense en profondeur,
-            ce masquage est de la UX, pas la vraie barrière). */}
-        {!forcedAgentChoice && (
-        <>
         {/* Agent choice */}
         <div>
           <Label htmlFor="agent-choice">Agent CLI</Label>
@@ -97,6 +91,12 @@ export default function AgentPage() {
             <option value="claude">claude</option>
             <option value="aider">aider</option>
           </select>
+          {forcedAgentChoice && (
+            <p className="mt-1 text-xs text-foreground-subtle">
+              Sans clé API ci-dessous, ce projet utilisera <span className="font-mono">{forcedAgentChoice}</span> avec la
+              clé fournie par Alexis. Renseignez votre propre clé pour choisir librement l&apos;agent et le fournisseur.
+            </p>
+          )}
         </div>
 
         {/* API key */}
@@ -130,13 +130,13 @@ export default function AgentPage() {
             placeholder={agentChoice === "claude" ? "sk-ant-… (laisser vide si non fourni)" : "sk-… (OpenAI / OpenRouter / Groq)"}
           />
           <p className="mt-1 text-xs text-foreground-subtle">
-            {agentChoice === "claude"
-              ? "Sans clé, Alexis utilise sa propre clé Anthropic pour traiter vos tickets. La facturation de l'usage agent est alors gérée par Alexis, séparément de votre abonnement."
-              : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
+            {forcedAgentChoice
+              ? `Laissez vide pour utiliser la clé gérée par Alexis (${forcedAgentChoice}, sans frais). En saisir une active votre propre agent et fournisseur, sans restriction.`
+              : agentChoice === "claude"
+                ? "Sans clé, Alexis utilise sa propre clé Anthropic pour traiter vos tickets. La facturation de l'usage agent est alors gérée par Alexis, séparément de votre abonnement."
+                : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
           </p>
         </div>
-        </>
-        )}
 
         {/* Base URL — visible uniquement pour Aider */}
         {agentChoice === "aider" && (

@@ -298,7 +298,7 @@ describe("AgentPage (step 2)", () => {
     );
   });
 
-  it("skips the agent/key fields entirely for a client on a forced-agent plan", async () => {
+  it("shows the agent/key fields as optional for a client on a forced-agent plan, with reframed hint copy", async () => {
     vi.spyOn(apiClient, "getMe").mockResolvedValue({
       id: "client-1", email: "free@x.com", github_username: null, forced_agent_choice: "aider",
     });
@@ -308,9 +308,46 @@ describe("AgentPage (step 2)", () => {
     renderAgentPage();
 
     await waitFor(() => {
-      expect(screen.queryByLabelText("Agent CLI")).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(/Clé API agent/i)).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Agent CLI")).toBeInTheDocument();
+      expect(screen.getByLabelText(/Clé API agent/i)).toBeInTheDocument();
     });
-    expect(screen.getByRole("checkbox", { name: /revue de code/i })).toBeInTheDocument();
+    expect(screen.getByText(/clé gérée par Alexis/i)).toBeInTheDocument();
+  });
+
+  it("submits the client's own agent choice and key on a forced-agent plan when a key is provided", async () => {
+    vi.spyOn(apiClient, "getMe").mockResolvedValue({
+      id: "client-1", email: "free@x.com", github_username: null, forced_agent_choice: "aider",
+    });
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+
+    function FilledAgentPage() {
+      const ctx = useNewProject();
+      if (!ctx.name) {
+        ctx.setName("kara");
+        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setForgeToken("ghp_xxx");
+        ctx.setAgentChoice("claude");
+      }
+      return <AgentPage />;
+    }
+
+    render(
+      <Provider>
+        <FilledAgentPage />
+      </Provider>
+    );
+
+    await waitFor(() => expect(screen.getByLabelText("Agent CLI")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
+    fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(apiClient.createProject).toHaveBeenCalledWith(
+      "alx_xxx",
+      expect.objectContaining({ agent_choice: "claude", agent_api_key: "sk-ant-xxx" })
+    );
   });
 });
