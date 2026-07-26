@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import ContextAdvancedOptions from "@/components/context-advanced-options";
+import AgentTemplateHint from "@/components/agent-template-hint";
 
 interface Props {
   projectId: string;
@@ -428,6 +429,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                 ))}
               </div>
             )}
+
+            <AgentTemplateHint />
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <ContextAdvancedOptions onChange={setAdvancedBrief} />
