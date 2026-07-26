@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createProject, getProjectContext, AlexisApiError } from "@/lib/api-client";
+import { createProject, getMe, getProjectContext, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, getDefaultModels } from "@/lib/project-defaults";
@@ -23,6 +23,15 @@ export default function AgentPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [forcedAgentChoice, setForcedAgentChoice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    getMe(apiKey)
+      .then((me) => setForcedAgentChoice(me.forced_agent_choice))
+      .catch(() => setForcedAgentChoice(null));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +79,12 @@ export default function AgentPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        {/* Agent choice + clé API — masqués pour un client sur un plan à agent
+            imposé (ex: Free/Groq) : rien à choisir, le backend force de toute
+            façon agent_choice + models côté création (défense en profondeur,
+            ce masquage est de la UX, pas la vraie barrière). */}
+        {!forcedAgentChoice && (
+        <>
         {/* Agent choice */}
         <div>
           <Label htmlFor="agent-choice">Agent CLI</Label>
@@ -120,6 +135,8 @@ export default function AgentPage() {
               : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
           </p>
         </div>
+        </>
+        )}
 
         {/* Base URL — visible uniquement pour Aider */}
         {agentChoice === "aider" && (

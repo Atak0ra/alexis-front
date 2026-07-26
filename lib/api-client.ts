@@ -154,11 +154,12 @@ export interface ClientProfile {
   id: string;
   email: string;
   github_username: string | null;
+  forced_agent_choice: string | null;
 }
 
 export function getMe(apiKey: string): Promise<ClientProfile> {
   if (isLocalMode()) {
-    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null });
+    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null, forced_agent_choice: null });
   }
   return request("/auth/me", {
     headers: { Authorization: `Bearer ${apiKey}` },

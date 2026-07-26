@@ -31,6 +31,9 @@ beforeEach(() => {
   vi.restoreAllMocks();
   pushMock.mockClear();
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+  vi.spyOn(apiClient, "getMe").mockResolvedValue({
+    id: "client-1", email: "x@x.com", github_username: null, forced_agent_choice: null,
+  });
 });
 
 function renderAgentPage() {
@@ -293,5 +296,21 @@ describe("AgentPage (step 2)", () => {
     await waitFor(() =>
       expect(screen.getByText("Erreur de création du projet")).toBeInTheDocument()
     );
+  });
+
+  it("skips the agent/key fields entirely for a client on a forced-agent plan", async () => {
+    vi.spyOn(apiClient, "getMe").mockResolvedValue({
+      id: "client-1", email: "free@x.com", github_username: null, forced_agent_choice: "aider",
+    });
+    vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+
+    renderAgentPage();
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Agent CLI")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/Clé API agent/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("checkbox", { name: /revue de code/i })).toBeInTheDocument();
   });
 });
