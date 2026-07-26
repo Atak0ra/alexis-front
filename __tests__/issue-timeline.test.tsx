@@ -33,7 +33,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     expect(screen.getByTestId("issue-step-requested")).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     expect(screen.getByTestId("issue-step-requested")).toHaveAttribute("data-status", "current");
@@ -63,7 +63,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     expect(screen.getByTestId("issue-step-analysis")).toHaveAttribute("data-status", "attention");
@@ -82,7 +82,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     expect(screen.getByText("Le bouton suivant ne fonctionne pas sur mobile.")).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     expect(screen.getByText(/Créée le/)).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={vi.fn()}
+        onIssueUpdated={vi.fn()}
       />
     );
     const requestedStep = screen.getByTestId("issue-step-requested");
@@ -118,32 +118,61 @@ describe("IssueTimeline", () => {
     expect(line).not.toBeNull();
   });
 
-  it("submits a new comment and calls onCommentAdded", async () => {
-    const newComment: apiClient.IssueComment = {
-      id: "c2",
-      body: "Merci, ça avance bien",
-      author: "user",
-      created_at: "2026-07-12T00:00:00Z",
-    };
-    vi.spyOn(apiClient, "createIssueComment").mockResolvedValue(newComment);
-    const onCommentAdded = vi.fn();
-
+  it("does not show the chat/regenerate/validate zone outside a review state", () => {
     render(
       <IssueTimeline
         issue={makeIssue({ state: "Dev" })}
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onCommentAdded={onCommentAdded}
+        onIssueUpdated={vi.fn()}
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Ajouter un commentaire…"), {
-      target: { value: "Merci, ça avance bien" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Ajouter un commentaire" }));
+    expect(screen.queryByRole("button", { name: "Discuter" })).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => expect(onCommentAdded).toHaveBeenCalledWith(newComment));
-    expect(apiClient.createIssueComment).toHaveBeenCalledWith("k1", "p1", "i1", "Merci, ça avance bien");
+  it("sends a chat message in a review state and disables the button while in progress", async () => {
+    vi.spyOn(apiClient, "sendIssueChat").mockResolvedValue({ status: "in_progress" });
+    vi.spyOn(apiClient, "getIssueChatStatus").mockResolvedValue({ status: "in_progress" });
+
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Spec Review" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/posez une question/i), {
+      target: { value: "Quelle approche pour la pagination ?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Discuter" }));
+
+    await waitFor(() => expect(apiClient.sendIssueChat).toHaveBeenCalledWith("k1", "p1", "i1", "Quelle approche pour la pagination ?"));
+    expect(screen.getByRole("button", { name: /en cours/i })).toBeDisabled();
+  });
+
+  it("calls updateIssue and onIssueUpdated when Valider is clicked in a review state", async () => {
+    const updatedIssue = makeIssue({ state: "Plan" });
+    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(updatedIssue);
+    const onIssueUpdated = vi.fn();
+
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Spec Review" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={onIssueUpdated}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Valider" }));
+
+    await waitFor(() => expect(onIssueUpdated).toHaveBeenCalledWith(updatedIssue));
+    expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
   });
 });

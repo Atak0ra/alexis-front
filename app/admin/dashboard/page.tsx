@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#71717A" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: "#71717A" }} axisLine={false} tickLine={false} width={50} />
               <Tooltip
-                formatter={(value: number) => [`$${value.toFixed(2)}`, "Dépense"]}
+                formatter={(value) => [`$${Number(value).toFixed(2)}`, "Dépense"]}
                 contentStyle={{ borderRadius: 12, borderColor: "#E4E4E7" }}
               />
               <Area type="monotone" dataKey="cost_usd" stroke="#4F46E5" fill="url(#spendGradient)" strokeWidth={2} />

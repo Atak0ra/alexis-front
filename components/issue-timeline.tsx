@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Inbox, Search, Code2, CheckCircle2, AlertTriangle, type LucideIcon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Inbox, Search, Code2, CheckCircle2, AlertTriangle, SendHorizonal, RefreshCw, CircleCheck, Loader2, type LucideIcon } from "lucide-react";
 import { getIssueSteps, type StepId } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
-import { createIssueComment, type Issue, type IssueComment } from "@/lib/api-client";
+import {
+  sendIssueChat,
+  getIssueChatStatus,
+  updateIssue,
+  type Issue,
+  type IssueComment,
+  type ChatStatus,
+} from "@/lib/api-client";
 import MarkdownLite from "@/components/markdown-lite";
 
 const STEP_ICONS: Record<StepId, LucideIcon> = {
@@ -28,7 +35,26 @@ interface IssueTimelineProps {
   states: Record<string, string>;
   projectId: string;
   apiKey: string;
-  onCommentAdded: (comment: IssueComment) => void;
+  onIssueUpdated: (issue: Issue) => void;
+}
+
+/** Détecte si l'état courant est une phase de review (spec ou plan). */
+function isReviewState(state: string): boolean {
+  const s = state.toLowerCase();
+  return s.includes("review") && (s.includes("spec") || s.includes("plan"));
+}
+
+/** Retourne la clé interne du step (spec|plan) selon l'état. */
+function reviewPhase(state: string): "spec" | "plan" | null {
+  const s = state.toLowerCase();
+  if (s.includes("spec")) return "spec";
+  if (s.includes("plan")) return "plan";
+  return null;
+}
+
+/** Trouve le state label à partir d'une clé dans la map states du projet. */
+function findStateLabel(states: Record<string, string>, key: string): string | null {
+  return states[key] ?? null;
 }
 
 export default function IssueTimeline({
@@ -36,22 +62,89 @@ export default function IssueTimeline({
   states,
   projectId,
   apiKey,
-  onCommentAdded,
+  onIssueUpdated,
 }: IssueTimelineProps) {
   const steps = getIssueSteps(issue, states);
-  const [commentBody, setCommentBody] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatStatus, setChatStatus] = useState<ChatStatus>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<"regen" | "validate" | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function handleSubmitComment() {
-    const body = commentBody.trim();
-    if (!body) return;
-    setSubmitting(true);
+  const inReview = isReviewState(issue.state);
+  const phase = reviewPhase(issue.state);
+
+  // Polling du statut chat tant que in_progress
+  useEffect(() => {
+    if (chatStatus === "in_progress") {
+      pollRef.current = setInterval(async () => {
+        try {
+          const res = await getIssueChatStatus(apiKey, projectId, issue.id);
+          setChatStatus(res.status);
+          if (res.status !== "in_progress") {
+            clearInterval(pollRef.current!);
+            if (res.status === "failed") setChatError(res.error ?? "Erreur inconnue");
+            // Rafraîchir l'issue pour afficher le commentaire alexis
+            if (res.status === "done") onIssueUpdated({ ...issue });
+          }
+        } catch {
+          clearInterval(pollRef.current!);
+          setChatStatus("failed");
+          setChatError("Erreur lors de la vérification du statut.");
+        }
+      }, 2000);
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [chatStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSendChat() {
+    const msg = chatMessage.trim();
+    if (!msg || chatStatus === "in_progress") return;
+    setChatError(null);
+    setChatStatus("in_progress");
+    setChatMessage("");
     try {
-      const comment = await createIssueComment(apiKey, projectId, issue.id, body);
-      onCommentAdded(comment);
-      setCommentBody("");
+      await sendIssueChat(apiKey, projectId, issue.id, msg);
+    } catch (err: unknown) {
+      setChatStatus("failed");
+      const detail = (err as { detail?: string })?.detail;
+      setChatError(detail ?? "Impossible d'envoyer le message.");
+    }
+  }
+
+  async function handleRegenerate() {
+    if (!phase) return;
+    setActionLoading("regen");
+    try {
+      // Repasser au trigger du step courant (efface le lock → poller relance)
+      const triggerKey = phase === "spec" ? "todo" : "plan";
+      const newState = findStateLabel(states, triggerKey);
+      if (!newState) throw new Error(`État "${triggerKey}" introuvable dans la config.`);
+      const updated = await updateIssue(apiKey, projectId, issue.id, { state: newState });
+      onIssueUpdated(updated);
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      setChatError(detail ?? "Impossible de relancer la génération.");
     } finally {
-      setSubmitting(false);
+      setActionLoading(null);
+    }
+  }
+
+  async function handleValidate() {
+    if (!phase) return;
+    setActionLoading("validate");
+    try {
+      // Passer au trigger du step suivant
+      const nextKey = phase === "spec" ? "plan" : "dev";
+      const newState = findStateLabel(states, nextKey);
+      if (!newState) throw new Error(`État "${nextKey}" introuvable dans la config.`);
+      const updated = await updateIssue(apiKey, projectId, issue.id, { state: newState });
+      onIssueUpdated(updated);
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      setChatError(detail ?? "Impossible de valider.");
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -142,9 +235,17 @@ export default function IssueTimeline({
                   {issue.comments.length > 0 && (
                     <ul className="space-y-3">
                       {issue.comments.map((c) => (
-                        <li key={c.id} className="rounded-lg bg-surface-sunken p-3">
+                        <li
+                          key={c.id}
+                          className={cn(
+                            "rounded-lg p-3",
+                            c.author === "alexis"
+                              ? "bg-brand/10 border border-brand/20"
+                              : "bg-surface-sunken"
+                          )}
+                        >
                           <p className="text-xs font-medium text-foreground-muted">
-                            {c.author} · {formatDate(c.created_at)}
+                            {c.author === "alexis" ? "Alexis" : "Vous"} · {formatDate(c.created_at)}
                           </p>
                           <div className="mt-1 text-sm text-foreground">
                             <MarkdownLite text={c.body} />
@@ -154,23 +255,76 @@ export default function IssueTimeline({
                     </ul>
                   )}
 
-                  <div className="flex flex-col gap-2">
-                    <textarea
-                      value={commentBody}
-                      onChange={(e) => setCommentBody(e.target.value)}
-                      rows={3}
-                      placeholder="Ajouter un commentaire…"
-                      className="w-full resize-none rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                    />
-                    <button
-                      type="button"
-                      disabled={!commentBody.trim() || submitting}
-                      onClick={handleSubmitComment}
-                      className="self-end rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-brand-hover disabled:opacity-50"
-                    >
-                      {submitting ? "Envoi…" : "Ajouter un commentaire"}
-                    </button>
-                  </div>
+                  {/* Zone de conversation — disponible uniquement en review */}
+                  {inReview && (
+                    <div className="flex flex-col gap-3">
+                      <textarea
+                        value={chatMessage}
+                        onChange={(e) => setChatMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSendChat();
+                        }}
+                        rows={3}
+                        placeholder="Posez une question ou apportez une précision… (⌘↵ pour envoyer)"
+                        disabled={chatStatus === "in_progress"}
+                        className="w-full resize-none rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
+                      />
+
+                      {chatError && (
+                        <p className="text-xs font-medium text-red-500">{chatError}</p>
+                      )}
+
+                      {/* Boutons : Discuter / Régénérer / Valider */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!chatMessage.trim() || chatStatus === "in_progress"}
+                          onClick={handleSendChat}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-hover disabled:opacity-50"
+                        >
+                          {chatStatus === "in_progress" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <SendHorizonal className="h-4 w-4" />
+                          )}
+                          {chatStatus === "in_progress" ? "En cours…" : "Discuter"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={actionLoading !== null}
+                          onClick={handleRegenerate}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-surface-sunken disabled:opacity-50"
+                        >
+                          {actionLoading === "regen" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          Régénérer
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={actionLoading !== null}
+                          onClick={handleValidate}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-transparent px-4 py-2 text-sm font-medium text-brand transition-all hover:bg-brand/10 disabled:opacity-50"
+                        >
+                          {actionLoading === "validate" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CircleCheck className="h-4 w-4" />
+                          )}
+                          Valider
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hors review : affichage des commentaires sans zone de chat */}
+                  {!inReview && issue.comments.length === 0 && (
+                    <p className="text-xs text-foreground-subtle">Aucune activité pour l&apos;instant.</p>
+                  )}
                 </div>
               )}
             </div>

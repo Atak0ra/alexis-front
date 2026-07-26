@@ -10,7 +10,6 @@ import {
   AlexisApiError,
   type ProjectOut,
   type Issue,
-  type IssueComment,
 } from "@/lib/api-client";
 import { AppHeader } from "@/components/app-header";
 import IssueTimeline from "@/components/issue-timeline";
@@ -43,8 +42,26 @@ export default function IssueDetailPage() {
       .catch(() => setNotFound(true));
   }, [projectId, issueId, apiKey]);
 
-  function handleCommentAdded(comment: IssueComment) {
-    setIssue((prev) => (prev ? { ...prev, comments: [...prev.comments, comment] } : prev));
+  function handleIssueUpdated(updated: Issue) {
+    // Si l'état a changé (Valider / Régénérer), recharger tout le fil
+    // pour récupérer le nouvel état + commentaires depuis l'API.
+    if (updated.state !== issue?.state) {
+      listIssues(apiKey, projectId)
+        .then((issues) => {
+          const found = issues.find((i) => i.id === issueId);
+          if (found) setIssue(found);
+        })
+        .catch(() => {});
+    } else {
+      // Sinon (rafraîchissement suite à chat done), recharger l'issue pour
+      // afficher le nouveau commentaire alexis.
+      listIssues(apiKey, projectId)
+        .then((issues) => {
+          const found = issues.find((i) => i.id === issueId);
+          if (found) setIssue(found);
+        })
+        .catch(() => {});
+    }
   }
 
   if (error || notFound) {
@@ -91,7 +108,7 @@ export default function IssueDetailPage() {
               states={project.states}
               projectId={projectId}
               apiKey={apiKey}
-              onCommentAdded={handleCommentAdded}
+              onIssueUpdated={handleIssueUpdated}
             />
           </div>
         </>

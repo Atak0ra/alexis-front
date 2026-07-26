@@ -69,4 +69,24 @@ describe("ChoicePage (step 1 — repo origin)", () => {
     expect(pushMock).toHaveBeenCalledWith("/projects/new/repo");
     expect(captured?.hosted).toBe(true);
   });
+
+  it("'Passer' skips the choice and defaults to hosted", async () => {
+    const { useNewProject, NewProjectProvider: Provider } = await import("@/lib/new-project-context");
+    let captured: ReturnType<typeof useNewProject> | null = null;
+
+    function Probe() {
+      captured = useNewProject();
+      return <ChoicePage />;
+    }
+    render(
+      <Provider>
+        <Probe />
+      </Provider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /passer/i }));
+
+    expect(pushMock).toHaveBeenCalledWith("/projects/new/repo");
+    expect(captured?.hosted).toBe(true);
+  });
 });

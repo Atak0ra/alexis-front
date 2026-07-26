@@ -464,6 +464,44 @@ export function createIssueComment(
   });
 }
 
+// ─── Chat (raffinement conversationnel spec/plan) ─────────────────────────────
+
+export type ChatStatus = "in_progress" | "done" | "failed" | null;
+
+export interface IssueChatStatusOut {
+  status: ChatStatus;
+  error?: string | null;
+}
+
+export function sendIssueChat(
+  apiKey: string,
+  projectId: string,
+  issueId: string,
+  message: string
+): Promise<IssueChatStatusOut> {
+  if (isLocalMode()) {
+    return Promise.resolve({ status: "done" });
+  }
+  return request(`/projects/${projectId}/issues/${issueId}/chat`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ message }),
+  });
+}
+
+export function getIssueChatStatus(
+  apiKey: string,
+  projectId: string,
+  issueId: string
+): Promise<IssueChatStatusOut> {
+  if (isLocalMode()) {
+    return Promise.resolve({ status: null });
+  }
+  return request(`/projects/${projectId}/issues/${issueId}/chat/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 // ─── Project context (.alexis/project.md) ────────────────────────────────────
 
 export interface RepoSummaryEnqueue {
