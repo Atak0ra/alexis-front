@@ -20,11 +20,10 @@ import {
   type Issue,
   type TicketOut,
 } from "@/lib/api-client";
-import { AppHeader } from "@/components/app-header";
 import ProjectContextStep from "@/components/project-context-step";
 import ProjectContextCard from "@/components/project-context-card";
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
-import { Settings, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
 
@@ -205,8 +204,7 @@ export default function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen flex-col bg-surface">
-        <AppHeader />
+      <div className="flex h-full min-h-[calc(100vh-3.5rem)] flex-col bg-surface lg:min-h-screen">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-bg">
             <svg className="h-7 w-7 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -300,14 +298,6 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          {/* ── Retour aux projets ── */}
-          <Link
-            href="/dashboard"
-            className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
-          >
-            ← Retour aux projets
-          </Link>
-
           {/* ── Project header ── */}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -331,13 +321,6 @@ export default function ProjectDetailPage() {
               <span className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted">
                 {project.agent_choice}
               </span>
-              <Link
-                href={`/dashboard/${projectId}/settings`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
-              >
-                <Settings className="h-4 w-4" />
-                Paramètres
-              </Link>
               {project.is_active && (
                 <button
                   onClick={async () => {

@@ -9,10 +9,6 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "proj-1", issueId: "issue-1" }),
 }));
 
-vi.mock("@/components/app-header", () => ({
-  AppHeader: () => <header data-testid="app-header" />,
-}));
-
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
   name: "Kara",

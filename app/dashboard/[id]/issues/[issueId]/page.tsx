@@ -11,7 +11,6 @@ import {
   type ProjectOut,
   type Issue,
 } from "@/lib/api-client";
-import { AppHeader } from "@/components/app-header";
 import IssueTimeline from "@/components/issue-timeline";
 
 export default function IssueDetailPage() {
@@ -66,8 +65,7 @@ export default function IssueDetailPage() {
 
   if (error || notFound) {
     return (
-      <div className="flex h-screen flex-col bg-surface">
-        <AppHeader />
+      <div className="flex h-full min-h-[calc(100vh-3.5rem)] flex-col bg-surface lg:min-h-screen">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
           <p className="text-base font-semibold text-foreground">
             {error ?? "Demande introuvable."}
@@ -85,13 +83,6 @@ export default function IssueDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-8">
-      <Link
-        href={`/dashboard/${projectId}`}
-        className="text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
-      >
-        ← Retour au projet
-      </Link>
-
       {issue === null || project === null ? (
         <div className="mt-6 space-y-4">
           <div className="h-8 w-2/3 animate-pulse rounded-lg bg-surface-sunken" />

@@ -10,10 +10,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("@/components/app-header", () => ({
-  AppHeader: () => <header data-testid="app-header" />,
-}));
-
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
   name: "Kara",

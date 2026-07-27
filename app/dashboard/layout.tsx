@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getApiKey } from "@/lib/session";
-import { AppHeader } from "@/components/app-header";
+import { AppSidebar } from "@/components/app-sidebar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -29,11 +29,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-full min-h-screen flex-col bg-surface">
-      <AppHeader />
-      <main className="flex-1">
-        {children}
-      </main>
+    <div className="flex min-h-screen flex-col bg-surface lg:flex-row">
+      <AppSidebar />
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }
