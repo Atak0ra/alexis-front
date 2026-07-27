@@ -86,17 +86,27 @@ export default function AdminDashboardPage() {
       <div className="mt-6 grid grid-cols-3 gap-4">
         <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Clients</p>
-          <p className="mt-1.5 text-2xl font-bold text-foreground">{summary?.client_count ?? "—"}</p>
+          {summary ? (
+            <p className="mt-1.5 text-2xl font-bold text-foreground">{summary.client_count}</p>
+          ) : (
+            <div className="mt-2 h-7 w-12 animate-pulse rounded bg-surface-sunken" />
+          )}
         </AdminCard>
         <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Projets</p>
-          <p className="mt-1.5 text-2xl font-bold text-foreground">{summary?.project_count ?? "—"}</p>
+          {summary ? (
+            <p className="mt-1.5 text-2xl font-bold text-foreground">{summary.project_count}</p>
+          ) : (
+            <div className="mt-2 h-7 w-12 animate-pulse rounded bg-surface-sunken" />
+          )}
         </AdminCard>
         <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Dépenses (période)</p>
-          <p className="mt-1.5 font-mono text-2xl font-bold text-brand">
-            {spend ? `$${spend.total_usd.toFixed(2)}` : "—"}
-          </p>
+          {spend ? (
+            <p className="mt-1.5 font-mono text-2xl font-bold text-brand">${spend.total_usd.toFixed(2)}</p>
+          ) : (
+            <div className="mt-2 h-7 w-20 animate-pulse rounded bg-surface-sunken" />
+          )}
         </AdminCard>
       </div>
 
@@ -137,6 +147,9 @@ export default function AdminDashboardPage() {
 
       <AdminCard className="mt-6 p-5">
         <div className="h-72 w-full">
+          {!spend ? (
+            <div className="h-full w-full animate-pulse rounded-lg bg-surface-sunken" />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
@@ -155,6 +168,7 @@ export default function AdminDashboardPage() {
               <Area type="monotone" dataKey="cost_usd" stroke="#4F46E5" fill="url(#spendGradient)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </div>
       </AdminCard>
     </div>

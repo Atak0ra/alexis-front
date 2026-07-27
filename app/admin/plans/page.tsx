@@ -30,13 +30,15 @@ export default function AdminPlansPage() {
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<PlanPayload>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   function load() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
     adminListPlans(apiKey)
       .then(setPlans)
-      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
+      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
+      .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
@@ -95,6 +97,15 @@ export default function AdminPlansPage() {
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
+      {loading && (
+        <div className="mt-6 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-xl bg-surface-sunken" />
+          ))}
+        </div>
+      )}
+
+      {!loading && (
       <AdminCard className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead>
@@ -132,6 +143,7 @@ export default function AdminPlansPage() {
           </tbody>
         </table>
       </AdminCard>
+      )}
 
       {editingId && (
         <AdminCard className="mt-8 max-w-md p-6">

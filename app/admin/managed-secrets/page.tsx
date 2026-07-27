@@ -12,13 +12,15 @@ export default function AdminManagedSecretsPage() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   function load() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
     adminListManagedSecrets(apiKey)
       .then(setSecrets)
-      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
+      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
+      .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
@@ -46,6 +48,15 @@ export default function AdminManagedSecretsPage() {
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
+      {loading && (
+        <div className="mt-6 space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-surface-sunken" />
+          ))}
+        </div>
+      )}
+
+      {!loading && (
       <div className="mt-6 space-y-4">
         {secrets.map((secret) => (
           <AdminCard key={secret.key} className="p-5">
@@ -98,6 +109,7 @@ export default function AdminManagedSecretsPage() {
           </AdminCard>
         ))}
       </div>
+      )}
     </div>
   );
 }

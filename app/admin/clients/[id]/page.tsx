@@ -21,7 +21,20 @@ export default function AdminClientDetailPage() {
       .finally(() => setLoading(false));
   }, [params.id]);
 
-  if (loading) return <p className="text-sm text-foreground-muted">Chargement…</p>;
+  if (loading) {
+    return (
+      <div>
+        <div className="h-8 w-64 animate-pulse rounded-lg bg-surface-sunken" />
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-surface-sunken" />
+          ))}
+        </div>
+        <div className="mt-10 h-6 w-24 animate-pulse rounded-lg bg-surface-sunken" />
+        <div className="mt-3 h-32 animate-pulse rounded-xl bg-surface-sunken" />
+      </div>
+    );
+  }
   if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!client) return null;
 

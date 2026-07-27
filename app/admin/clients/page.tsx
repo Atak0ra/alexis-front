@@ -26,7 +26,14 @@ export default function AdminClientsPage() {
       <p className="mt-1 text-sm text-foreground-muted">{clients.length} client(s)</p>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-      {loading && <p className="mt-4 text-sm text-foreground-muted">Chargement…</p>}
+
+      {loading && (
+        <div className="mt-6 space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-xl bg-surface-sunken" />
+          ))}
+        </div>
+      )}
 
       {!loading && !error && (
         <AdminCard className="mt-6 overflow-hidden">
