@@ -6,10 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { clearAdminApiKey, getAdminApiKey } from "@/lib/session";
 
 const NAV_ITEMS = [
-  { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/dashboard", label: "Cockpit" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/managed-secrets", label: "Clés gérées" },
+  { href: "/admin/settings", label: "Réglages" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

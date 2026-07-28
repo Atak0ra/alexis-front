@@ -150,16 +150,38 @@ export function login(email: string, password: string): Promise<ApiKeyOut> {
   return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
+// ─── Plans publics (page pricing + /auth/me) ──────────────────────────────────
+
+export interface PlanPublicOut {
+  id: string;
+  name: string;
+  display_name: string | null;
+  description: string | null;
+  features: string[] | null;
+  monthly_price_eur: number;
+  requires_own_key: boolean;
+  max_members: number | null;
+  is_public: boolean;
+  sort_order: number;
+}
+
+export function listPublicPlans(): Promise<PlanPublicOut[]> {
+  if (isLocalMode()) return Promise.resolve([]);
+  return request("/plans");
+}
+
 export interface ClientProfile {
   id: string;
   email: string;
   github_username: string | null;
   forced_agent_choice: string | null;
+  /** Plan courant du client — null si aucun plan assigné (fail-open). */
+  plan: PlanPublicOut | null;
 }
 
 export function getMe(apiKey: string): Promise<ClientProfile> {
   if (isLocalMode()) {
-    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null, forced_agent_choice: null });
+    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null, forced_agent_choice: null, plan: null });
   }
   return request("/auth/me", {
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -833,6 +855,169 @@ export interface AdminSpendSeries {
 
 export function adminGetSpendSeries(adminApiKey: string, start: string, end: string): Promise<AdminSpendSeries> {
   return request(`/admin/dashboard/spend?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+// ─── Admin cockpit — KPIs & analytics ────────────────────────────────────────
+
+export interface AdminKpis {
+  total_cost_usd: number;
+  total_cost_display: number;
+  display_currency: string;
+  run_count: number;
+  success_rate: number;
+  failure_rate: number;
+  avg_cost_per_run_usd: number;
+  avg_duration_ms: number;
+  mrr_eur: number;
+  margin_display: number;
+}
+
+export function adminGetKpis(adminApiKey: string, start: string, end: string): Promise<AdminKpis> {
+  return request(`/admin/dashboard/kpis?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface AdminCostByModelItem {
+  model: string;
+  cost_usd: number;
+  run_count: number;
+}
+
+export function adminGetCostByModel(adminApiKey: string, start: string, end: string): Promise<AdminCostByModelItem[]> {
+  return request(`/admin/dashboard/cost-by-model?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface AdminCostByStepItem {
+  step: string;
+  cost_usd: number;
+  run_count: number;
+}
+
+export function adminGetCostByStep(adminApiKey: string, start: string, end: string): Promise<AdminCostByStepItem[]> {
+  return request(`/admin/dashboard/cost-by-step?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface AdminSuccessByStepItem {
+  step: string;
+  success: number;
+  failed: number;
+}
+
+export function adminGetSuccessByStep(adminApiKey: string, start: string, end: string): Promise<AdminSuccessByStepItem[]> {
+  return request(`/admin/dashboard/success-by-step?start=${start}&end=${end}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface AdminTopClientItem {
+  client_id: string;
+  email: string;
+  cost_usd: number;
+}
+
+export function adminGetTopClients(adminApiKey: string, start: string, end: string, limit = 5): Promise<AdminTopClientItem[]> {
+  return request(`/admin/dashboard/top-clients?start=${start}&end=${end}&limit=${limit}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export interface AdminRecentRun {
+  id: string;
+  identifier: string;
+  step: string;
+  status: string;
+  model: string | null;
+  cost_usd: number | null;
+  duration_ms: number | null;
+  error: string | null;
+  created_at: string;
+  client_email: string;
+  client_id: string;
+  project_name: string;
+  project_id: string;
+}
+
+export function adminGetRecentRuns(
+  adminApiKey: string,
+  opts?: { limit?: number; status?: string; step?: string }
+): Promise<AdminRecentRun[]> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.step) params.set("step", opts.step);
+  const qs = params.toString();
+  return request(`/admin/dashboard/recent-runs${qs ? `?${qs}` : ""}`, {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+// ─── Admin settings ───────────────────────────────────────────────────────────
+
+export interface AdminDefaultModels {
+  spec: string;
+  plan: string;
+  dev: string;
+}
+
+export function adminGetDefaultModels(adminApiKey: string): Promise<AdminDefaultModels> {
+  return request("/admin/settings/default-models", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateDefaultModels(adminApiKey: string, payload: Partial<AdminDefaultModels>): Promise<AdminDefaultModels> {
+  return request("/admin/settings/default-models", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AdminDisplayCurrency {
+  display_currency: string;
+}
+
+export function adminGetDisplayCurrency(adminApiKey: string): Promise<AdminDisplayCurrency> {
+  return request("/admin/settings/display-currency", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateDisplayCurrency(adminApiKey: string, display_currency: string): Promise<AdminDisplayCurrency> {
+  return request("/admin/settings/display-currency", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ display_currency }),
+  });
+}
+
+export interface AdminFxRates {
+  fx_rates: Record<string, number>;
+}
+
+export function adminGetFxRates(adminApiKey: string): Promise<AdminFxRates> {
+  return request("/admin/settings/fx-rates", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateFxRates(adminApiKey: string, fx_rates: Record<string, number>): Promise<AdminFxRates> {
+  return request("/admin/settings/fx-rates", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ fx_rates }),
+  });
+}
+
+export interface AdminProjectToggle {
+  project_id: string;
+  is_active: boolean;
+}
+
+export function adminToggleProjectActive(adminApiKey: string, projectId: string): Promise<AdminProjectToggle> {
+  return request(`/admin/settings/projects/${projectId}/toggle-active`, {
+    method: "PATCH",
     headers: { Authorization: `Bearer ${adminApiKey}` },
   });
 }

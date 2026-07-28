@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
-import { listProjects, getProjectStats, type ProjectOut, type ProjectStats } from "@/lib/api-client";
+import { listProjects, getProjectStats, getMe, type ProjectOut, type ProjectStats, type PlanPublicOut } from "@/lib/api-client";
 
 type StatsState = ProjectStats | "unavailable" | null;
 
@@ -153,15 +153,80 @@ function ProjectCard({ project, stats }: { project: ProjectOut; stats: StatsStat
   );
 }
 
+// ─── Plan Banner (plan gratuit) ───────────────────────────────────────────────
+
+function FreePlanBanner() {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-brand/20 bg-brand/5 px-5 py-3.5">
+      <div className="flex items-center gap-3">
+        <svg className="h-5 w-5 shrink-0 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-sm text-foreground-muted">
+          Vous êtes sur le <span className="font-semibold text-foreground">plan Gratuit</span> — agent limité à <span className="font-medium">aider</span>.
+          Passez à un plan supérieur pour choisir votre agent et débloquer des budgets plus élevés.
+        </p>
+      </div>
+      <Link
+        href="/pricing"
+        className="shrink-0 rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-hover transition-colors"
+      >
+        Voir les plans
+      </Link>
+    </div>
+  );
+}
+
+// ─── Plan Card (encart "Mon plan") ────────────────────────────────────────────
+
+function MyPlanCard({ plan }: { plan: PlanPublicOut }) {
+  const isFree = plan.name === "free";
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-raised p-5 shadow-card">
+      <div className="flex items-center gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-light">
+          <svg className="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-xs text-foreground-subtle">Mon plan</p>
+          <p className="font-semibold text-foreground">{plan.display_name ?? plan.name}</p>
+          {plan.monthly_price_eur === 0 ? (
+            <p className="text-xs text-foreground-muted">Gratuit</p>
+          ) : (
+            <p className="text-xs text-foreground-muted">{plan.monthly_price_eur} € / mois</p>
+          )}
+        </div>
+      </div>
+      {isFree && (
+        <Link
+          href="/pricing"
+          className="shrink-0 rounded-lg border border-brand px-3.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand hover:text-white transition-colors"
+        >
+          Évoluer
+        </Link>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectOut[] | null>(null);
   const [stats, setStats] = useState<Record<string, StatsState>>({});
+  const [plan, setPlan] = useState<PlanPublicOut | null | undefined>(undefined);
 
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
+
+    // Load client profile (plan)
+    getMe(apiKey)
+      .then((me) => setPlan(me.plan))
+      .catch(() => setPlan(null));
+
     listProjects(apiKey).then((result) => {
       setProjects(result);
       for (const project of result) {
@@ -179,10 +244,15 @@ export default function DashboardPage() {
   const totalFailed = allStats.reduce((acc, s) => acc + s.failed, 0);
   const totalCost = allStats.reduce((acc, s) => acc + s.total_cost_usd, 0);
 
+  const isFreePlan = plan?.name === "free";
+
   return (
     <div className="mx-auto w-full max-w-7xl px-6 py-8">
+      {/* Bannière plan gratuit */}
+      {isFreePlan && <FreePlanBanner />}
+
       {/* Page title */}
-      <div className="flex items-center justify-between">
+      <div className={cn("flex items-center justify-between", isFreePlan ? "mt-5" : "")}>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -199,6 +269,13 @@ export default function DashboardPage() {
           Nouveau projet
         </Link>
       </div>
+
+      {/* Encart Mon plan */}
+      {plan && (
+        <div className="mt-6">
+          <MyPlanCard plan={plan} />
+        </div>
+      )}
 
       {/* KPIs — only show when we have data */}
       {allStats.length > 0 && (
