@@ -32,7 +32,7 @@ describe("LoginPage", () => {
     expect(setApiKeySpy).toHaveBeenCalledWith("alx_xxx");
   });
 
-  it("signs up and redirects to /dashboard", async () => {
+  it("signs up and shows the 'check your email' confirmation instead of redirecting immediately", async () => {
     vi.spyOn(apiClient, "signup").mockResolvedValue({ id: "abc", api_key: "alx_yyy" });
     vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
@@ -43,7 +43,14 @@ describe("LoginPage", () => {
     fireEvent.change(screen.getByLabelText("Confirmer le mot de passe"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    // Pas de redirect immédiat — le compte doit vérifier son email avant de
+    // pouvoir créer des projets (garde-fou backend, cf. DELETE /auth/me etc.).
+    expect(await screen.findByText("Compte créé")).toBeInTheDocument();
+    expect(screen.getByText("new@b.com")).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aller au tableau de bord" }));
+    expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
   it("blocks signup and shows an error when passwords don't match", async () => {

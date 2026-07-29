@@ -30,7 +30,7 @@ function VerifyEmailContent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-16">
       <div className="w-full max-w-sm text-center">
-        <Link href="/" className="inline-flex items-center gap-2 font-mono text-sm font-bold text-foreground">
+        <Link href="/" className="inline-flex items-center gap-2 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
             A
           </span>

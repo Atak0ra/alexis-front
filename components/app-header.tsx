@@ -35,7 +35,7 @@ export function AppHeader({ projectName }: AppHeaderProps) {
       {/* Logo */}
       <Link
         href="/dashboard"
-        className="flex items-center gap-2 font-mono text-sm font-semibold tracking-tight text-foreground hover:text-brand transition-colors"
+        className="flex items-center gap-2 font-display text-sm font-semibold tracking-tight text-foreground hover:text-brand transition-colors"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
           A

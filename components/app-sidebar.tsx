@@ -127,7 +127,7 @@ export function AppSidebar() {
     <>
       {/* Mobile top bar */}
       <header className="flex h-14 items-center justify-between border-b border-border bg-surface-raised px-4 lg:hidden">
-        <Link href="/dashboard" className="flex items-center gap-2 font-mono text-sm font-bold text-foreground">
+        <Link href="/dashboard" className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
             A
           </span>
@@ -171,7 +171,7 @@ export function AppSidebar() {
 
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-border lg:bg-surface-raised">
-        <Link href="/dashboard" className="flex items-center gap-2 px-5 py-5 font-mono text-sm font-bold text-foreground">
+        <Link href="/dashboard" className="flex items-center gap-2 px-5 py-5 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
             A
           </span>

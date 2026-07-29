@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen bg-surface">
       <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface-raised px-4 py-6">
-        <Link href="/admin/clients" className="mb-8 flex items-center gap-2 font-mono text-sm font-bold text-foreground">
+        <Link href="/admin/clients" className="mb-8 flex items-center gap-2 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
             A
           </span>

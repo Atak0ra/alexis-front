@@ -159,7 +159,7 @@ export default function RootPage() {
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-sm">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-tight text-foreground">
+          <div className="flex items-center gap-2 font-display text-sm font-bold tracking-tight text-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
               A
             </span>
@@ -338,7 +338,7 @@ export default function RootPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-border bg-surface-raised">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-8">
-          <div className="flex items-center gap-2 font-mono text-sm font-bold text-foreground-muted">
+          <div className="flex items-center gap-2 font-display text-sm font-bold text-foreground-muted">
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand text-white text-xs font-bold">
               A
             </span>

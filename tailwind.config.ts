@@ -41,6 +41,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-body)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07)",
