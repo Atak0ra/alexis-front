@@ -74,7 +74,19 @@ describe("RepoPage (step 1)", () => {
   it("navigates to /projects/new/agent on Suivant click after validation", async () => {
     vi.spyOn(apiClient, "validateForge").mockResolvedValue({ valid: true, account: "octocat" });
 
-    renderRepoPage();
+    // handleNext ne pousse vers /projects/new/agent que pour un client BYOK
+    // (isByok, résolu par le layout parent, non monté dans ce test).
+    const { NewProjectProvider: Provider, useNewProject } = await import("@/lib/new-project-context");
+    function ByokRepoPage() {
+      const ctx = useNewProject();
+      if (!ctx.isByok) ctx.setIsByok(true);
+      return <RepoPage />;
+    }
+    render(
+      <Provider>
+        <ByokRepoPage />
+      </Provider>
+    );
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
     fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/kara" } });
     fireEvent.change(screen.getByPlaceholderText(/ghp_/), { target: { value: "ghp_xxx" } });
@@ -116,7 +128,10 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
 
     function PreHostedRepoPage() {
       const ctx = useNewProject();
-      if (!ctx.hosted) ctx.setHosted(true);
+      if (!ctx.hosted) {
+        ctx.setHosted(true);
+        ctx.setIsByok(true);
+      }
       return <RepoPage />;
     }
 
@@ -161,7 +176,7 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
 
   it("pre-fills the GitHub username remembered from a previous hosted project", async () => {
     vi.spyOn(apiClient, "getMe").mockResolvedValue({
-      id: "client-1", email: "a@b.com", github_username: "deSully",
+      id: "client-1", email: "a@b.com", email_verified: true, github_username: "deSully",
     });
 
     await renderHostedRepoPage();
@@ -173,7 +188,7 @@ describe("RepoPage — hosted (chosen on the previous step)", () => {
 
   it("does not overwrite a username the user already typed", async () => {
     vi.spyOn(apiClient, "getMe").mockResolvedValue({
-      id: "client-1", email: "a@b.com", github_username: "deSully",
+      id: "client-1", email: "a@b.com", email_verified: true, github_username: "deSully",
     });
 
     await renderHostedRepoPage();

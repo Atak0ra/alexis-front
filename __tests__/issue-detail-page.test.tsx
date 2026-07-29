@@ -49,7 +49,7 @@ beforeEach(() => {
 describe("IssueDetailPage", () => {
   it("renders the issue title and timeline once loaded", async () => {
     vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
-    vi.spyOn(apiClient, "listIssues").mockResolvedValue([FAKE_ISSUE]);
+    vi.spyOn(apiClient, "getIssue").mockResolvedValue(FAKE_ISSUE);
 
     render(<IssueDetailPage />);
 
@@ -60,7 +60,7 @@ describe("IssueDetailPage", () => {
 
   it("shows a not-found message when the issue id doesn't match any issue", async () => {
     vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
-    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "getIssue").mockRejectedValue(new apiClient.AlexisApiError(404, "Demande introuvable"));
 
     render(<IssueDetailPage />);
 

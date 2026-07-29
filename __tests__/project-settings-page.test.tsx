@@ -45,6 +45,15 @@ const FAKE_HOSTED_PROJECT: apiClient.ProjectOut = {
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+  // isByok (section Agent) dérive de profile.plan.requires_own_key — tous
+  // les tests de ce fichier attendent la section Agent visible (BYOK).
+  vi.spyOn(apiClient, "getMe").mockResolvedValue({
+    id: "client-1", email: "a@b.com", email_verified: true, github_username: null, forced_agent_choice: null,
+    plan: {
+      id: "plan-byok", name: "byok", display_name: "BYOK", description: null, features: null,
+      monthly_price_eur: 0, requires_own_key: true, max_members: 1, is_public: true, sort_order: 0,
+    },
+  });
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import AgentPage from "@/app/projects/new/agent/page";
-import { NewProjectProvider } from "@/lib/new-project-context";
+import { NewProjectProvider, useNewProject } from "@/lib/new-project-context";
 import * as apiClient from "@/lib/api-client";
 import * as session from "@/lib/session";
 
@@ -36,10 +37,25 @@ beforeEach(() => {
   });
 });
 
-function renderAgentPage() {
+// isByok n'est plus résolu par AgentPage lui-même — il est peuplé par le
+// layout parent (via getMe()) avant que cette route ne soit atteinte
+// (repo/page.tsx ne route vers /agent que pour un client BYOK). On simule
+// cette précondition ici plutôt que de monter le layout complet.
+function ForceByok({ byok, children }: { byok: boolean; children: React.ReactNode }) {
+  const { setIsByok } = useNewProject();
+  useEffect(() => {
+    setIsByok(byok);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byok]);
+  return <>{children}</>;
+}
+
+function renderAgentPage({ byok = true }: { byok?: boolean } = {}) {
   return render(
     <NewProjectProvider>
-      <AgentPage />
+      <ForceByok byok={byok}>
+        <AgentPage />
+      </ForceByok>
     </NewProjectProvider>
   );
 }
@@ -71,6 +87,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -107,6 +124,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -141,6 +159,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -176,6 +195,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
         ctx.setAgentChoice("aider");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -210,6 +230,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -240,6 +261,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setHosted(true);
         ctx.setGithubUsername("octocat");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -280,6 +302,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setName("kara");
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }
@@ -330,6 +353,7 @@ describe("AgentPage (step 2)", () => {
         ctx.setRepoUrl("https://github.com/acme/kara");
         ctx.setForgeToken("ghp_xxx");
         ctx.setAgentChoice("claude");
+        ctx.setIsByok(true);
       }
       return <AgentPage />;
     }

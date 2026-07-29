@@ -248,9 +248,6 @@ export default function RepoPage() {
                   Connecté ✓ · compte&nbsp;: <span className="font-mono font-medium">{validatedAccount}</span>
                 </p>
               )}
-              {error && (
-                <p className="mt-2 text-sm text-danger">{error}</p>
-              )}
             </div>
           </>
         )}
