@@ -175,4 +175,59 @@ describe("IssueTimeline", () => {
     await waitFor(() => expect(onIssueUpdated).toHaveBeenCalledWith(updatedIssue));
     expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
   });
+
+  it("shows a Relancer button on a failed ticket and reverts it to the trigger state on click", async () => {
+    const updatedIssue = makeIssue({ state: "Plan" });
+    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(updatedIssue);
+    const onIssueUpdated = vi.fn();
+
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Plan Failed" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={onIssueUpdated}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
+
+    await waitFor(() => expect(onIssueUpdated).toHaveBeenCalledWith(updatedIssue));
+    expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
+  });
+
+  it("reverts a Spec Failed ticket to Todo (not Spec), the spec trigger state", async () => {
+    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(makeIssue({ state: "Todo" }));
+
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Spec Failed" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
+
+    await waitFor(() =>
+      expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.todo })
+    );
+  });
+
+  it("does not show a Relancer button outside a failed state", () => {
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Dev" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Relancer" })).not.toBeInTheDocument();
+  });
 });

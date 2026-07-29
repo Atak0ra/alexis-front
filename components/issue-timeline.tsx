@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Inbox, Search, Code2, CheckCircle2, AlertTriangle, SendHorizonal, RefreshCw, CircleCheck, Loader2, type LucideIcon } from "lucide-react";
-import { getIssueSteps, type StepId } from "@/lib/issue-steps";
+import { getIssueSteps, getRetryTargetState, type StepId } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
 import {
   sendIssueChat,
@@ -68,11 +68,12 @@ export default function IssueTimeline({
   const [chatMessage, setChatMessage] = useState("");
   const [chatStatus, setChatStatus] = useState<ChatStatus>(null);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<"regen" | "validate" | null>(null);
+  const [actionLoading, setActionLoading] = useState<"regen" | "validate" | "retry" | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const inReview = isReviewState(issue.state);
   const phase = reviewPhase(issue.state);
+  const retryTargetState = getRetryTargetState(issue.state, states);
 
   // Polling du statut chat tant que in_progress
   useEffect(() => {
@@ -125,6 +126,21 @@ export default function IssueTimeline({
     } catch (err: unknown) {
       const detail = (err as { detail?: string })?.detail;
       setChatError(detail ?? "Impossible de relancer la génération.");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRetry() {
+    if (!retryTargetState) return;
+    setActionLoading("retry");
+    setChatError(null);
+    try {
+      const updated = await updateIssue(apiKey, projectId, issue.id, { state: retryTargetState });
+      onIssueUpdated(updated);
+    } catch (err: unknown) {
+      const detail = (err as { detail?: string })?.detail;
+      setChatError(detail ?? "Impossible de relancer le ticket.");
     } finally {
       setActionLoading(null);
     }
@@ -321,8 +337,32 @@ export default function IssueTimeline({
                     </div>
                   )}
 
+                  {/* Ticket en échec (2 tentatives) : bouton pour repasser dans l'état
+                      actif (efface le lock, repris au prochain cycle poller) plutôt
+                      que de glisser-déposer la carte manuellement. */}
+                  {!inReview && retryTargetState && (
+                    <div className="flex flex-col gap-2">
+                      {chatError && (
+                        <p className="text-xs font-medium text-red-500">{chatError}</p>
+                      )}
+                      <button
+                        type="button"
+                        disabled={actionLoading !== null}
+                        onClick={handleRetry}
+                        className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-hover disabled:opacity-50"
+                      >
+                        {actionLoading === "retry" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        Relancer
+                      </button>
+                    </div>
+                  )}
+
                   {/* Hors review : affichage des commentaires sans zone de chat */}
-                  {!inReview && issue.comments.length === 0 && (
+                  {!inReview && !retryTargetState && issue.comments.length === 0 && (
                     <p className="text-xs text-foreground-subtle">Aucune activité pour l&apos;instant.</p>
                   )}
                 </div>

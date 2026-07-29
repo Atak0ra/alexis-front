@@ -30,8 +30,20 @@ export const STEP_GROUPS: StepDefinition[] = [
   { id: "done", label: "Terminé", keys: ["to_merge", "to_merge_failed", "done"] },
 ];
 
-function findStateKey(stateLabel: string, states: Record<string, string>): string | null {
+export function findStateKey(stateLabel: string, states: Record<string, string>): string | null {
   return Object.entries(states).find(([, label]) => label === stateLabel)?.[0] ?? null;
+}
+
+/** État vers lequel relancer un ticket en échec ("X Failed") — le trigger du
+ * même step (spec_failed -> todo, sinon même clé : plan_failed -> plan,
+ * dev_failed -> dev, to_merge_failed -> to_merge). null si l'état courant
+ * n'est pas un état d'échec. */
+export function getRetryTargetState(stateLabel: string, states: Record<string, string>): string | null {
+  const stateKey = findStateKey(stateLabel, states);
+  if (!stateKey || !stateKey.endsWith("_failed")) return null;
+  const step = stateKey.slice(0, -"_failed".length);
+  const triggerKey = step === "spec" ? "todo" : step;
+  return states[triggerKey] ?? null;
 }
 
 export function getIssueSteps(issue: Issue, states: Record<string, string>): StepState[] {
