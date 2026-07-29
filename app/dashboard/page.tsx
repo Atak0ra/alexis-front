@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
 import { listProjects, getProjectStats, getMe, type ProjectOut, type ProjectStats, type PlanPublicOut } from "@/lib/api-client";
+import NewProjectCTA from "@/components/new-project-cta";
 
 type StatsState = ProjectStats | "unavailable" | null;
 
@@ -217,6 +218,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectOut[] | null>(null);
   const [stats, setStats] = useState<Record<string, StatsState>>({});
   const [plan, setPlan] = useState<PlanPublicOut | null | undefined>(undefined);
+  const [emailVerified, setEmailVerified] = useState(true);
 
   useEffect(() => {
     const apiKey = getApiKey();
@@ -224,7 +226,7 @@ export default function DashboardPage() {
 
     // Load client profile (plan)
     getMe(apiKey)
-      .then((me) => setPlan(me.plan))
+      .then((me) => { setPlan(me.plan); setEmailVerified(me.email_verified); })
       .catch(() => setPlan(null));
 
     listProjects(apiKey).then((result) => {
@@ -260,7 +262,8 @@ export default function DashboardPage() {
             Vue d&apos;ensemble de vos projets
           </p>
         </div>
-        <Link
+        <NewProjectCTA
+          emailVerified={emailVerified}
           href="/projects/new/choice"
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-hover transition-colors"
         >
@@ -268,7 +271,7 @@ export default function DashboardPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           Nouveau projet
-        </Link>
+        </NewProjectCTA>
       </div>
 
       {/* Encart Mon plan */}

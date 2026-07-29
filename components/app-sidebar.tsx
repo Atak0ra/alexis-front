@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { clearApiKey, getApiKey, getKeyId } from "@/lib/session";
 import { getMe, listProjects, revokeApiKey, type ProjectOut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import NewProjectCTA from "@/components/new-project-cta";
 
 function NavItem({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
@@ -21,7 +22,9 @@ function NavItem({ href, active, children }: { href: string; active: boolean; ch
   );
 }
 
-function SidebarNav({ pathname, projects }: { pathname: string; projects: ProjectOut[] | null }) {
+function SidebarNav({
+  pathname, projects, emailVerified,
+}: { pathname: string; projects: ProjectOut[] | null; emailVerified: boolean }) {
   const match = pathname.match(/^\/dashboard\/([^/]+)/);
   const activeProjectId = match ? match[1] : null;
   const activeProject = projects?.find((p) => p.id === activeProjectId) ?? null;
@@ -78,7 +81,8 @@ function SidebarNav({ pathname, projects }: { pathname: string; projects: Projec
         </div>
       )}
 
-      <Link
+      <NewProjectCTA
+        emailVerified={emailVerified}
         href="/projects/new/choice"
         className="mt-4 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand transition-colors hover:bg-brand-light"
       >
@@ -86,7 +90,7 @@ function SidebarNav({ pathname, projects }: { pathname: string; projects: Projec
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
         </svg>
         Nouveau projet
-      </Link>
+      </NewProjectCTA>
     </nav>
   );
 }
@@ -96,13 +100,16 @@ export function AppSidebar() {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectOut[] | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
     listProjects(apiKey).then(setProjects).catch(() => setProjects([]));
-    getMe(apiKey).then((me) => setEmail(me.email)).catch(() => {});
+    getMe(apiKey)
+      .then((me) => { setEmail(me.email); setEmailVerified(me.email_verified); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -154,7 +161,7 @@ export function AppSidebar() {
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black/30" onClick={() => setMobileOpen(false)} />
           <div className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface-raised py-5">
-            <SidebarNav pathname={pathname} projects={projects} />
+            <SidebarNav pathname={pathname} projects={projects} emailVerified={emailVerified} />
             <div className="border-t border-border px-3 pt-4">
               {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}
               <button
@@ -178,7 +185,7 @@ export function AppSidebar() {
           Alexis
         </Link>
 
-        <SidebarNav pathname={pathname} projects={projects} />
+        <SidebarNav pathname={pathname} projects={projects} emailVerified={emailVerified} />
 
         <div className="border-t border-border px-3 py-4">
           {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}

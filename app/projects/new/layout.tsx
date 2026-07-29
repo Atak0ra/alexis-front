@@ -7,16 +7,19 @@ import { getMe } from "@/lib/api-client";
 import { NewProjectProvider, useNewProject } from "@/lib/new-project-context";
 import { AppHeader } from "@/components/app-header";
 import NewProjectStepper from "@/components/new-project-stepper";
+import EmailVerificationModal from "@/components/email-verification-modal";
 
 // Composant interne qui a accès au contexte NewProject pour y injecter isByok
 function LayoutInner({ children, pathname }: { children: ReactNode; pathname: string }) {
   const { isByok, setIsByok } = useNewProject();
+  const router = useRouter();
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
     getMe(apiKey)
-      .then((me) => setIsByok(me.plan?.requires_own_key ?? false))
+      .then((me) => { setIsByok(me.plan?.requires_own_key ?? false); setEmailVerified(me.email_verified); })
       .catch(() => setIsByok(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -32,6 +35,19 @@ function LayoutInner({ children, pathname }: { children: ReactNode; pathname: st
   }
 
   const currentStep = pathToStep(pathname ?? "");
+
+  // Défense en profondeur : les points d'entrée (sidebar, dashboard) bloquent
+  // déjà le clic, mais une navigation directe vers /projects/new/* doit
+  // aussi être coupée avant de laisser remplir tout le wizard pour rien —
+  // POST /projects renvoie 403 tant que le compte n'est pas vérifié.
+  if (emailVerified === false) {
+    return (
+      <div className="flex min-h-screen flex-col bg-surface">
+        <AppHeader />
+        <EmailVerificationModal onClose={() => router.push("/dashboard")} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-surface">

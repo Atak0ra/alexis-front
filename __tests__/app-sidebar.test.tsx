@@ -59,6 +59,21 @@ describe("AppSidebar — global state (outside a project)", () => {
   it("shows a link to create a new project", async () => {
     render(<AppSidebar />);
     await waitFor(() => expect(screen.getAllByText(/Nouveau projet/).length).toBeGreaterThan(0));
+    expect(screen.getAllByRole("link", { name: /nouveau projet/i }).length).toBeGreaterThan(0);
+  });
+
+  it("shows a reminder modal instead of a link when the account isn't email-verified", async () => {
+    vi.spyOn(apiClient, "getMe").mockResolvedValue({
+      id: "client-1", email: "a@b.com", email_verified: false, github_username: null, forced_agent_choice: null, plan: null,
+    });
+
+    render(<AppSidebar />);
+    await waitFor(() => expect(screen.getAllByText(/Nouveau projet/).length).toBeGreaterThan(0));
+    expect(screen.queryByRole("link", { name: /nouveau projet/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /nouveau projet/i })[0]);
+
+    expect(screen.getByText("Compte pas encore activé")).toBeInTheDocument();
   });
 });
 
