@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Inbox, Search, Code2, CheckCircle2, AlertTriangle, SendHorizonal, RefreshCw, CircleCheck, Loader2, type LucideIcon } from "lucide-react";
 import { getIssueSteps, getRetryTargetState, type StepId } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ export default function IssueTimeline({
   const [chatMessage, setChatMessage] = useState("");
   const [chatStatus, setChatStatus] = useState<ChatStatus>(null);
   const [chatError, setChatError] = useState<string | null>(null);
+  const router = useRouter();
   const [actionLoading, setActionLoading] = useState<"regen" | "validate" | "retry" | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -136,12 +138,17 @@ export default function IssueTimeline({
     setActionLoading("retry");
     setChatError(null);
     try {
-      const updated = await updateIssue(apiKey, projectId, issue.id, { state: retryTargetState });
-      onIssueUpdated(updated);
+      await updateIssue(apiKey, projectId, issue.id, { state: retryTargetState });
+      // Retour direct sur le kanban plutôt qu'une simple mise à jour locale :
+      // le kanban a son propre state (fetché une fois au montage) qui ne se
+      // rafraîchit pas tout seul si la navigation "arrière" est servie depuis
+      // le cache du router Next.js. router.refresh() force le refetch pour
+      // voir la carte dans sa nouvelle colonne dès l'arrivée sur le kanban.
+      router.push(`/dashboard/${projectId}`);
+      router.refresh();
     } catch (err: unknown) {
       const detail = (err as { detail?: string })?.detail;
       setChatError(detail ?? "Impossible de relancer le ticket.");
-    } finally {
       setActionLoading(null);
     }
   }

@@ -5,6 +5,12 @@ import * as apiClient from "@/lib/api-client";
 import { DEFAULT_STATES } from "@/lib/project-defaults";
 import type { Issue } from "@/lib/api-client";
 
+const pushMock = vi.fn();
+const refreshMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock, refresh: refreshMock }),
+}));
+
 function makeIssue(overrides: Partial<Issue>): Issue {
   return {
     id: "i1",
@@ -23,6 +29,8 @@ function makeIssue(overrides: Partial<Issue>): Issue {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  pushMock.mockClear();
+  refreshMock.mockClear();
 });
 
 describe("IssueTimeline", () => {
@@ -176,10 +184,8 @@ describe("IssueTimeline", () => {
     expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
   });
 
-  it("shows a Relancer button on a failed ticket and reverts it to the trigger state on click", async () => {
-    const updatedIssue = makeIssue({ state: "Plan" });
-    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(updatedIssue);
-    const onIssueUpdated = vi.fn();
+  it("shows a Relancer button on a failed ticket, reverts it to the trigger state, and returns to the kanban", async () => {
+    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(makeIssue({ state: "Plan" }));
 
     render(
       <IssueTimeline
@@ -187,14 +193,41 @@ describe("IssueTimeline", () => {
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
-        onIssueUpdated={onIssueUpdated}
+        onIssueUpdated={vi.fn()}
       />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
 
-    await waitFor(() => expect(onIssueUpdated).toHaveBeenCalledWith(updatedIssue));
-    expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
+    await waitFor(() =>
+      expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan })
+    );
+    // Retour direct sur le kanban plutôt qu'une simple mise à jour locale —
+    // le kanban a son propre state fetché au montage, une navigation
+    // "arrière" servie depuis le cache du router ne le rafraîchirait pas.
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard/p1"));
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("shows an error and stays on the page when the retry API call fails", async () => {
+    vi.spyOn(apiClient, "updateIssue").mockRejectedValue(
+      new apiClient.AlexisApiError(500, "Erreur serveur")
+    );
+
+    render(
+      <IssueTimeline
+        issue={makeIssue({ state: "Plan Failed" })}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        apiKey="k1"
+        onIssueUpdated={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
+
+    await waitFor(() => expect(screen.getByText("Erreur serveur")).toBeInTheDocument());
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("reverts a Spec Failed ticket to Todo (not Spec), the spec trigger state", async () => {

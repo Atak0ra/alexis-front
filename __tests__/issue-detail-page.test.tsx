@@ -7,6 +7,7 @@ import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/pr
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "proj-1", issueId: "issue-1" }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
