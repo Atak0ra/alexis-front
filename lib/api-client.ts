@@ -223,6 +223,14 @@ export function deleteAccount(apiKey: string): Promise<void> {
   });
 }
 
+export function resendVerification(apiKey: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request("/auth/resend-verification", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 // ─── Forge validation ─────────────────────────────────────────────────────────
 
 export interface ForgeValidation {
@@ -797,6 +805,13 @@ export interface AdminClientDetail {
 
 export function adminGetClient(adminApiKey: string, clientId: string): Promise<AdminClientDetail> {
   return request(`/admin/clients/${clientId}`, { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminDeleteClient(adminApiKey: string, clientId: string): Promise<void> {
+  return request(`/admin/clients/${clientId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
 }
 
 export interface PlanOut {

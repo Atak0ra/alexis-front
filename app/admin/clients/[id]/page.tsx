@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { adminGetClient, AdminClientDetail, AlexisApiError } from "@/lib/api-client";
+import { useParams, useRouter } from "next/navigation";
+import { adminGetClient, adminDeleteClient, AdminClientDetail, AlexisApiError } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard } from "../../_components/chrome";
 
 export default function AdminClientDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [client, setClient] = useState<AdminClientDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // État de la suppression
+  const [deleteState, setDeleteState] = useState<"idle" | "confirm" | "deleting" | "error">("idle");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const apiKey = getAdminApiKey();
@@ -20,6 +25,21 @@ export default function AdminClientDetailPage() {
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
       .finally(() => setLoading(false));
   }, [params.id]);
+
+  async function handleDelete() {
+    const apiKey = getAdminApiKey();
+    if (!apiKey || !client) return;
+    setDeleteState("deleting");
+    setDeleteError(null);
+    try {
+      await adminDeleteClient(apiKey, client.id);
+      // Suppression réussie → retour à la liste
+      router.push("/admin/clients");
+    } catch (err) {
+      setDeleteError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setDeleteState("error");
+    }
+  }
 
   if (loading) {
     return (
@@ -40,7 +60,46 @@ export default function AdminClientDetailPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">{client.email}</h1>
+      {/* En-tête : email + bouton supprimer */}
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">{client.email}</h1>
+
+        {deleteState === "confirm" ? (
+          /* Zone de confirmation — irréversible */
+          <div className="flex items-center gap-2 rounded-xl border border-danger-border bg-danger-bg px-4 py-2.5">
+            <p className="text-sm text-danger font-medium">
+              Supprimer définitivement ce client ?
+            </p>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+            >
+              Confirmer
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDeleteState("idle"); setDeleteError(null); }}
+              className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:bg-surface-sunken transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDeleteState("confirm")}
+            disabled={deleteState === "deleting"}
+            className="rounded-xl border border-danger/30 bg-danger-bg px-4 py-2 text-sm font-semibold text-danger hover:bg-danger/10 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+          >
+            {deleteState === "deleting" ? "Suppression…" : "Supprimer le client"}
+          </button>
+        )}
+      </div>
+
+      {deleteError && (
+        <p className="mt-2 text-sm text-danger">{deleteError}</p>
+      )}
 
       <div className="mt-6 grid grid-cols-3 gap-4">
         <AdminCard className="p-5">
@@ -95,6 +154,14 @@ export default function AdminClientDetailPage() {
           </tbody>
         </table>
       </AdminCard>
+
+      {/* Zone danger — rappel RGPD */}
+      <div className="mt-10 rounded-xl border border-danger-border bg-danger-bg px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-danger">Zone danger</p>
+        <p className="mt-1 text-sm text-foreground-muted">
+          La suppression est <span className="font-semibold text-foreground">définitive et irréversible</span> — tous les projets, tickets, runs et clés API de ce client seront effacés (droit à l&apos;oubli RGPD).
+        </p>
+      </div>
     </div>
   );
 }
