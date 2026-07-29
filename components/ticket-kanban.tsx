@@ -205,11 +205,11 @@ export default function TicketKanban({
                     </div>
                   )}
 
-                  {(ticket?.pr_url || (ticket && ticket.cost_display > 0)) && (
+                  {(ticket?.pr_url || (ticket && (ticket.cost_display ?? 0) > 0)) && (
                     <div className="flex items-center gap-2 pt-0.5">
-                      {ticket && ticket.cost_display > 0 && (
+                      {ticket && (ticket.cost_display ?? 0) > 0 && (
                         <span className="font-mono text-[11px] text-foreground-subtle">
-                          {ticket.cost_display.toFixed(2)} {ticket.display_currency}
+                          {ticket.cost_display.toFixed(2)} {ticket.display_currency ?? "EUR"}
                         </span>
                       )}
                       {ticket?.pr_url && (

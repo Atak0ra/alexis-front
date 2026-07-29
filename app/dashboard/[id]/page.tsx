@@ -44,7 +44,7 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4 text-center">
         <p className="font-mono text-3xl font-bold text-foreground">
-          {stats.total_cost_display.toFixed(2)} {stats.display_currency}
+          {(stats.total_cost_display ?? 0).toFixed(2)} {stats.display_currency ?? "EUR"}
         </p>
         <p className="mt-1 text-xs font-medium text-foreground-muted">Coût cumulé</p>
       </div>

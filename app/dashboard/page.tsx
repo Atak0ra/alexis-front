@@ -130,7 +130,7 @@ function ProjectCard({ project, stats }: { project: ProjectOut; stats: StatsStat
             <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-foreground-muted">Coût cumulé</span>
               <span className="font-mono text-sm font-semibold text-foreground">
-                {stats.total_cost_display.toFixed(2)} {stats.display_currency}
+                {(stats.total_cost_display ?? 0).toFixed(2)} {stats.display_currency ?? "EUR"}
               </span>
             </div>
           </>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
   const totalResolved = allStats.reduce((acc, s) => acc + s.resolved, 0);
   const totalInProgress = allStats.reduce((acc, s) => acc + s.in_progress, 0);
   const totalFailed = allStats.reduce((acc, s) => acc + s.failed, 0);
-  const totalCost = allStats.reduce((acc, s) => acc + s.total_cost_display, 0);
+  const totalCost = allStats.reduce((acc, s) => acc + (s.total_cost_display ?? 0), 0);
   const displayCurrency = allStats[0]?.display_currency ?? "EUR";
 
   const isFreePlan = plan?.name === "free";
