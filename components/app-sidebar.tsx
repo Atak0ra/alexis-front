@@ -56,6 +56,9 @@ function SidebarNav({ pathname, projects }: { pathname: string; projects: Projec
       <NavItem href="/dashboard" active={pathname === "/dashboard"}>
         Tableau de bord
       </NavItem>
+      <NavItem href="/dashboard/account" active={pathname === "/dashboard/account"}>
+        Mon compte
+      </NavItem>
 
       {projects && projects.length > 0 && (
         <div className="mt-5">

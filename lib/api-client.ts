@@ -213,6 +213,14 @@ export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
   });
 }
 
+export function deleteAccount(apiKey: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request("/auth/me", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 // ─── Forge validation ─────────────────────────────────────────────────────────
 
 export interface ForgeValidation {
