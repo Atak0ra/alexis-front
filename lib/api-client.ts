@@ -71,7 +71,9 @@ export interface ProjectOut {
   name: string;
   repo_url: string | null;
   is_hosted: boolean;
-  agent_choice: string;
+  /** null si le projet n'a pas de clé perso (non-BYOK) */
+  agent_choice: string | null;
+  /** null si le projet n'a pas de clé perso (non-BYOK) */
   agent_base_url: string | null;
   has_agent_api_key: boolean;
   issue_prefix: string | null;
@@ -79,6 +81,7 @@ export interface ProjectOut {
   has_forge_token: boolean;
   states: Record<string, string>;
   trigger_states: string[];
+  /** {} si le projet n'a pas de clé perso (non-BYOK) */
   models: Record<string, string>;
   code_review_enabled: boolean;
   run_timeout_seconds: number;
@@ -173,6 +176,7 @@ export function listPublicPlans(): Promise<PlanPublicOut[]> {
 export interface ClientProfile {
   id: string;
   email: string;
+  email_verified: boolean;
   github_username: string | null;
   forced_agent_choice: string | null;
   /** Plan courant du client — null si aucun plan assigné (fail-open). */
@@ -181,11 +185,24 @@ export interface ClientProfile {
 
 export function getMe(apiKey: string): Promise<ClientProfile> {
   if (isLocalMode()) {
-    return Promise.resolve({ id: "demo-client", email: DEMO_CREDENTIALS.email, github_username: null, forced_agent_choice: null, plan: null });
+    return Promise.resolve({
+      id: "demo-client", email: DEMO_CREDENTIALS.email, email_verified: true,
+      github_username: null, forced_agent_choice: null, plan: null,
+    });
   }
   return request("/auth/me", {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
+}
+
+export function verifyEmail(token: string): Promise<ClientProfile> {
+  if (isLocalMode()) {
+    return Promise.resolve({
+      id: "demo-client", email: DEMO_CREDENTIALS.email, email_verified: true,
+      github_username: null, forced_agent_choice: null, plan: null,
+    });
+  }
+  return request("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) });
 }
 
 export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
@@ -414,6 +431,17 @@ export function listTickets(apiKey: string, projectId: string): Promise<TicketOu
 export function listIssues(apiKey: string, projectId: string): Promise<Issue[]> {
   if (isLocalMode()) return Promise.resolve(getDemoIssues(projectId));
   return request(`/projects/${projectId}/issues`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getIssue(apiKey: string, projectId: string, issueId: string): Promise<Issue> {
+  if (isLocalMode()) {
+    const found = getDemoIssues(projectId).find((i) => i.id === issueId);
+    if (!found) return Promise.reject(new AlexisApiError(404, "Demande introuvable"));
+    return Promise.resolve(found);
+  }
+  return request(`/projects/${projectId}/issues/${issueId}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 }
@@ -813,7 +841,11 @@ export function adminDeletePlan(adminApiKey: string, planId: string): Promise<vo
 
 export interface ManagedSecretOut {
   key: string;
+  agent: string;      // "claude" | "aider"
+  env_var: string;    // ex: "GROQ_API_KEY"
   has_value: boolean;
+  /** True si la clé est configurée — badge ACTIF dans l'UI admin */
+  is_active: boolean;
   updated_at: string;
 }
 
@@ -997,6 +1029,40 @@ export function adminUpdateDisplayCurrency(adminApiKey: string, display_currency
 export interface AdminFxRates {
   fx_rates: Record<string, number>;
 }
+
+// ── Providers LLM ─────────────────────────────────────────────────────────────
+
+export interface AdminProviderItem {
+  key: string;
+  agent: string;
+  env_var: string;
+  base_url: string | null;
+  is_active: boolean;
+  has_managed_key: boolean;
+}
+
+export interface AdminProviderModel {
+  agent: string;
+  model: string;
+}
+
+export function adminGetProviders(adminApiKey: string): Promise<AdminProviderItem[]> {
+  return request("/admin/settings/providers", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminGetProviderModel(adminApiKey: string): Promise<AdminProviderModel> {
+  return request("/admin/settings/provider-model", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateProviderModel(adminApiKey: string, payload: AdminProviderModel): Promise<AdminProviderModel> {
+  return request("/admin/settings/provider-model", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Taux de change ─────────────────────────────────────────────────────────────
 
 export function adminGetFxRates(adminApiKey: string): Promise<AdminFxRates> {
   return request("/admin/settings/fx-rates", { headers: { Authorization: `Bearer ${adminApiKey}` } });

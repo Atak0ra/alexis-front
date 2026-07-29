@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  getMe,
   getProject,
   updateProject,
   getProjectContext,
@@ -16,6 +17,7 @@ import {
   downloadProject,
   AlexisApiError,
   type ProjectOut,
+  type ClientProfile,
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import ProjectContextStep from "@/components/project-context-step";
@@ -70,7 +72,12 @@ export default function ProjectSettingsPage() {
   const router = useRouter();
 
   const [project, setProject] = useState<ProjectOut | null>(null);
+  const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // isByok : true si le plan du client autorise la config agent personnalisée.
+  // Fail-safe : pas de plan → non-BYOK → section masquée.
+  const isByok = profile?.plan?.requires_own_key ?? false;
 
   // Champs classiques
   const [name, setName] = useState("");
@@ -110,16 +117,23 @@ export default function ProjectSettingsPage() {
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
+
+    // Charger le profil client (pour dériver isByok)
+    getMe(apiKey)
+      .then(setProfile)
+      .catch(() => setProfile(null));
+
     getProject(apiKey, projectId)
       .then((p) => {
         setProject(p);
         setName(p.name);
         setRepoUrl(p.repo_url ?? "");
-        setAgentChoice(p.agent_choice);
+        // agent_choice / agent_base_url / models sont null/{} pour les projets non-BYOK
+        setAgentChoice(p.agent_choice ?? "claude");
         setAgentBaseUrl(p.agent_base_url ?? "");
-        setSpecModel(p.models.spec ?? "");
-        setPlanModel(p.models.plan ?? "");
-        setDevModel(p.models.dev ?? "");
+        setSpecModel(p.models?.spec ?? "");
+        setPlanModel(p.models?.plan ?? "");
+        setDevModel(p.models?.dev ?? "");
         setCodeReviewEnabled(p.code_review_enabled);
         setForgeProvider(p.forge_provider);
       })
@@ -143,12 +157,16 @@ export default function ProjectSettingsPage() {
       const payload: Parameters<typeof updateProject>[2] = {
         name,
         repo_url: repoUrl,
-        agent_choice: agentChoice,
-        agent_base_url: agentBaseUrl.trim() || null,
-        models: { spec: specModel.trim(), plan: planModel.trim(), dev: devModel.trim() },
+        // Champs BYOK : envoyés uniquement si le plan l'autorise.
+        // Sinon le backend renverrait 403 (plan sans requires_own_key).
+        ...(isByok ? {
+          agent_choice: agentChoice,
+          agent_base_url: agentBaseUrl.trim() || null,
+          models: { spec: specModel.trim(), plan: planModel.trim(), dev: devModel.trim() },
+          ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
+        } : {}),
         code_review_enabled: codeReviewEnabled,
         ...(project?.is_hosted ? {} : { forge_provider: forgeProvider }),
-        ...(agentApiKey ? { agent_api_key: agentApiKey } : {}),
         ...(!project?.is_hosted && forgeToken ? { forge_token: forgeToken } : {}),
       };
       await updateProject(apiKey, projectId, payload);
@@ -357,98 +375,101 @@ export default function ProjectSettingsPage() {
                   </section>
                 )}
 
-                {/* Agent */}
+                {/* Agent — visible uniquement pour les plans BYOK (requires_own_key).
+                    Les plans gérés utilisent le provider par défaut de la plateforme. */}
+                {isByok && (
+                  <section>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                      Agent
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="agent-choice">Agent CLI</Label>
+                        <select
+                          id="agent-choice"
+                          value={agentChoice}
+                          onChange={(e) => setAgentChoice(e.target.value)}
+                          className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        >
+                          <option value="claude">claude</option>
+                          <option value="aider">aider</option>
+                        </select>
+                      </div>
+                      <SecretField
+                        id="agent-api-key"
+                        label="Clé API agent"
+                        placeholder="sk-ant-… ou clé aider"
+                        value={agentApiKey}
+                        onChange={setAgentApiKey}
+                        isConfigured={project.has_agent_api_key}
+                      />
+                      {agentChoice === "aider" && (
+                        <div>
+                          <Label htmlFor="agent-base-url">
+                            Base URL de l&apos;API{" "}
+                            <span className="text-foreground-subtle font-normal">(optionnel)</span>
+                          </Label>
+                          <Input
+                            id="agent-base-url"
+                            type="url"
+                            value={agentBaseUrl}
+                            onChange={(e) => setAgentBaseUrl(e.target.value)}
+                            placeholder="https://api.groq.com/openai/v1"
+                          />
+                          <p className="mt-1 text-xs text-foreground-subtle">
+                            Laisse vide pour OpenAI. Groq : https://api.groq.com/openai/v1. OpenRouter :
+                            https://openrouter.ai/api/v1.
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="mb-1.5 text-sm font-medium text-foreground">Modèles par étape</p>
+                        <p className="mb-2 text-xs text-foreground-subtle">
+                          Doit correspondre au fournisseur de la clé ci-dessus (ex : claude-sonnet-4-5 pour
+                          Anthropic, gpt-4o pour OpenAI). Avec Groq ou OpenRouter, préfixe le nom du modèle par{" "}
+                          <code className="font-mono">groq/</code> ou{" "}
+                          <code className="font-mono">openrouter/</code>, ex :{" "}
+                          <code className="font-mono">groq/llama-3.3-70b-versatile</code>. Ces providers sont
+                          gérés nativement, la Base URL ci-dessus n&apos;est alors pas utilisée.
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div>
+                            <Label htmlFor="spec-model">Spec</Label>
+                            <Input id="spec-model" value={specModel} onChange={(e) => setSpecModel(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="plan-model">Plan</Label>
+                            <Input id="plan-model" value={planModel} onChange={(e) => setPlanModel(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="dev-model">Dev</Label>
+                            <Input id="dev-model" value={devModel} onChange={(e) => setDevModel(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* Revue de code — visible pour tous les plans */}
                 <section>
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                    Agent
+                    Qualité
                   </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="agent-choice">Agent CLI</Label>
-                      <select
-                        id="agent-choice"
-                        value={agentChoice}
-                        onChange={(e) => setAgentChoice(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                      >
-                        <option value="claude">claude</option>
-                        <option value="aider">aider</option>
-                      </select>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="code-review-enabled"
+                        type="checkbox"
+                        checked={codeReviewEnabled}
+                        onChange={(e) => setCodeReviewEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                      />
+                      <Label htmlFor="code-review-enabled">Revue de code</Label>
                     </div>
-                    <SecretField
-                      id="agent-api-key"
-                      label="Clé API agent"
-                      placeholder="sk-ant-… ou clé aider"
-                      value={agentApiKey}
-                      onChange={setAgentApiKey}
-                      isConfigured={project.has_agent_api_key}
-                    />
-                    {!project.has_agent_api_key && (
-                      <p className="-mt-2 text-xs text-foreground-subtle">
-                        {agentChoice === "claude"
-                          ? "Sans clé, Alexis utilise sa propre clé Anthropic. Facturation gérée par Alexis dans ce cas."
-                          : "Aider n'a pas de clé de secours côté Alexis : sans clé, le traitement des tickets échouera."}
-                      </p>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          id="code-review-enabled"
-                          type="checkbox"
-                          checked={codeReviewEnabled}
-                          onChange={(e) => setCodeReviewEnabled(e.target.checked)}
-                          className="h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                        />
-                        <Label htmlFor="code-review-enabled">Revue de code</Label>
-                      </div>
-                      <p className="mt-1 text-xs text-foreground-subtle">
-                        Décoché : le code part directement sur develop au prochain ticket, sans Pull Request.
-                      </p>
-                    </div>
-                    {agentChoice === "aider" && (
-                      <div>
-                        <Label htmlFor="agent-base-url">
-                          Base URL de l&apos;API{" "}
-                          <span className="text-foreground-subtle font-normal">(optionnel)</span>
-                        </Label>
-                        <Input
-                          id="agent-base-url"
-                          type="url"
-                          value={agentBaseUrl}
-                          onChange={(e) => setAgentBaseUrl(e.target.value)}
-                          placeholder="https://api.groq.com/openai/v1"
-                        />
-                        <p className="mt-1 text-xs text-foreground-subtle">
-                          Laisse vide pour OpenAI. Groq : https://api.groq.com/openai/v1. OpenRouter :
-                          https://openrouter.ai/api/v1.
-                        </p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium text-foreground">Modèles par étape</p>
-                      <p className="mb-2 text-xs text-foreground-subtle">
-                        Doit correspondre au fournisseur de la clé ci-dessus (ex : claude-sonnet-4-5 pour
-                        Anthropic, gpt-4o pour OpenAI). Avec Groq ou OpenRouter, préfixe le nom du modèle par{" "}
-                        <code className="font-mono">groq/</code> ou{" "}
-                        <code className="font-mono">openrouter/</code>, ex :{" "}
-                        <code className="font-mono">groq/llama-3.3-70b-versatile</code>. Ces providers sont
-                        gérés nativement, la Base URL ci-dessus n&apos;est alors pas utilisée.
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div>
-                          <Label htmlFor="spec-model">Spec</Label>
-                          <Input id="spec-model" value={specModel} onChange={(e) => setSpecModel(e.target.value)} />
-                        </div>
-                        <div>
-                          <Label htmlFor="plan-model">Plan</Label>
-                          <Input id="plan-model" value={planModel} onChange={(e) => setPlanModel(e.target.value)} />
-                        </div>
-                        <div>
-                          <Label htmlFor="dev-model">Dev</Label>
-                          <Input id="dev-model" value={devModel} onChange={(e) => setDevModel(e.target.value)} />
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-xs text-foreground-subtle">
+                      Décoché : le code part directement sur develop au prochain ticket, sans Pull Request.
+                    </p>
                   </div>
                 </section>
 

@@ -32,7 +32,7 @@ beforeEach(() => {
   pushMock.mockClear();
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
   vi.spyOn(apiClient, "getMe").mockResolvedValue({
-    id: "client-1", email: "x@x.com", github_username: null, forced_agent_choice: null,
+    id: "client-1", email: "x@x.com", email_verified: true, github_username: null, forced_agent_choice: null,
   });
 });
 
@@ -300,7 +300,7 @@ describe("AgentPage (step 2)", () => {
 
   it("shows the agent/key fields as optional for a client on a forced-agent plan, with reframed hint copy", async () => {
     vi.spyOn(apiClient, "getMe").mockResolvedValue({
-      id: "client-1", email: "free@x.com", github_username: null, forced_agent_choice: "aider",
+      id: "client-1", email: "free@x.com", email_verified: true, github_username: null, forced_agent_choice: "aider",
     });
     vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
@@ -316,7 +316,7 @@ describe("AgentPage (step 2)", () => {
 
   it("submits the client's own agent choice and key on a forced-agent plan when a key is provided", async () => {
     vi.spyOn(apiClient, "getMe").mockResolvedValue({
-      id: "client-1", email: "free@x.com", github_username: null, forced_agent_choice: "aider",
+      id: "client-1", email: "free@x.com", email_verified: true, github_username: null, forced_agent_choice: "aider",
     });
     vi.spyOn(apiClient, "createProject").mockResolvedValue(FAKE_PROJECT);
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });

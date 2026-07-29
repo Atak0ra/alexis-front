@@ -112,8 +112,11 @@ export default function TicketKanban({
           <div className="flex flex-col gap-2 min-h-[3rem]">
             {byColumn[col.key].map((issue) => {
               const ticket = ticketsByIdentifier?.[issue.identifier];
-              const isSubstate = issue.state !== (states[col.key] ?? col.label);
-              const isFailure = issue.state.endsWith("Failed") || issue.state.endsWith("Échoué");
+                  const isSubstate = issue.state !== (states[col.key] ?? col.label);
+                  // Détection d'échec via la clé d'état (ex: "spec_failed", "dev_failed"),
+                  // pas via le libellé — robuste aux libellés personnalisés par le client.
+                  const stateKey = stateKeyForLabel(issue.state, states);
+                  const isFailure = stateKey !== null && stateKey.endsWith("_failed");
 
               return (
                 <div

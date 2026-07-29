@@ -26,7 +26,7 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
 
   const ctaHref = isEntreprise
     ? "mailto:contact@alexis.dev?subject=Plan%20Entreprise"
-    : "/login";
+    : "/login?mode=signup";
 
   return (
     <div

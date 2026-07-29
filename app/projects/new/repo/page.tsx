@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { validateForge, getMe, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
+import { submitNewProject } from "@/lib/submit-new-project";
 import FieldHint from "@/components/field-hint";
 
 export default function RepoPage() {
@@ -20,12 +21,20 @@ export default function RepoPage() {
     forgeProvider, setForgeProvider,
     forgeToken, setForgeToken,
     githubUsername, setGithubUsername,
+    agentChoice,
+    agentApiKey,
+    agentBaseUrl,
+    codeReviewEnabled,
+    // isByok est peuplé par le layout via getMe() — source unique de vérité.
+    isByok,
+    issuePrefix,
   } = useNewProject();
 
   const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState(false);
   const [validatedAccount, setValidatedAccount] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Pré-remplit le pseudo GitHub avec celui déjà enregistré côté client (mémorisé
   // par le backend lors d'un précédent projet hébergé), sans écraser une saisie
@@ -81,9 +90,45 @@ export default function RepoPage() {
     }
   }
 
-  function handleNext(e: React.FormEvent) {
+  async function handleNext(e: React.FormEvent) {
     e.preventDefault();
-    router.push("/projects/new/agent");
+
+    // Plan BYOK → étape Agent (config clé/modèle)
+    if (isByok) {
+      router.push("/projects/new/agent");
+      return;
+    }
+
+    // Plan géré (non-BYOK) → créer le projet directement via le helper partagé.
+    // Le helper envoie models:{} pour que le back applique ses propres défauts
+    // (et son forçage éventuel d'agent/Groq), sans risque de désalignement.
+    setError(null);
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setError("Session absente");
+      return;
+    }
+    await submitNewProject({
+      apiKey,
+      draft: {
+        name,
+        hosted,
+        repoUrl,
+        forgeProvider,
+        forgeToken,
+        githubUsername,
+        issuePrefix,
+        agentChoice,
+        agentApiKey,
+        agentBaseUrl,
+        codeReviewEnabled,
+        isByok,
+      },
+      router,
+      onStart: () => setSubmitting(true),
+      onError: (msg) => setError(msg),
+      onFinally: () => setSubmitting(false),
+    });
   }
 
   const canNext = hosted
@@ -232,9 +277,13 @@ export default function RepoPage() {
           </div>
         )}
 
+        {error && !validated && (
+          <p className="text-sm text-danger">{error}</p>
+        )}
+
         <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={!canNext}>
-            Suivant →
+          <Button type="submit" disabled={!canNext || submitting}>
+            {submitting ? "Création…" : "Suivant →"}
           </Button>
         </div>
       </form>

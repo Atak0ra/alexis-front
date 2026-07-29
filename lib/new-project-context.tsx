@@ -11,11 +11,13 @@ export interface NewProjectDraft {
   forgeToken: string;
   githubUsername: string;
   issuePrefix: string;
-  // Step 2 — Agent
+  // Step 2 — Agent (BYOK uniquement)
   agentChoice: string;
   agentApiKey: string;
   agentBaseUrl: string;
   codeReviewEnabled: boolean;
+  // Plan info — chargé depuis getMe() dans le layout
+  isByok: boolean;
 }
 
 interface NewProjectState extends NewProjectDraft {
@@ -30,6 +32,7 @@ interface NewProjectState extends NewProjectDraft {
   setAgentApiKey: (v: string) => void;
   setAgentBaseUrl: (v: string) => void;
   setCodeReviewEnabled: (v: boolean) => void;
+  setIsByok: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -45,6 +48,7 @@ const INITIAL_DRAFT: NewProjectDraft = {
   agentApiKey: "",
   agentBaseUrl: "",
   codeReviewEnabled: true,
+  isByok: false,
 };
 
 const NewProjectContext = createContext<NewProjectState | null>(null);
@@ -63,6 +67,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const setAgentApiKey = useCallback((v: string) => setDraft((d) => ({ ...d, agentApiKey: v })), []);
   const setAgentBaseUrl = useCallback((v: string) => setDraft((d) => ({ ...d, agentBaseUrl: v })), []);
   const setCodeReviewEnabled = useCallback((v: boolean) => setDraft((d) => ({ ...d, codeReviewEnabled: v })), []);
+  const setIsByok = useCallback((v: boolean) => setDraft((d) => ({ ...d, isByok: v })), []);
   const reset = useCallback(() => setDraft(INITIAL_DRAFT), []);
 
   return (
@@ -80,6 +85,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
         setAgentApiKey,
         setAgentBaseUrl,
         setCodeReviewEnabled,
+        setIsByok,
         reset,
       }}
     >

@@ -7,22 +7,32 @@ interface Step {
   description: string;
 }
 
-const STEPS: Step[] = [
+const STEPS_BYOK: Step[] = [
   { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
   { label: "Agent", description: "Modèle IA" },
   { label: "Contexte", description: "Description du projet" },
 ];
 
+const STEPS_MANAGED: Step[] = [
+  { label: "Origine", description: "Dépôt existant ou hébergé" },
+  { label: "Dépôt", description: "Forge & token d'accès" },
+  { label: "Contexte", description: "Description du projet" },
+];
+
 interface NewProjectStepperProps {
   current: 1 | 2 | 3 | 4;
+  isByok?: boolean;
   orientation?: "vertical" | "horizontal";
 }
 
 export default function NewProjectStepper({
   current,
+  isByok = true,
   orientation = "horizontal",
 }: NewProjectStepperProps) {
+  const STEPS = isByok ? STEPS_BYOK : STEPS_MANAGED;
+
   if (orientation === "vertical") {
     return (
       <nav aria-label="Étapes de création du projet">

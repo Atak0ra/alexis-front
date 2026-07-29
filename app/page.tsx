@@ -167,6 +167,12 @@ export default function RootPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/pricing"
+              className="text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
+            >
+              Tarifs
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
             >

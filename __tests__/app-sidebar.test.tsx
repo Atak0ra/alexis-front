@@ -43,7 +43,7 @@ beforeEach(() => {
   vi.spyOn(session, "getKeyId").mockReturnValue("key-1");
   vi.spyOn(apiClient, "listProjects").mockResolvedValue(FAKE_PROJECTS);
   vi.spyOn(apiClient, "getMe").mockResolvedValue({
-    id: "client-1", email: "a@b.com", github_username: null, forced_agent_choice: null, plan: null,
+    id: "client-1", email: "a@b.com", email_verified: true, github_username: null, forced_agent_choice: null, plan: null,
   });
 });
 

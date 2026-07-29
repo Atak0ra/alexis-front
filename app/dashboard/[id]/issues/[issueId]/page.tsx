@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { getApiKey } from "@/lib/session";
 import {
   getProject,
-  listIssues,
+  getIssue,
   AlexisApiError,
   type ProjectOut,
   type Issue,
@@ -32,35 +32,27 @@ export default function IssueDetailPage() {
       .then(setProject)
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
 
-    listIssues(apiKey, projectId)
-      .then((issues) => {
-        const found = issues.find((i) => i.id === issueId);
-        if (found) setIssue(found);
-        else setNotFound(true);
-      })
-      .catch(() => setNotFound(true));
+    // Utilise getIssue (GET /issues/{id}) plutôt que listIssues + find :
+    // - 404 propre si l'issue n'existe pas
+    // - pas de surcharge réseau (charge une seule issue, pas toutes)
+    getIssue(apiKey, projectId, issueId)
+      .then(setIssue)
+      .catch((err) => {
+        if (err instanceof AlexisApiError && err.status === 404) {
+          setNotFound(true);
+        } else {
+          setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+        }
+      });
   }, [projectId, issueId, apiKey]);
 
-  function handleIssueUpdated(updated: Issue) {
-    // Si l'état a changé (Valider / Régénérer), recharger tout le fil
-    // pour récupérer le nouvel état + commentaires depuis l'API.
-    if (updated.state !== issue?.state) {
-      listIssues(apiKey, projectId)
-        .then((issues) => {
-          const found = issues.find((i) => i.id === issueId);
-          if (found) setIssue(found);
-        })
-        .catch(() => {});
-    } else {
-      // Sinon (rafraîchissement suite à chat done), recharger l'issue pour
-      // afficher le nouveau commentaire alexis.
-      listIssues(apiKey, projectId)
-        .then((issues) => {
-          const found = issues.find((i) => i.id === issueId);
-          if (found) setIssue(found);
-        })
-        .catch(() => {});
-    }
+  function handleIssueUpdated() {
+    // Recharge l'issue depuis l'API pour refléter le nouvel état et les
+    // nouveaux commentaires (réponse agent, changement d'état, etc.).
+    if (!apiKey) return;
+    getIssue(apiKey, projectId, issueId)
+      .then(setIssue)
+      .catch(() => {});
   }
 
   if (error || notFound) {

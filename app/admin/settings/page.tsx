@@ -5,28 +5,11 @@ import {
   adminGetDefaultModels, adminUpdateDefaultModels,
   adminGetDisplayCurrency, adminUpdateDisplayCurrency,
   adminGetFxRates, adminUpdateFxRates,
-  AdminDefaultModels, AlexisApiError,
+  adminGetProviders, adminGetProviderModel, adminUpdateProviderModel,
+  AdminDefaultModels, AdminProviderItem, AdminProviderModel, AlexisApiError,
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard, adminInputClass, adminButtonClass, adminGhostButtonClass } from "../_components/chrome";
-
-// ── Modèles disponibles ───────────────────────────────────────────────────────
-
-const CLAUDE_MODELS = [
-  "claude-opus-4-5",
-  "claude-sonnet-4-5",
-  "claude-haiku-4-5",
-  "claude-opus-4",
-  "claude-sonnet-4",
-];
-
-const GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "mixtral-8x7b-32768",
-];
-
-const ALL_MODELS = [...CLAUDE_MODELS, ...GROQ_MODELS];
 
 // ── Devises connues ───────────────────────────────────────────────────────────
 
@@ -47,10 +30,54 @@ function SaveStatus({ status }: { status: "idle" | "saving" | "saved" | "error" 
   return <span className="text-xs text-danger">Erreur</span>;
 }
 
+/** Libellé lisible pour un provider (ex: "together_ai" → "Together AI") */
+function providerLabel(key: string): string {
+  const labels: Record<string, string> = {
+    anthropic: "Anthropic (Claude)",
+    openai: "OpenAI",
+    gemini: "Google Gemini",
+    moonshot: "Moonshot / Kimi",
+    xai: "xAI / Grok",
+    groq: "Groq",
+    openrouter: "OpenRouter",
+    mistral: "Mistral",
+    deepseek: "DeepSeek",
+    together_ai: "Together AI",
+    cohere: "Cohere",
+  };
+  return labels[key] ?? key;
+}
+
+/** Modèle par défaut suggéré pour un provider */
+function defaultModelForProvider(key: string): string {
+  const defaults: Record<string, string> = {
+    anthropic: "claude-sonnet-4-5",
+    openai: "openai/gpt-4o",
+    gemini: "gemini/gemini-2.0-flash",
+    moonshot: "moonshot/moonshot-v1-8k",
+    xai: "xai/grok-3",
+    groq: "groq/llama-3.3-70b-versatile",
+    openrouter: "openrouter/meta-llama/llama-3.3-70b-instruct",
+    mistral: "mistral/mistral-large-latest",
+    deepseek: "deepseek/deepseek-chat",
+    together_ai: "together_ai/meta-llama/Llama-3-70b-chat-hf",
+    cohere: "cohere/command-r-plus",
+  };
+  return defaults[key] ?? key;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminSettingsPage() {
-  // Modèles LLM
+  // Provider actif
+  const [providers, setProviders] = useState<AdminProviderItem[]>([]);
+  const [providerModel, setProviderModel] = useState<AdminProviderModel>({ agent: "claude", model: "claude-sonnet-4-5" });
+  const [selectedProvider, setSelectedProvider] = useState<string>("anthropic");
+  const [customModel, setCustomModel] = useState<string>("");
+  const [providerStatus, setProviderStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [providerError, setProviderError] = useState<string | null>(null);
+
+  // Modèles LLM par step
   const [models, setModels] = useState<AdminDefaultModels>({ spec: "", plan: "", dev: "" });
   const [modelStatus, setModelStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
@@ -70,17 +97,50 @@ export default function AdminSettingsPage() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
     Promise.all([
+      adminGetProviders(apiKey),
+      adminGetProviderModel(apiKey),
       adminGetDefaultModels(apiKey),
       adminGetDisplayCurrency(apiKey),
       adminGetFxRates(apiKey),
     ])
-      .then(([m, c, fx]) => {
+      .then(([prov, pm, m, c, fx]) => {
+        setProviders(prov);
+        setProviderModel(pm);
+        // Déduire le provider actif depuis le modèle courant
+        const active = prov.find((p) => p.is_active);
+        const provKey = active?.key ?? (pm.agent === "claude" ? "anthropic" : "groq");
+        setSelectedProvider(provKey);
+        setCustomModel(pm.model);
         setModels(m);
         setCurrency(c.display_currency);
         setFxRates(fx.fx_rates);
       })
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur de chargement"));
   }, []);
+
+  // ── Sauvegarde provider actif ──
+
+  async function saveProvider() {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    setProviderStatus("saving");
+    setProviderError(null);
+    const spec = providers.find((p) => p.key === selectedProvider);
+    const agent = spec?.agent ?? "aider";
+    const model = customModel || defaultModelForProvider(selectedProvider);
+    try {
+      const updated = await adminUpdateProviderModel(apiKey, { agent, model });
+      setProviderModel(updated);
+      // Rafraîchir la liste pour mettre à jour is_active
+      const prov = await adminGetProviders(apiKey);
+      setProviders(prov);
+      setProviderStatus("saved");
+      setTimeout(() => setProviderStatus("idle"), 2000);
+    } catch (err) {
+      setProviderStatus("error");
+      setProviderError(err instanceof AlexisApiError ? err.detail : "Erreur");
+    }
+  }
 
   // ── Sauvegarde modèles ──
 
@@ -158,19 +218,110 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Réglages</h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Pilotez les modèles LLM et la devise d&apos;affichage sans redéploiement.
+          Pilotez le provider LLM actif, les modèles et la devise sans redéploiement.
         </p>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {/* ── Modèles LLM ── */}
+      {/* ── Provider actif de la plateforme ── */}
       <AdminCard className="p-6">
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Modèles LLM par défaut</h2>
+            <h2 className="text-base font-semibold text-foreground">Provider LLM actif</h2>
             <p className="mt-0.5 text-sm text-foreground-muted">
-              Appliqués à tous les projets immédiatement — sans redéploiement.
+              Provider utilisé pour tous les clients sans clé personnelle (plans non-BYOK).
+            </p>
+          </div>
+          <SaveStatus status={providerStatus} />
+        </div>
+
+        {/* Grille des providers */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-5">
+          {providers.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => {
+                setSelectedProvider(p.key);
+                setCustomModel(defaultModelForProvider(p.key));
+              }}
+              className={[
+                "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
+                selectedProvider === p.key
+                  ? "border-brand bg-brand/5 ring-1 ring-brand"
+                  : "border-border bg-surface-raised hover:border-brand/40",
+              ].join(" ")}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {providerLabel(p.key)}
+                  </span>
+                  {p.is_active && (
+                    <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">
+                      ACTIF
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-[11px] text-foreground-muted font-mono">{p.agent}</span>
+                  {p.has_managed_key ? (
+                    <span className="text-[11px] text-success">✓ clé configurée</span>
+                  ) : (
+                    <span className="text-[11px] text-warning">⚠ clé manquante</span>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Modèle pour le provider sélectionné */}
+        {selectedProvider && (
+          <div className="mb-4">
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+              Modèle ({providerLabel(selectedProvider)})
+            </label>
+            <input
+              type="text"
+              value={customModel}
+              onChange={(e) => setCustomModel(e.target.value)}
+              placeholder={defaultModelForProvider(selectedProvider)}
+              className={adminInputClass}
+            />
+            <p className="mt-1 text-xs text-foreground-muted">
+              Format litellm : <code className="font-mono">provider/nom-du-modele</code> (ex: <code className="font-mono">groq/llama-3.3-70b-versatile</code>)
+            </p>
+          </div>
+        )}
+
+        {providerError && (
+          <p className="mb-3 text-sm text-danger">{providerError}</p>
+        )}
+
+        {/* Avertissement si clé manquante */}
+        {selectedProvider && providers.find((p) => p.key === selectedProvider && !p.has_managed_key) && (
+          <p className="mb-3 text-sm text-warning">
+            ⚠ Aucune clé API gérée pour ce provider. Configure-la dans{" "}
+            <a href="/admin/managed-secrets" className="underline">Clés API gérées</a> avant d&apos;activer.
+          </p>
+        )}
+
+        <div className="flex justify-end">
+          <button type="button" onClick={saveProvider} className={adminButtonClass}>
+            Activer ce provider
+          </button>
+        </div>
+      </AdminCard>
+
+      {/* ── Modèles LLM par step ── */}
+      <AdminCard className="p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Modèles par step (spec / plan / dev)</h2>
+            <p className="mt-0.5 text-sm text-foreground-muted">
+              Affine le modèle utilisé par step — indépendant du provider actif.
             </p>
           </div>
           <SaveStatus status={modelStatus} />
@@ -182,22 +333,13 @@ export default function AdminSettingsPage() {
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">
                 Step {step}
               </label>
-              <select
+              <input
+                type="text"
                 value={models[step]}
                 onChange={(e) => setModels((prev) => ({ ...prev, [step]: e.target.value }))}
+                placeholder="ex: groq/llama-3.3-70b-versatile"
                 className={adminInputClass}
-              >
-                <optgroup label="Claude">
-                  {CLAUDE_MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
-                </optgroup>
-                <optgroup label="Groq / Llama">
-                  {GROQ_MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
-                </optgroup>
-                {/* Modèle personnalisé non listé */}
-                {models[step] && !ALL_MODELS.includes(models[step]) && (
-                  <option value={models[step]}>{models[step]}</option>
-                )}
-              </select>
+              />
             </div>
           ))}
         </div>
@@ -234,7 +376,6 @@ export default function AdminSettingsPage() {
               {KNOWN_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>{c.label}</option>
               ))}
-              {/* Devise personnalisée non listée */}
               {!KNOWN_CURRENCIES.find((c) => c.code === currency) && (
                 <option value={currency}>{currency}</option>
               )}
@@ -258,7 +399,6 @@ export default function AdminSettingsPage() {
           <SaveStatus status={fxStatus} />
         </div>
 
-        {/* Taux existants */}
         <div className="space-y-3">
           {Object.entries(fxRates).map(([code, rate]) => (
             <div key={code} className="flex items-center gap-3">
@@ -284,7 +424,6 @@ export default function AdminSettingsPage() {
           ))}
         </div>
 
-        {/* Ajouter une devise */}
         <div className="mt-5 border-t border-border pt-5">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-foreground-subtle">
             Ajouter une devise
