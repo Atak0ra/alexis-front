@@ -18,6 +18,8 @@ function LoginForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Email saisi au moment du signup — affiché dans l'encart de confirmation */
+  const [signupEmail, setSignupEmail] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +33,14 @@ function LoginForm() {
       const result = mode === "login" ? await login(email, password) : await signup(email, password);
       setApiKey(result.api_key);
       setKeyId(result.id);
-      router.push("/dashboard");
+      if (mode === "signup" && !isLocalMode()) {
+        // Après signup : afficher l'encart "vérifie ta boîte mail"
+        // plutôt que de rediriger directement — le user doit savoir qu'un
+        // email l'attend avant de pouvoir créer des projets.
+        setSignupEmail(email);
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
@@ -39,11 +48,55 @@ function LoginForm() {
     }
   }
 
+  // Encart de confirmation post-signup (affiché à la place du formulaire)
+  if (signupEmail) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-16">
+        <div className="w-full max-w-sm">
+          {/* Wordmark */}
+          <Link href="/" className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
+              A
+            </span>
+            Alexis
+          </Link>
+          <div className="mt-4 border-t border-border" />
+
+          <div className="mt-8 rounded-xl border border-brand/20 bg-brand-light px-6 py-6">
+            <h2 className="text-lg font-bold text-foreground">Compte créé</h2>
+            <p className="mt-2 text-sm text-foreground-muted leading-relaxed">
+              On t&apos;a envoyé un email à{" "}
+              <span className="font-medium text-foreground">{signupEmail}</span>.
+              Clique sur le lien pour activer ton compte et commencer à créer des projets.
+            </p>
+            <p className="mt-3 text-xs text-foreground-subtle">
+              Vérifie aussi tes spams si tu ne vois rien dans les prochaines minutes.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="mt-6 w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors"
+          >
+            Aller au tableau de bord
+          </button>
+
+          <div className="mt-10 flex items-center justify-center gap-3 text-xs text-foreground-subtle">
+            <Link href="/" className="hover:text-foreground-muted transition-colors">
+              ← Retour à l&apos;accueil
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-16">
       <div className="w-full max-w-sm">
         {/* Wordmark */}
-        <Link href="/" className="flex items-center gap-2 font-mono text-sm font-bold text-foreground">
+        <Link href="/" className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
             A
           </span>
