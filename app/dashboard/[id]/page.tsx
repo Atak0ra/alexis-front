@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
@@ -23,7 +23,8 @@ import {
 import ProjectContextStep from "@/components/project-context-step";
 import ProjectContextCard from "@/components/project-context-card";
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
-import { Plus, X } from "lucide-react";
+import { Modal, ModalFooter } from "@/components/ui/modal";
+import { Plus } from "lucide-react";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
 
@@ -31,16 +32,16 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <div className="rounded-xl border border-success-border bg-success-bg p-4 text-center">
-        <p className="text-3xl font-bold text-success">{stats.resolved}</p>
-        <p className="mt-1 text-xs font-medium text-success/70">Résolus</p>
+        <p className="text-3xl font-bold text-success" aria-label={`${stats.resolved} résolus`}>{stats.resolved}</p>
+        <p className="mt-1 text-xs font-medium text-success/70" aria-hidden="true">Résolus</p>
       </div>
       <div className="rounded-xl border border-warning-border bg-warning-bg p-4 text-center">
-        <p className="text-3xl font-bold text-warning">{stats.in_progress}</p>
-        <p className="mt-1 text-xs font-medium text-warning/70">En cours</p>
+        <p className="text-3xl font-bold text-warning" aria-label={`${stats.in_progress} en cours`}>{stats.in_progress}</p>
+        <p className="mt-1 text-xs font-medium text-warning/70" aria-hidden="true">En cours</p>
       </div>
       <div className="rounded-xl border border-danger-border bg-danger-bg p-4 text-center">
-        <p className="text-3xl font-bold text-danger">{stats.failed}</p>
-        <p className="mt-1 text-xs font-medium text-danger/70">Échecs</p>
+        <p className="text-3xl font-bold text-danger" aria-label={`${stats.failed} échecs`}>{stats.failed}</p>
+        <p className="mt-1 text-xs font-medium text-danger/70" aria-hidden="true">Échecs</p>
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4 text-center">
         <p className="font-mono text-3xl font-bold text-foreground">
@@ -55,76 +56,119 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
 // ─── Modal nouveau ticket ─────────────────────────────────────────────────────
 
 function NewIssueModal({
+  open,
   onClose,
   onSubmit,
   submitting,
 }: {
+  open: boolean;
   onClose: () => void;
   onSubmit: (title: string, description: string) => void;
   submitting: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const titleId = useId();
+  const descId = useId();
+
+  // Reset fields when modal opens
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setDescription("");
+    }
+  }, [open]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-sm font-semibold text-foreground">Nouveau ticket</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <Modal open={open} onClose={onClose} title="Nouveau ticket" titleId="new-issue-title">
+      <div className="space-y-4">
+        <div>
+          <label htmlFor={titleId} className="block text-sm font-medium text-foreground mb-1.5">
+            Titre <span className="text-danger" aria-hidden="true">*</span>
+            <span className="sr-only">(requis)</span>
+          </label>
+          <input
+            id={titleId}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex : Corriger le bug de pagination"
+            required
+            aria-required="true"
+            className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          />
         </div>
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-foreground-muted mb-1.5">
-              Titre <span className="text-danger">*</span>
-            </label>
-            <input
-              autoFocus
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex : Corriger le bug de pagination"
-              className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-foreground-muted mb-1.5">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Décrivez le problème ou la fonctionnalité…"
-              className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand resize-none"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-sunken transition-colors"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            disabled={!title.trim() || submitting}
-            onClick={() => onSubmit(title.trim(), description.trim())}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-50 transition-colors"
-          >
-            {submitting ? "Création…" : "Créer"}
-          </button>
+        <div>
+          <label htmlFor={descId} className="block text-sm font-medium text-foreground mb-1.5">
+            Description
+          </label>
+          <textarea
+            id={descId}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            placeholder="Décrivez le problème ou la fonctionnalité…"
+            className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+          />
         </div>
       </div>
-    </div>
+      <ModalFooter className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-sunken transition-colors"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          disabled={!title.trim() || submitting}
+          onClick={() => onSubmit(title.trim(), description.trim())}
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-50 transition-colors"
+        >
+          {submitting ? "Création…" : "Créer"}
+        </button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ─── Confirm deactivate modal ─────────────────────────────────────────────────
+
+function ConfirmDeactivateModal({
+  open,
+  onClose,
+  onConfirm,
+  deactivating,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  deactivating: boolean;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title="Désactiver ce projet ?" titleId="confirm-deactivate-title" maxWidth="max-w-sm">
+      <p className="text-sm text-foreground-muted">
+        Le polling s&apos;arrêtera. Vous pourrez réactiver le projet depuis les paramètres.
+      </p>
+      <ModalFooter className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-sunken transition-colors"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          disabled={deactivating}
+          onClick={onConfirm}
+          className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white hover:bg-danger/90 disabled:opacity-50 transition-colors"
+        >
+          {deactivating ? "Désactivation…" : "Désactiver"}
+        </button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -141,10 +185,12 @@ export default function ProjectDetailPage() {
   const [tickets, setTickets] = useState<TicketOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  const [showConfirmDeactivate, setShowConfirmDeactivate] = useState(false);
   const [contextExists, setContextExists] = useState<boolean | null>(null);
   const [showContextModal, setShowContextModal] = useState(false);
   const [showNewIssue, setShowNewIssue] = useState(false);
   const [creatingIssue, setCreatingIssue] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const apiKey = getApiKey() ?? "";
 
@@ -184,14 +230,13 @@ export default function ProjectDetailPage() {
 
   async function handleCreateIssue(title: string, description: string) {
     setCreatingIssue(true);
+    setCreateError(null);
     try {
-      // Backlog par design : c'est au user de faire passer le ticket en Todo
-      // (triage manuel) via le Kanban pour déclencher le worker.
       const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
       setIssues((prev) => (prev ? [...prev, issue] : [issue]));
       setShowNewIssue(false);
-    } catch {
-      // silently ignore — l'utilisateur peut réessayer
+    } catch (err) {
+      setCreateError(err instanceof AlexisApiError ? err.detail : "Impossible de créer le ticket. Réessayez.");
     } finally {
       setCreatingIssue(false);
     }
@@ -205,12 +250,23 @@ export default function ProjectDetailPage() {
     });
   }
 
+  async function handleDeactivate() {
+    setDeactivating(true);
+    try {
+      await deleteProject(apiKey, projectId);
+      router.push("/dashboard");
+    } catch {
+      setDeactivating(false);
+      setShowConfirmDeactivate(false);
+    }
+  }
+
   if (error) {
     return (
       <div className="flex h-full min-h-[calc(100vh-3.5rem)] flex-col bg-surface lg:min-h-screen">
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-bg">
-            <svg className="h-7 w-7 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="h-7 w-7 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
           </div>
@@ -232,7 +288,7 @@ export default function ProjectDetailPage() {
       {project === null && (
         <div className="space-y-6">
           <div className="h-8 w-48 animate-pulse rounded-lg bg-surface-sunken" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-24 animate-pulse rounded-xl bg-surface-sunken" />
             ))}
@@ -256,7 +312,7 @@ export default function ProjectDetailPage() {
           {contextExists === false && !showContextModal && (
             <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-warning-border bg-warning-bg px-5 py-3.5">
               <div className="flex items-center gap-3 min-w-0">
-                <svg className="h-4 w-4 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-4 w-4 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <p className="text-sm text-warning">
@@ -274,32 +330,24 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          {/* ── Context modal ── */}
-          {showContextModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-              <div className="relative w-full max-w-lg rounded-2xl bg-surface shadow-xl overflow-y-auto max-h-[90vh] p-6 sm:p-8">
-                <button
-                  type="button"
-                  onClick={() => setShowContextModal(false)}
-                  className="absolute right-4 top-4 rounded-lg p-1.5 text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
-                  aria-label="Fermer"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-                <ProjectContextStep
-                  projectId={projectId}
-                  embedded
-                  onDone={() => {
-                    setShowContextModal(false);
-                    setContextExists(true);
-                  }}
-                  onSkip={() => setShowContextModal(false)}
-                />
-              </div>
-            </div>
-          )}
+          {/* ── Context modal (accessible) ── */}
+          <Modal
+            open={showContextModal}
+            onClose={() => setShowContextModal(false)}
+            title="Contexte du projet"
+            titleId="context-modal-title"
+            maxWidth="max-w-lg"
+          >
+            <ProjectContextStep
+              projectId={projectId}
+              embedded
+              onDone={() => {
+                setShowContextModal(false);
+                setContextExists(true);
+              }}
+              onSkip={() => setShowContextModal(false)}
+            />
+          </Modal>
 
           {/* ── Project header ── */}
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -308,7 +356,7 @@ export default function ProjectDetailPage() {
                 <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
                 {project.is_active && (
                   <span className="flex items-center gap-1.5 rounded-full bg-success-bg px-3 py-1 text-xs font-semibold text-success">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                     Actif
                   </span>
                 )}
@@ -326,16 +374,8 @@ export default function ProjectDetailPage() {
               </span>
               {project.is_active && (
                 <button
-                  onClick={async () => {
-                    if (!confirm("Désactiver ce projet ? Le polling s'arrêtera.")) return;
-                    setDeactivating(true);
-                    try {
-                      await deleteProject(apiKey, projectId);
-                      router.push("/dashboard");
-                    } catch {
-                      setDeactivating(false);
-                    }
-                  }}
+                  type="button"
+                  onClick={() => setShowConfirmDeactivate(true)}
                   disabled={deactivating}
                   className="rounded-lg border border-danger-border bg-danger-bg px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/10 disabled:opacity-50 transition-colors"
                 >
@@ -358,8 +398,8 @@ export default function ProjectDetailPage() {
               <h2 className="text-base font-semibold text-foreground">Tickets</h2>
               <div className="flex items-center gap-3">
                 {issues === null && (
-                  <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                    <div className="h-3 w-3 animate-spin rounded-full border border-border border-t-brand" />
+                  <div className="flex items-center gap-2 text-xs text-foreground-muted" aria-live="polite" aria-label="Chargement des tickets">
+                    <div className="h-3 w-3 animate-spin rounded-full border border-border border-t-brand" aria-hidden="true" />
                     Chargement…
                   </div>
                 )}
@@ -368,11 +408,18 @@ export default function ProjectDetailPage() {
                   onClick={() => setShowNewIssue(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-brand-hover"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" aria-hidden="true" />
                   Demander une modification
                 </button>
               </div>
             </div>
+
+            {/* Error from ticket creation — announced to screen readers */}
+            {createError && (
+              <p role="alert" className="mb-4 rounded-lg border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger">
+                {createError}
+              </p>
+            )}
 
             {issues !== null && (
               <TicketKanban
@@ -388,13 +435,20 @@ export default function ProjectDetailPage() {
       )}
 
       {/* ── Modal nouveau ticket ── */}
-      {showNewIssue && (
-        <NewIssueModal
-          onClose={() => setShowNewIssue(false)}
-          onSubmit={handleCreateIssue}
-          submitting={creatingIssue}
-        />
-      )}
+      <NewIssueModal
+        open={showNewIssue}
+        onClose={() => { setShowNewIssue(false); setCreateError(null); }}
+        onSubmit={handleCreateIssue}
+        submitting={creatingIssue}
+      />
+
+      {/* ── Confirm deactivate modal ── */}
+      <ConfirmDeactivateModal
+        open={showConfirmDeactivate}
+        onClose={() => setShowConfirmDeactivate(false)}
+        onConfirm={handleDeactivate}
+        deactivating={deactivating}
+      />
     </div>
   );
 }

@@ -54,26 +54,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Bandeau d'avertissement email non vérifié */}
         {emailVerified === false && (
-          <div className="border-b border-danger-border bg-danger-bg px-4 py-2.5">
+          <div role="alert" className="border-b border-danger-border bg-danger-bg px-4 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-danger">
                 <span className="font-semibold">Compte non activé.</span>{" "}
                 Vérifie ta boîte mail pour activer ton compte et créer des projets.
               </p>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resendState === "sending" || resendState === "sent"}
-                className="shrink-0 rounded-lg border border-danger/30 bg-white px-3 py-1 text-xs font-semibold text-danger hover:bg-danger-bg disabled:opacity-50 disabled:pointer-events-none transition-colors"
-              >
-                {resendState === "sending"
-                  ? "Envoi…"
-                  : resendState === "sent"
-                  ? "Email envoyé"
-                  : resendState === "error"
-                  ? "Réessayer"
-                  : "Renvoyer l'email"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendState === "sending" || resendState === "sent"}
+                  className="shrink-0 rounded-lg border border-danger/30 bg-white px-3 py-1 text-xs font-semibold text-danger hover:bg-danger-bg disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                >
+                  {resendState === "sending"
+                    ? "Envoi…"
+                    : resendState === "sent"
+                    ? "Email envoyé ✓"
+                    : resendState === "error"
+                    ? "Réessayer"
+                    : "Renvoyer l'email"}
+                </button>
+                {/* aria-live region announces the send result to screen readers */}
+                <span aria-live="polite" aria-atomic="true" className="sr-only">
+                  {resendState === "sent" ? "Email de vérification envoyé." : resendState === "error" ? "Erreur lors de l'envoi. Réessayez." : ""}
+                </span>
+              </div>
             </div>
           </div>
         )}

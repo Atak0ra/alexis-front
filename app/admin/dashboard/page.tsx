@@ -185,7 +185,7 @@ export default function AdminDashboardPage() {
         <KpiCard label="Projets" value={summary ? String(summary.project_count) : "—"} />
         <KpiCard label={`Coût (${currency})`} value={kpis ? fmtCurrency(kpis.total_cost_display, currency) : "—"} accent />
         <KpiCard label="Runs" value={kpis ? String(kpis.run_count) : "—"}
-          sub={kpis ? `✓ ${fmtPct(kpis.success_rate)} · ✗ ${fmtPct(kpis.failure_rate)}` : undefined} />
+          sub={kpis ? `Succès ${fmtPct(kpis.success_rate)} · Échecs ${fmtPct(kpis.failure_rate)}` : undefined} />
         <KpiCard label="MRR (€)" value={kpis ? `${kpis.mrr_eur} €` : "—"} />
         <KpiCard label={`Marge est. (${currency})`}
           value={kpis ? fmtCurrency(kpis.margin_display, currency) : "—"}
@@ -340,10 +340,18 @@ export default function AdminDashboardPage() {
               ) : recentRuns.map((r) => (
                 <tr
                   key={r.id}
-                  onClick={() => setSelectedRun(r)}
-                  className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-surface-sunken/50 transition-colors"
+                  className="border-b border-border/50 last:border-0 hover:bg-surface-sunken/50 transition-colors"
                 >
-                  <td className="py-2 font-mono text-xs text-foreground">{r.identifier}</td>
+                  <td className="py-2 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRun(r)}
+                      aria-label={`Voir le détail du run ${r.identifier}`}
+                      className="font-mono text-xs text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand rounded"
+                    >
+                      {r.identifier}
+                    </button>
+                  </td>
                   <td className="py-2 text-foreground-muted">{r.client_email}</td>
                   <td className="py-2 text-foreground-muted">{r.step}</td>
                   <td className="py-2"><StatusBadge status={r.status} /></td>

@@ -37,6 +37,7 @@ export default function AdminClientsPage() {
 
       {!loading && !error && (
         <AdminCard className="mt-6 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
@@ -68,6 +69,7 @@ export default function AdminClientsPage() {
               )}
             </tbody>
           </table>
+          </div>
         </AdminCard>
       )}
     </div>

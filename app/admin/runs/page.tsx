@@ -84,11 +84,12 @@ export default function AdminRunsPage() {
         </p>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
       <AdminCard className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <select
+            aria-label="Filtrer par client"
             value={clientFilter}
             onChange={(e) => setClientFilter(e.target.value)}
             className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-foreground"
@@ -100,6 +101,7 @@ export default function AdminRunsPage() {
           </select>
 
           <select
+            aria-label="Filtrer par projet"
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
             disabled={!clientFilter}
@@ -114,6 +116,7 @@ export default function AdminRunsPage() {
           </select>
 
           <select
+            aria-label="Filtrer par statut"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-foreground"
@@ -125,6 +128,7 @@ export default function AdminRunsPage() {
           </select>
 
           <select
+            aria-label="Filtrer par step"
             value={stepFilter}
             onChange={(e) => setStepFilter(e.target.value)}
             className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-foreground"
@@ -165,10 +169,18 @@ export default function AdminRunsPage() {
                   ) : runs.map((r) => (
                     <tr
                       key={r.id}
-                      onClick={() => setSelectedRun(r)}
-                      className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-surface-sunken/50 transition-colors"
+                      className="border-b border-border/50 last:border-0 hover:bg-surface-sunken/50 transition-colors"
                     >
-                      <td className="py-2 font-mono text-xs text-foreground">{r.identifier}</td>
+                      <td className="py-2 font-mono text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRun(r)}
+                          aria-label={`Voir le détail du run ${r.identifier}`}
+                          className="font-mono text-xs text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand rounded"
+                        >
+                          {r.identifier}
+                        </button>
+                      </td>
                       <td className="py-2 text-foreground-muted">{r.client_email}</td>
                       <td className="py-2 text-foreground-muted">{r.project_name}</td>
                       <td className="py-2 text-foreground-muted">{r.step}</td>

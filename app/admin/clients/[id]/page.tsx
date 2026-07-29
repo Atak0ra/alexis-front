@@ -45,7 +45,7 @@ export default function AdminClientDetailPage() {
     return (
       <div>
         <div className="h-8 w-64 animate-pulse rounded-lg bg-surface-sunken" />
-        <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded-xl bg-surface-sunken" />
           ))}
@@ -101,7 +101,7 @@ export default function AdminClientDetailPage() {
         <p className="mt-2 text-sm text-danger">{deleteError}</p>
       )}
 
-      <div className="mt-6 grid grid-cols-3 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Plan</p>
           <p className="mt-1.5 text-lg font-semibold text-foreground">{client.plan_name ?? "illimité"}</p>

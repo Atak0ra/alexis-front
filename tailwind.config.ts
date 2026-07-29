@@ -15,7 +15,7 @@ const config: Config = {
         // Text
         foreground: "#18181B",
         "foreground-muted": "#71717A",
-        "foreground-subtle": "#A1A1AA",
+        "foreground-subtle": "#6B7280",
         // Brand / accent
         brand: "#4F46E5",
         "brand-hover": "#4338CA",

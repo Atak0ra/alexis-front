@@ -31,6 +31,7 @@ export default function AdminPlansPage() {
   const [form, setForm] = useState<PlanPayload>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   function load() {
     const apiKey = getAdminApiKey();
@@ -107,6 +108,7 @@ export default function AdminPlansPage() {
 
       {!loading && (
       <AdminCard className="mt-6 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
@@ -127,21 +129,48 @@ export default function AdminPlansPage() {
                   {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <button type="button" onClick={() => startEdit(plan)} className="text-brand hover:text-brand-hover">
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(plan.id)}
-                    className="ml-4 text-danger hover:opacity-80"
-                  >
-                    Supprimer
-                  </button>
+                  {confirmDeleteId === plan.id ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="text-xs text-foreground-muted">Confirmer ?</span>
+                      <button
+                        type="button"
+                        onClick={() => { handleDelete(plan.id); setConfirmDeleteId(null); }}
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-danger px-3 text-sm font-semibold text-white hover:bg-danger/90 transition-colors"
+                      >
+                        Oui, supprimer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-border px-3 text-sm font-medium text-foreground-muted hover:bg-surface-sunken transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(plan)}
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-3 text-sm font-medium text-brand hover:bg-brand-light transition-colors"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(plan.id)}
+                        className="ml-1 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger-bg transition-colors"
+                      >
+                        Supprimer
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </AdminCard>
       )}
 

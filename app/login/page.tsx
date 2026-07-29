@@ -129,10 +129,11 @@ function LoginForm() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5" aria-describedby={error ? "form-error" : undefined} noValidate>
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
               {isLocalMode() ? "Identifiant" : "Adresse email"}
+              <span className="text-danger ml-0.5" aria-hidden="true">*</span>
             </label>
             <input
               id="email"
@@ -140,6 +141,8 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-required="true"
+              aria-describedby={error ? "form-error" : undefined}
               placeholder={isLocalMode() ? "demo" : "vous@exemple.com"}
               className="w-full rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
             />
@@ -148,6 +151,7 @@ function LoginForm() {
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">
               Mot de passe
+              <span className="text-danger ml-0.5" aria-hidden="true">*</span>
             </label>
             <input
               id="password"
@@ -155,6 +159,8 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              aria-required="true"
+              aria-describedby={error ? "form-error" : undefined}
               minLength={isLocalMode() ? undefined : 8}
               placeholder={isLocalMode() ? "passer" : "••••••••"}
               className="w-full rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
@@ -165,6 +171,7 @@ function LoginForm() {
             <div>
               <label htmlFor="confirm-password" className="mb-1.5 block text-sm font-medium text-foreground">
                 Confirmer le mot de passe
+                <span className="text-danger ml-0.5" aria-hidden="true">*</span>
               </label>
               <input
                 id="confirm-password"
@@ -172,6 +179,8 @@ function LoginForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                aria-required="true"
+                aria-describedby={error ? "form-error" : undefined}
                 minLength={8}
                 placeholder="••••••••"
                 className="w-full rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
@@ -179,7 +188,14 @@ function LoginForm() {
             </div>
           )}
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && (
+            <p id="form-error" role="alert" className="flex items-center gap-2 rounded-lg border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger">
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
