@@ -130,7 +130,7 @@ function ProjectCard({ project, stats }: { project: ProjectOut; stats: StatsStat
             <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-foreground-muted">Coût cumulé</span>
               <span className="font-mono text-sm font-semibold text-foreground">
-                ${stats.total_cost_usd.toFixed(2)}
+                {stats.total_cost_display.toFixed(2)} {stats.display_currency}
               </span>
             </div>
           </>
@@ -242,7 +242,8 @@ export default function DashboardPage() {
   const totalResolved = allStats.reduce((acc, s) => acc + s.resolved, 0);
   const totalInProgress = allStats.reduce((acc, s) => acc + s.in_progress, 0);
   const totalFailed = allStats.reduce((acc, s) => acc + s.failed, 0);
-  const totalCost = allStats.reduce((acc, s) => acc + s.total_cost_usd, 0);
+  const totalCost = allStats.reduce((acc, s) => acc + s.total_cost_display, 0);
+  const displayCurrency = allStats[0]?.display_currency ?? "EUR";
 
   const isFreePlan = plan?.name === "free";
 
@@ -312,7 +313,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Coût total"
-            value={`$${totalCost.toFixed(2)}`}
+            value={`${totalCost.toFixed(2)} ${displayCurrency}`}
             color="brand"
             icon={
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -208,7 +208,7 @@ export default function PricingPage() {
               <dt className="font-semibold text-foreground">Qu&apos;est-ce qui est inclus dans le plan Solo Preneur ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
                 À 199 €/mois, Alexis fournit la clé d&apos;inférence — vous n&apos;avez rien à configurer.
-                Un budget d&apos;inférence de 100 $/mois est inclus. Au-delà, les runs sont mis en pause
+                Un budget d&apos;inférence de 100 €/mois est inclus. Au-delà, les runs sont mis en pause
                 jusqu&apos;au mois suivant. Contactez-nous à{" "}
                 <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
                   contact@alexis.dev

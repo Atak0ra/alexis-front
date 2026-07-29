@@ -121,7 +121,7 @@ function LivePipelinePreview() {
             <p className="text-xs text-warning/70">En cours</p>
           </div>
           <div className="rounded-xl border border-border bg-surface-sunken p-3 text-center">
-            <p className="font-mono text-2xl font-bold text-foreground">$142</p>
+            <p className="font-mono text-2xl font-bold text-foreground">131 €</p>
             <p className="text-xs text-foreground-muted">Coût</p>
           </div>
         </div>
@@ -129,9 +129,9 @@ function LivePipelinePreview() {
         {/* Ticket list preview */}
         <div className="mt-4 space-y-2">
           {[
-            { id: "KARA-142", title: "Pagination côté serveur sur /admin/users", status: "resolved", cost: "$3.42" },
-            { id: "KARA-145", title: "Webhooks GitHub pour les événements PR", status: "in_progress", cost: "$1.20" },
-            { id: "SHOP-89", title: "Filtre par catégorie sur le catalogue", status: "resolved", cost: "$2.60" },
+            { id: "KARA-142", title: "Pagination côté serveur sur /admin/users", status: "resolved", cost: "3,15 €" },
+            { id: "KARA-145", title: "Webhooks GitHub pour les événements PR", status: "in_progress", cost: "1,10 €" },
+            { id: "SHOP-89", title: "Filtre par catégorie sur le catalogue", status: "resolved", cost: "2,39 €" },
           ].map((t) => (
             <div key={t.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2.5">
               <div

@@ -94,6 +94,8 @@ export interface ProjectStats {
   in_progress: number;
   failed: number;
   total_cost_usd: number;
+  total_cost_display: number;
+  display_currency: string;
 }
 
 // ─── Issues (tracker natif) ───────────────────────────────────────────────────
@@ -421,6 +423,8 @@ export interface TicketOut {
   status: "resolved" | "in_progress" | "failed";
   agent: string;
   cost_usd: number;
+  cost_display: number;
+  display_currency: string;
   updated_at: string;
   pr_url: string | null;
   pr_title: string | null;

@@ -65,6 +65,8 @@ export interface DemoProjectStats {
   in_progress: number;
   failed: number;
   total_cost_usd: number;
+  total_cost_display: number;
+  display_currency: string;
 }
 
 function seedFromId(id: string): number {
@@ -79,7 +81,10 @@ export function getDemoProjectStats(projectId: string): DemoProjectStats {
   const in_progress = 1 + (seed % 5);
   const failed = seed % 4;
   const total_cost_usd = Math.round(resolved * (2.1 + (seed % 7) * 0.4) * 100) / 100;
-  return { resolved, in_progress, failed, total_cost_usd };
+  // Même taux par défaut que orchestrator/interface/currency.py (EUR: 0.92) —
+  // cohérent avec ce qu'un vrai backend renverrait, pour la démo locale.
+  const total_cost_display = Math.round(total_cost_usd * 0.92 * 100) / 100;
+  return { resolved, in_progress, failed, total_cost_usd, total_cost_display, display_currency: "EUR" };
 }
 
 // ─── Demo issues (tracker natif — 14 états du workflow) ──────────────────────

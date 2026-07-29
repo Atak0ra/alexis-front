@@ -44,7 +44,7 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4 text-center">
         <p className="font-mono text-3xl font-bold text-foreground">
-          ${stats.total_cost_usd.toFixed(2)}
+          {stats.total_cost_display.toFixed(2)} {stats.display_currency}
         </p>
         <p className="mt-1 text-xs font-medium text-foreground-muted">Coût cumulé</p>
       </div>
@@ -176,7 +176,10 @@ export default function ProjectDetailPage() {
 
   const ticketsByIdentifier: Record<string, TicketSummary> = {};
   for (const t of tickets) {
-    ticketsByIdentifier[t.id] = { pr_url: t.pr_url, pr_title: t.pr_title, cost_usd: t.cost_usd };
+    ticketsByIdentifier[t.id] = {
+      pr_url: t.pr_url, pr_title: t.pr_title,
+      cost_display: t.cost_display, display_currency: t.display_currency,
+    };
   }
 
   async function handleCreateIssue(title: string, description: string) {

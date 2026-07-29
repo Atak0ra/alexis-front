@@ -8,7 +8,8 @@ import type { Issue } from "@/lib/api-client";
 export interface TicketSummary {
   pr_url: string | null;
   pr_title: string | null;
-  cost_usd: number;
+  cost_display: number;
+  display_currency: string;
 }
 
 interface Column {
@@ -36,6 +37,16 @@ const SUBSTATE_TO_COLUMN: Record<string, string> = {
   to_merge_failed: "to_merge",
 };
 
+// Mapping état échoué → clé d'état déclencheur du step correspondant.
+// Doit rester synchronisé avec _TRIGGER_STATE_KEY dans orchestrator/application/poller.py.
+// Le step "spec" se déclenche depuis "todo" (pas "spec"), les autres depuis leur propre clé.
+const FAILED_TO_TRIGGER_KEY: Record<string, string> = {
+  spec_failed:     "todo",
+  plan_failed:     "plan",
+  dev_failed:      "dev",
+  to_merge_failed: "to_merge",
+};
+
 function stateKeyForLabel(label: string, states: Record<string, string>): string | null {
   return Object.entries(states).find(([, v]) => v === label)?.[0] ?? null;
 }
@@ -45,6 +56,21 @@ function columnKeyForIssue(issue: Issue, states: Record<string, string>): string
   if (!key) return "backlog";
   if (SUBSTATE_TO_COLUMN[key]) return SUBSTATE_TO_COLUMN[key];
   return COLUMNS.some((c) => c.key === key) ? key : "backlog";
+}
+
+/**
+ * Retourne le libellé d'état déclencheur pour relancer un step échoué.
+ * Ex: issue en "Spec Failed" (stateKey="spec_failed") → states["todo"] = "Todo"
+ * car le step spec se déclenche depuis l'état "todo", pas "spec".
+ */
+function triggerLabelForFailure(
+  stateKey: string,
+  states: Record<string, string>,
+  fallbackLabel: string,
+): string {
+  const triggerKey = FAILED_TO_TRIGGER_KEY[stateKey];
+  if (!triggerKey) return fallbackLabel;
+  return states[triggerKey] ?? fallbackLabel;
 }
 
 interface TicketKanbanProps {
@@ -139,14 +165,22 @@ export default function TicketKanban({
                       >
                         {issue.state}
                       </span>
-                      {isFailure && (
+                      {isFailure && stateKey && (
                         <button
                           type="button"
                           title="Réessayer"
                           aria-label="Réessayer"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRetry(issue.id, states[col.key] ?? col.label);
+                            // Envoie l'état DÉCLENCHEUR du step (pas le label de colonne).
+                            // Ex: "Spec Failed" → envoie "Todo" (trigger du step spec),
+                            // pas "Spec" qui n'est pas un état déclencheur et ne relance rien.
+                            const triggerLabel = triggerLabelForFailure(
+                              stateKey,
+                              states,
+                              states[col.key] ?? col.label,
+                            );
+                            handleRetry(issue.id, triggerLabel);
                           }}
                           className="text-foreground-subtle transition-colors hover:text-brand"
                         >
@@ -171,11 +205,11 @@ export default function TicketKanban({
                     </div>
                   )}
 
-                  {(ticket?.pr_url || (ticket && ticket.cost_usd > 0)) && (
+                  {(ticket?.pr_url || (ticket && ticket.cost_display > 0)) && (
                     <div className="flex items-center gap-2 pt-0.5">
-                      {ticket && ticket.cost_usd > 0 && (
+                      {ticket && ticket.cost_display > 0 && (
                         <span className="font-mono text-[11px] text-foreground-subtle">
-                          ${ticket.cost_usd.toFixed(2)}
+                          {ticket.cost_display.toFixed(2)} {ticket.display_currency}
                         </span>
                       )}
                       {ticket?.pr_url && (
