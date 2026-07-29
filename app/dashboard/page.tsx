@@ -340,7 +340,7 @@ export default function DashboardPage() {
 
         {/* Loading */}
         {projects === null && (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-52 animate-pulse rounded-xl border border-border bg-surface-raised" />
             ))}
@@ -373,7 +373,7 @@ export default function DashboardPage() {
 
         {/* Project grid */}
         {projects !== null && projects.length > 0 && (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
               <ProjectCard
                 key={project.id}

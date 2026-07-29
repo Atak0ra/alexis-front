@@ -237,7 +237,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Grille des providers */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-5">
           {providers.map((p) => (
             <button
               key={p.key}
@@ -327,7 +327,7 @@ export default function AdminSettingsPage() {
           <SaveStatus status={modelStatus} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {(["spec", "plan", "dev"] as const).map((step) => (
             <div key={step}>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">

@@ -118,6 +118,7 @@ export default function AdminClientDetailPage() {
 
       <h2 className="mt-10 text-lg font-semibold text-foreground">Projets</h2>
       <AdminCard className="mt-3 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
@@ -153,6 +154,7 @@ export default function AdminClientDetailPage() {
             )}
           </tbody>
         </table>
+        </div>
       </AdminCard>
 
       {/* Zone danger — rappel RGPD */}

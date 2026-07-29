@@ -51,8 +51,8 @@ function LoginForm() {
   // Encart de confirmation post-signup (affiché à la place du formulaire)
   if (signupEmail) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-16">
-        <div className="w-full max-w-sm">
+      <div className="flex min-h-screen flex-col bg-surface px-6 py-10 sm:items-center sm:justify-center sm:py-16">
+        <div className="w-full sm:max-w-sm">
           {/* Wordmark */}
           <Link href="/" className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
@@ -93,8 +93,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-16">
-      <div className="w-full max-w-sm">
+    <div className="flex min-h-screen flex-col bg-surface px-6 py-10 sm:items-center sm:justify-center sm:py-16">
+      <div className="w-full sm:max-w-sm">
         {/* Wordmark */}
         <Link href="/" className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">

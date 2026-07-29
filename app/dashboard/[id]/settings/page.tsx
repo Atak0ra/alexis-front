@@ -432,7 +432,7 @@ export default function ProjectSettingsPage() {
                           <code className="font-mono">groq/llama-3.3-70b-versatile</code>. Ces providers sont
                           gérés nativement, la Base URL ci-dessus n&apos;est alors pas utilisée.
                         </p>
-                        <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                           <div>
                             <Label htmlFor="spec-model">Spec</Label>
                             <Input id="spec-model" value={specModel} onChange={(e) => setSpecModel(e.target.value)} />

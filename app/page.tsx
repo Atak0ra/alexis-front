@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import LandingNav from "@/components/landing-nav";
 
 const PIPELINE_STAGES = [
   {
@@ -157,33 +158,7 @@ export default function RootPage() {
   return (
     <div className="min-h-screen bg-surface">
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-2 font-display text-sm font-bold tracking-tight text-foreground">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">
-              A
-            </span>
-            Alexis
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/pricing"
-              className="text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
-            >
-              Tarifs
-            </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
-            >
-              Connexion
-            </Link>
-            <Link href="/login?mode=signup" className={buttonVariants("primary")}>
-              Commencer gratuitement
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
@@ -263,7 +238,7 @@ export default function RootPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
             {PIPELINE_STAGES.map((stage, i) => (
               <div key={stage.key} className="relative flex flex-col">
                 {/* Connector line */}
@@ -295,7 +270,7 @@ export default function RootPage() {
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {VALUE_PROPS.map((prop) => (
               <div
                 key={prop.title}
