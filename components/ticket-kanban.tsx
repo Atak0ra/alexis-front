@@ -117,14 +117,14 @@ export default function TicketKanban({
       {issues.length === 0 && (
         <p className="mb-3 text-sm text-foreground-subtle">Aucune demande pour le moment.</p>
       )}
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:snap-none">
       {COLUMNS.map((col) => (
         <div
           key={col.key}
           data-testid={`kanban-column-${col.key}`}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleDrop(e, col.key)}
-          className="flex w-64 shrink-0 flex-col rounded-xl bg-surface-sunken/40 p-2"
+          className="flex w-[85vw] shrink-0 snap-start flex-col rounded-xl bg-surface-sunken/40 p-2 sm:w-64 sm:snap-align-none"
         >
           <div className="mb-2 flex items-center justify-between px-1.5 py-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
@@ -152,7 +152,29 @@ export default function TicketKanban({
                   onClick={() => router.push(`/dashboard/${projectId}/issues/${issue.id}`)}
                   className="cursor-grab space-y-1.5 rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-left shadow-card transition-colors hover:border-border-strong active:cursor-grabbing"
                 >
-                  <p className="font-mono text-[11px] text-foreground-subtle">{issue.identifier}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-mono text-[11px] text-foreground-subtle">{issue.identifier}</p>
+                    {/* Alternative au glisser-déposer — le drag HTML5 natif ne
+                        fonctionne pas au toucher, et n'est pas accessible au
+                        clavier/lecteur d'écran. Fonctionne partout, pas
+                        seulement sur mobile. */}
+                    <select
+                      aria-label={`Déplacer ${issue.identifier}`}
+                      value={col.key}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const targetLabel = states[e.target.value] ?? e.target.value;
+                        if (targetLabel !== issue.state) onMoveIssue(issue.id, targetLabel);
+                      }}
+                      className="shrink-0 rounded-md border border-border bg-surface px-1 py-0.5 text-[10px] text-foreground-subtle transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+                    >
+                      {COLUMNS.map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {states[c.key] ?? c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <p className="text-sm font-medium leading-snug text-foreground">{issue.title}</p>
 
                   {isSubstate && (

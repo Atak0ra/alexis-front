@@ -195,6 +195,35 @@ describe("TicketKanban", () => {
     expect(onMoveIssue).not.toHaveBeenCalled();
   });
 
+  it("moves a ticket via the Déplacer select — accessible alternative to drag (touch, keyboard, screen reader)", () => {
+    const onMoveIssue = vi.fn();
+    const issues = [makeIssue({ id: "i1", title: "A trier", state: "Backlog" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={onMoveIssue} />);
+
+    fireEvent.change(screen.getByLabelText("Déplacer PROJ-1"), { target: { value: "todo" } });
+
+    expect(onMoveIssue).toHaveBeenCalledWith("i1", "Todo");
+  });
+
+  it("does not call onMoveIssue when the select is set back to the current column", () => {
+    const onMoveIssue = vi.fn();
+    const issues = [makeIssue({ id: "i1", title: "Deja backlog", state: "Backlog" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={onMoveIssue} />);
+
+    fireEvent.change(screen.getByLabelText("Déplacer PROJ-1"), { target: { value: "backlog" } });
+
+    expect(onMoveIssue).not.toHaveBeenCalled();
+  });
+
+  it("clicking or changing the move select does not navigate to the issue detail page", () => {
+    const issues = [makeIssue({ id: "i1", title: "A trier", state: "Backlog" })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Déplacer PROJ-1"), { target: { value: "todo" } });
+
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it("shows a PR link and cost badge when ticket data matches the issue", () => {
     const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Avec PR", state: "Dev" })];
     render(
