@@ -7,6 +7,7 @@ import { clearAdminApiKey, getAdminApiKey } from "@/lib/session";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Cockpit" },
+  { href: "/admin/runs", label: "Runs" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/plans", label: "Plans" },
   { href: "/admin/managed-secrets", label: "Clés gérées" },

@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard } from "../_components/chrome";
+import { StatusBadge, RunDetailModal, fmtMs } from "../_components/run-detail";
 import { cn } from "@/lib/utils";
 
 // ── Types & helpers ───────────────────────────────────────────────────────────
@@ -50,11 +51,6 @@ function fmtPct(value: number): string {
   return `${(value * 100).toFixed(1)} %`;
 }
 
-function fmtMs(ms: number): string {
-  if (ms < 1000) return `${ms} ms`;
-  return `${(ms / 1000).toFixed(1)} s`;
-}
-
 const PRESETS: { value: Preset; label: string }[] = [
   { value: "7d", label: "7j" },
   { value: "30d", label: "30j" },
@@ -79,105 +75,6 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string; 
   );
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "done" ? "bg-success/10 text-success" :
-    status === "failed" ? "bg-danger/10 text-danger" :
-    "bg-warning/10 text-warning";
-  return <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", cls)}>{status}</span>;
-}
-
-// ── Run Detail Modal ──────────────────────────────────────────────────────────
-
-function RunDetailModal({ run, onClose }: { run: AdminRecentRun; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div
-        className="fixed inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-surface shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div>
-            <p className="font-mono text-sm font-bold text-foreground">{run.identifier}</p>
-            <p className="mt-0.5 text-xs text-foreground-muted">{run.step} · <StatusBadge status={run.status} /></p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
-            aria-label="Fermer"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Corps */}
-        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
-          {/* Infos principales */}
-          <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground-subtle">Informations</h3>
-            <dl className="space-y-2">
-              <Row label="Client" value={
-                <Link href={`/admin/clients/${run.client_id}`} className="text-brand hover:underline">
-                  {run.client_email}
-                </Link>
-              } />
-              <Row label="Projet" value={run.project_name} />
-              <Row label="Step" value={run.step} />
-              <Row label="Statut" value={<StatusBadge status={run.status} />} />
-              <Row label="Date" value={new Date(run.created_at).toLocaleString("fr-FR")} />
-            </dl>
-          </section>
-
-          {/* Métriques */}
-          <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground-subtle">Métriques</h3>
-            <dl className="space-y-2">
-              <Row label="Modèle" value={<span className="font-mono text-xs">{run.model ?? "—"}</span>} />
-              <Row label="Coût" value={run.cost_usd != null ? `$${run.cost_usd.toFixed(6)}` : "—"} />
-              <Row label="Durée" value={run.duration_ms != null ? fmtMs(run.duration_ms) : "—"} />
-            </dl>
-          </section>
-
-          {/* Erreur */}
-          {run.error && (
-            <section>
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-danger">Erreur</h3>
-              <pre className="max-h-64 overflow-y-auto rounded-xl bg-danger/5 p-4 text-xs text-danger whitespace-pre-wrap break-words">
-                {run.error}
-              </pre>
-            </section>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-border px-6 py-4">
-          <Link
-            href={`/admin/clients/${run.client_id}`}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-sunken transition-colors"
-          >
-            Voir la fiche client →
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <dt className="shrink-0 text-sm text-foreground-muted">{label}</dt>
-      <dd className="text-right text-sm text-foreground">{value}</dd>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
@@ -194,8 +91,6 @@ export default function AdminDashboardPage() {
   const [customStart, setCustomStart] = useState(DEFAULT_RANGE.start);
   const [customEnd, setCustomEnd] = useState(DEFAULT_RANGE.end);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [stepFilter, setStepFilter] = useState<string>("");
 
   const range = useMemo(() => {
     if (preset === "custom") return { start: customStart, end: customEnd };
@@ -232,18 +127,14 @@ export default function AdminDashboardPage() {
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
   }, [range.start, range.end]);
 
-  // Derniers runs (filtrables indépendamment)
+  // Aperçu des 5 derniers runs — liste complète filtrable sur /admin/runs.
   useEffect(() => {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
-    adminGetRecentRuns(apiKey, {
-      limit: 50,
-      status: statusFilter || undefined,
-      step: stepFilter || undefined,
-    })
-      .then(setRecentRuns)
+    adminGetRecentRuns(apiKey, { limit: 5 })
+      .then(({ items }) => setRecentRuns(items))
       .catch(() => {});
-  }, [statusFilter, stepFilter]);
+  }, []);
 
   const chartData = spend
     ? spend.series.map((p) => ({ ...p, label: formatBucket(p.bucket, spend.granularity) }))
@@ -420,26 +311,16 @@ export default function AdminDashboardPage() {
         </AdminCard>
       )}
 
-      {/* ── Derniers runs ── */}
+      {/* ── Derniers runs (aperçu) ── */}
       <AdminCard className="p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-semibold text-foreground">Derniers runs</p>
-          <div className="flex gap-2">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-foreground">
-              <option value="">Tous statuts</option>
-              <option value="done">done</option>
-              <option value="failed">failed</option>
-              <option value="in_progress">in_progress</option>
-            </select>
-            <select value={stepFilter} onChange={(e) => setStepFilter(e.target.value)}
-              className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-foreground">
-              <option value="">Tous steps</option>
-              {["spec", "plan", "dev", "merge", "chat"].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          <Link
+            href="/admin/runs"
+            className="text-sm font-medium text-brand hover:text-brand-hover transition-colors"
+          >
+            Voir tous les runs →
+          </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -447,18 +328,15 @@ export default function AdminDashboardPage() {
               <tr className="border-b border-border text-left text-xs text-foreground-subtle">
                 <th className="pb-2 font-medium">Ticket</th>
                 <th className="pb-2 font-medium">Client</th>
-                <th className="pb-2 font-medium">Projet</th>
                 <th className="pb-2 font-medium">Step</th>
                 <th className="pb-2 font-medium">Statut</th>
-                <th className="pb-2 font-medium">Modèle</th>
                 <th className="pb-2 text-right font-medium">Coût ($)</th>
-                <th className="pb-2 text-right font-medium">Durée</th>
                 <th className="pb-2 font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {recentRuns.length === 0 ? (
-                <tr><td colSpan={9} className="py-6 text-center text-foreground-muted">Aucun run</td></tr>
+                <tr><td colSpan={6} className="py-6 text-center text-foreground-muted">Aucun run</td></tr>
               ) : recentRuns.map((r) => (
                 <tr
                   key={r.id}
@@ -467,21 +345,15 @@ export default function AdminDashboardPage() {
                 >
                   <td className="py-2 font-mono text-xs text-foreground">{r.identifier}</td>
                   <td className="py-2 text-foreground-muted">{r.client_email}</td>
-                  <td className="py-2 text-foreground-muted">{r.project_name}</td>
                   <td className="py-2 text-foreground-muted">{r.step}</td>
                   <td className="py-2"><StatusBadge status={r.status} /></td>
-                  <td className="py-2 font-mono text-xs text-foreground-muted">
-                    {r.model ? r.model.split("/").pop()?.split("-").slice(0, 2).join("-") ?? r.model : "—"}
-                  </td>
                   <td className="py-2 text-right font-mono text-xs">{r.cost_usd != null ? `$${r.cost_usd.toFixed(4)}` : "—"}</td>
-                  <td className="py-2 text-right text-xs text-foreground-muted">{r.duration_ms != null ? fmtMs(r.duration_ms) : "—"}</td>
                   <td className="py-2 text-xs text-foreground-muted">{new Date(r.created_at).toLocaleDateString("fr-FR")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-foreground-muted">Cliquez sur une ligne pour voir le détail.</p>
       </AdminCard>
 
       {/* ── Modale détail run ── */}

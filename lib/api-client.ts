@@ -1003,14 +1003,25 @@ export interface AdminRecentRun {
   project_id: string;
 }
 
+export interface AdminRecentRunsPage {
+  items: AdminRecentRun[];
+  total: number;
+}
+
 export function adminGetRecentRuns(
   adminApiKey: string,
-  opts?: { limit?: number; status?: string; step?: string }
-): Promise<AdminRecentRun[]> {
+  opts?: {
+    limit?: number; offset?: number; status?: string; step?: string;
+    clientId?: string; projectId?: string;
+  }
+): Promise<AdminRecentRunsPage> {
   const params = new URLSearchParams();
   if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.offset) params.set("offset", String(opts.offset));
   if (opts?.status) params.set("status", opts.status);
   if (opts?.step) params.set("step", opts.step);
+  if (opts?.clientId) params.set("client_id", opts.clientId);
+  if (opts?.projectId) params.set("project_id", opts.projectId);
   const qs = params.toString();
   return request(`/admin/dashboard/recent-runs${qs ? `?${qs}` : ""}`, {
     headers: { Authorization: `Bearer ${adminApiKey}` },

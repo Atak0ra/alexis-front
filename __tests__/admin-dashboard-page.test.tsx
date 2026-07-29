@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.spyOn(apiClient, "adminGetCostByStep").mockResolvedValue([]);
   vi.spyOn(apiClient, "adminGetSuccessByStep").mockResolvedValue([]);
   vi.spyOn(apiClient, "adminGetTopClients").mockResolvedValue([]);
-  vi.spyOn(apiClient, "adminGetRecentRuns").mockResolvedValue([]);
+  vi.spyOn(apiClient, "adminGetRecentRuns").mockResolvedValue({ items: [], total: 0 });
 });
 
 describe("AdminDashboardPage", () => {
