@@ -74,7 +74,8 @@ describe("AdminPlansPage", () => {
     render(<AdminPlansPage />);
     await waitFor(() => expect(screen.getByText("standard")).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole("button", { name: /supprimer/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^supprimer$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /oui, supprimer/i }));
 
     await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith("alx_admin_xxx", "plan-standard"));
   });

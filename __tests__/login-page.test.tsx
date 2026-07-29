@@ -24,8 +24,8 @@ describe("LoginPage", () => {
     const setApiKeySpy = vi.spyOn(session, "setApiKey").mockImplementation(() => {});
 
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^Adresse email/), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/^Mot de passe/), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
@@ -38,9 +38,9 @@ describe("LoginPage", () => {
 
     render(<LoginPage />);
     fireEvent.click(screen.getByText("Créer un compte"));
-    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "new@b.com" } });
-    fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
-    fireEvent.change(screen.getByLabelText("Confirmer le mot de passe"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^Adresse email/), { target: { value: "new@b.com" } });
+    fireEvent.change(screen.getByLabelText(/^Mot de passe/), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^Confirmer le mot de passe/), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
 
     // Pas de redirect immédiat — le compte doit vérifier son email avant de
@@ -58,9 +58,9 @@ describe("LoginPage", () => {
 
     render(<LoginPage />);
     fireEvent.click(screen.getByText("Créer un compte"));
-    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "new@b.com" } });
-    fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "password123" } });
-    fireEvent.change(screen.getByLabelText("Confirmer le mot de passe"), { target: { value: "different" } });
+    fireEvent.change(screen.getByLabelText(/^Adresse email/), { target: { value: "new@b.com" } });
+    fireEvent.change(screen.getByLabelText(/^Mot de passe/), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^Confirmer le mot de passe/), { target: { value: "different" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer le compte" }));
 
     expect(await screen.findByText("Les mots de passe ne correspondent pas.")).toBeInTheDocument();
@@ -71,8 +71,8 @@ describe("LoginPage", () => {
     vi.spyOn(apiClient, "login").mockRejectedValue(new apiClient.AlexisApiError(401, "Invalid credentials"));
 
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText("Adresse email"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByLabelText("Mot de passe"), { target: { value: "wrong" } });
+    fireEvent.change(screen.getByLabelText(/^Adresse email/), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByLabelText(/^Mot de passe/), { target: { value: "wrong" } });
     fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
 
     expect(await screen.findByText("Invalid credentials")).toBeInTheDocument();
