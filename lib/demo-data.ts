@@ -1,4 +1,4 @@
-import type { ProjectOut, Issue } from "@/lib/api-client";
+import type { ProjectOut, Issue, IssueAsset, ProjectReference } from "@/lib/api-client";
 import { DEFAULT_MODELS, DEFAULT_STATES, DEFAULT_TRIGGER_STATES } from "@/lib/project-defaults";
 
 export function isLocalMode(): boolean {
@@ -358,6 +358,69 @@ export function deleteDemoIssue(projectId: string, issueId: string): void {
     ...demoIssues,
     [projectId]: (demoIssues[projectId] ?? []).filter((i) => i.id !== issueId),
   };
+}
+
+// ─── Demo issue assets ────────────────────────────────────────────────────────
+
+let demoIssueAssets: Record<string, IssueAsset[]> = {};
+
+function _fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function addDemoIssueAsset(issueId: string, file: File): Promise<IssueAsset> {
+  const dataUrl = await _fileToDataUrl(file);
+  const asset: IssueAsset & { _dataUrl: string } = {
+    id: `demo-asset-${Date.now()}`,
+    filename: file.name,
+    content_type: file.type,
+    size_bytes: file.size,
+    created_at: new Date().toISOString(),
+    _dataUrl: dataUrl,
+  };
+  demoIssueAssets[issueId] = [...(demoIssueAssets[issueId] ?? []), asset];
+  return asset;
+}
+
+export function getDemoIssueAssets(issueId: string): IssueAsset[] {
+  return demoIssueAssets[issueId] ?? [];
+}
+
+export function getDemoIssueAssetDataUrl(issueId: string, assetId: string): string | null {
+  const asset = getDemoIssueAssets(issueId).find((a) => a.id === assetId) as (IssueAsset & { _dataUrl: string }) | undefined;
+  return asset?._dataUrl ?? null;
+}
+
+// ─── Demo project references ──────────────────────────────────────────────────
+
+let demoProjectReferences: Record<string, ProjectReference[]> = {};
+
+export async function addDemoProjectReference(projectId: string, file: File): Promise<ProjectReference> {
+  const dataUrl = await _fileToDataUrl(file);
+  const reference: ProjectReference & { _dataUrl: string } = {
+    id: `demo-reference-${Date.now()}`,
+    filename: file.name,
+    content_type: file.type,
+    size_bytes: file.size,
+    created_at: new Date().toISOString(),
+    _dataUrl: dataUrl,
+  };
+  demoProjectReferences[projectId] = [...(demoProjectReferences[projectId] ?? []), reference];
+  return reference;
+}
+
+export function getDemoProjectReferences(projectId: string): ProjectReference[] {
+  return demoProjectReferences[projectId] ?? [];
+}
+
+export function getDemoProjectReferenceDataUrl(projectId: string, referenceId: string): string | null {
+  const reference = getDemoProjectReferences(projectId).find((r) => r.id === referenceId) as (ProjectReference & { _dataUrl: string }) | undefined;
+  return reference?._dataUrl ?? null;
 }
 
 // ─── Demo project context ─────────────────────────────────────────────────────

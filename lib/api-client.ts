@@ -13,6 +13,10 @@ import {
   getDemoContextStatus,
   isLocalMode,
   listDemoProjects,
+  addDemoIssueAsset,
+  getDemoIssueAssets,
+  addDemoProjectReference,
+  getDemoProjectReferences,
 } from "@/lib/demo-data";
 
 export class AlexisApiError extends Error {
@@ -29,10 +33,11 @@ export class AlexisApiError extends Error {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const resp = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
     },
   });
@@ -132,6 +137,22 @@ export interface IssueUpdate {
   description?: string;
   state?: string;
   labels?: string[];
+}
+
+export interface IssueAsset {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface ProjectReference {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -550,6 +571,78 @@ export function createIssueComment(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ body }),
+  });
+}
+
+// ─── Issue assets (mockups joints à une issue) ────────────────────────────────
+
+export function issueAssetContentUrl(projectId: string, issueId: string, assetId: string): string {
+  return `${API_URL}/projects/${projectId}/issues/${issueId}/assets/${assetId}/content`;
+}
+
+export async function uploadIssueAsset(
+  apiKey: string,
+  projectId: string,
+  issueId: string,
+  file: File
+): Promise<IssueAsset> {
+  if (isLocalMode()) {
+    return addDemoIssueAsset(issueId, file);
+  }
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/projects/${projectId}/issues/${issueId}/assets`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+}
+
+export function listIssueAssets(
+  apiKey: string,
+  projectId: string,
+  issueId: string
+): Promise<IssueAsset[]> {
+  if (isLocalMode()) {
+    return Promise.resolve(getDemoIssueAssets(issueId));
+  }
+  return request(`/projects/${projectId}/issues/${issueId}/assets`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+// ─── Project references (documents de référence attachés au projet) ──────────
+
+export function projectReferenceContentUrl(projectId: string, referenceId: string): string {
+  return `${API_URL}/projects/${projectId}/references/${referenceId}/content`;
+}
+
+export async function uploadProjectReference(
+  apiKey: string,
+  projectId: string,
+  file: File
+): Promise<ProjectReference> {
+  if (isLocalMode()) {
+    return addDemoProjectReference(projectId, file);
+  }
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/projects/${projectId}/references`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+}
+
+export function listProjectReferences(
+  apiKey: string,
+  projectId: string
+): Promise<ProjectReference[]> {
+  if (isLocalMode()) {
+    return Promise.resolve(getDemoProjectReferences(projectId));
+  }
+  return request(`/projects/${projectId}/references`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
   });
 }
 

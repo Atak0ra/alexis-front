@@ -11,6 +11,8 @@ import {
   createProjectContext,
   getProjectContextStatus,
   commitProjectContext,
+  uploadIssueAsset,
+  listIssueAssets,
   AlexisApiError,
 } from "@/lib/api-client";
 
@@ -181,6 +183,30 @@ describe("getProjectContextStatus", () => {
   });
 });
 
+describe("uploadIssueAsset", () => {
+  it("uploads an issue asset as FormData without forcing Content-Type: application/json", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      statusText: "",
+      json: async () => ({
+        id: "a1",
+        filename: "mockup.png",
+        content_type: "image/png",
+        size_bytes: 4,
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+    } as Response);
+
+    const file = new File(["data"], "mockup.png", { type: "image/png" });
+    await uploadIssueAsset("key", "proj-1", "issue-1", file);
+
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.headers["Content-Type"]).toBeUndefined();
+    expect(options.body).toBeInstanceOf(FormData);
+  });
+});
+
 describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
@@ -254,6 +280,16 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("uploadIssueAsset/listIssueAssets round-trip in demo mode", async () => {
+    const file = new File(["fake-bytes"], "mockup.png", { type: "image/png" });
+    const created = await uploadIssueAsset("demo-key", "demo-project-1", "issue-kara-1", file);
+    expect(created.filename).toBe("mockup.png");
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    const listed = await listIssueAssets("demo-key", "demo-project-1", "issue-kara-1");
+    expect(listed.some((a) => a.id === created.id)).toBe(true);
   });
 
   it("commitProjectContext moves demo status from draft_ready to done", async () => {
