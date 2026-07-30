@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import IssueDetailPage from "@/app/dashboard/[id]/issues/[issueId]/page";
 import * as apiClient from "@/lib/api-client";
 import * as session from "@/lib/session";
@@ -9,6 +9,12 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "proj-1", issueId: "issue-1" }),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
+
+// jsdom doesn't implement Blob URLs — the asset preview fetch-and-blob flow
+// calls the real URL.createObjectURL, so stub it for this suite.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = vi.fn(() => "blob:mock-url");
+}
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
@@ -66,5 +72,40 @@ describe("IssueDetailPage", () => {
     render(<IssueDetailPage />);
 
     await waitFor(() => expect(screen.getByText("Demande introuvable.")).toBeInTheDocument());
+  });
+
+  it("loads and displays existing ticket assets, and uploads a new one", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "getIssue").mockResolvedValue(FAKE_ISSUE);
+    vi.spyOn(apiClient, "listIssueAssets").mockResolvedValue([
+      { id: "a1", filename: "mockup.png", content_type: "image/png", size_bytes: 10, created_at: "2026-01-01T00:00:00Z" },
+    ]);
+    const uploadSpy = vi.spyOn(apiClient, "uploadIssueAsset").mockResolvedValue({
+      id: "a2", filename: "second.png", content_type: "image/png", size_bytes: 20, created_at: "2026-01-01T00:00:00Z",
+    });
+    // Real (non-demo) mode: previews are fetched with an Authorization header
+    // and turned into blob URLs, since a plain <img src> can't attach headers.
+    const fetchMock = vi.fn().mockResolvedValue({
+      blob: () => Promise.resolve(new Blob(["data"])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<IssueDetailPage />);
+
+    expect(await screen.findByAltText("mockup.png")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/assets/a1/content"),
+        expect.objectContaining({ headers: { Authorization: "Bearer alx_xxx" } })
+      )
+    );
+
+    const file = new File(["data"], "second.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText(/ajouter un fichier/i), { target: { files: [file] } });
+
+    await waitFor(() => expect(uploadSpy).toHaveBeenCalled());
+    expect(await screen.findByAltText("second.png")).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });

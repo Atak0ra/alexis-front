@@ -7,11 +7,17 @@ import { getApiKey } from "@/lib/session";
 import {
   getProject,
   getIssue,
+  listIssueAssets,
+  uploadIssueAsset,
+  issueAssetContentUrl,
   AlexisApiError,
   type ProjectOut,
   type Issue,
+  type IssueAsset,
 } from "@/lib/api-client";
+import { isLocalMode, getDemoIssueAssetDataUrl } from "@/lib/demo-data";
 import IssueTimeline from "@/components/issue-timeline";
+import AssetUploadGrid from "@/components/asset-upload-grid";
 
 export default function IssueDetailPage() {
   const params = useParams<{ id: string; issueId: string }>();
@@ -22,6 +28,9 @@ export default function IssueDetailPage() {
   const [issue, setIssue] = useState<Issue | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assets, setAssets] = useState<IssueAsset[]>([]);
+  const [assetPreviewUrls, setAssetPreviewUrls] = useState<Record<string, string>>({});
+  const [uploadingAsset, setUploadingAsset] = useState(false);
 
   const apiKey = getApiKey() ?? "";
 
@@ -44,7 +53,73 @@ export default function IssueDetailPage() {
           setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
         }
       });
+
+    listIssueAssets(apiKey, projectId, issueId)
+      .then((list) => {
+        setAssets(list);
+
+        // Le endpoint /content exige un Bearer token : une <img src> brute ne
+        // peut pas attacher de header, donc on résout les previews en amont
+        // (data: URL en démo, blob authentifié sinon) plutôt que de laisser
+        // AssetUploadGrid pointer directement vers l'URL de contenu.
+        if (isLocalMode()) {
+          const urls: Record<string, string> = {};
+          for (const a of list) {
+            const dataUrl = getDemoIssueAssetDataUrl(issueId, a.id);
+            if (dataUrl) urls[a.id] = dataUrl;
+          }
+          setAssetPreviewUrls(urls);
+        } else {
+          Promise.all(
+            list
+              .filter((a) => a.content_type.startsWith("image/"))
+              .map((a) =>
+                fetch(issueAssetContentUrl(projectId, issueId, a.id), {
+                  headers: { Authorization: `Bearer ${apiKey}` },
+                })
+                  .then((r) => r.blob())
+                  .then((blob) => [a.id, URL.createObjectURL(blob)] as const)
+                  .catch(() => null)
+              )
+          ).then((pairs) => {
+            const urls: Record<string, string> = {};
+            for (const pair of pairs) {
+              if (pair) urls[pair[0]] = pair[1];
+            }
+            setAssetPreviewUrls((prev) => ({ ...prev, ...urls }));
+          });
+        }
+      })
+      .catch(() => setAssets([]));
   }, [projectId, issueId, apiKey]);
+
+  async function handleUploadAsset(file: File) {
+    setUploadingAsset(true);
+    try {
+      const asset = await uploadIssueAsset(apiKey, projectId, issueId, file);
+      setAssets((prev) => [...prev, asset]);
+
+      if (isLocalMode()) {
+        const dataUrl = getDemoIssueAssetDataUrl(issueId, asset.id);
+        if (dataUrl) {
+          setAssetPreviewUrls((prev) => ({ ...prev, [asset.id]: dataUrl }));
+        }
+      } else if (asset.content_type.startsWith("image/")) {
+        fetch(issueAssetContentUrl(projectId, issueId, asset.id), {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        })
+          .then((r) => r.blob())
+          .then((blob) => {
+            setAssetPreviewUrls((prev) => ({ ...prev, [asset.id]: URL.createObjectURL(blob) }));
+          })
+          .catch(() => {});
+      }
+    } catch {
+      // silencieux — pas de blocage du reste de la page pour un échec d'upload
+    } finally {
+      setUploadingAsset(false);
+    }
+  }
 
   function handleIssueUpdated() {
     // Recharge l'issue depuis l'API pour refléter le nouvel état et les
@@ -84,6 +159,15 @@ export default function IssueDetailPage() {
         <>
           <h1 className="mt-4 text-2xl font-bold text-foreground">{issue.title}</h1>
           <p className="mt-1 font-mono text-xs text-foreground-subtle">{issue.identifier}</p>
+
+          <div className="mt-6">
+            <AssetUploadGrid
+              assets={assets}
+              onUpload={handleUploadAsset}
+              contentUrl={(assetId) => assetPreviewUrls[assetId] ?? ""}
+              uploading={uploadingAsset}
+            />
+          </div>
 
           <div className="mt-8">
             <IssueTimeline
