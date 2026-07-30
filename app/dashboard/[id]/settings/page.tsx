@@ -15,12 +15,18 @@ import {
   purgeProject,
   transferRepo,
   downloadProject,
+  listProjectReferences,
+  uploadProjectReference,
+  projectReferenceContentUrl,
   AlexisApiError,
   type ProjectOut,
   type ClientProfile,
+  type ProjectReference,
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
+import { isLocalMode, getDemoProjectReferenceDataUrl } from "@/lib/demo-data";
 import ProjectContextStep from "@/components/project-context-step";
+import AssetUploadGrid from "@/components/asset-upload-grid";
 
 // ─── Secret field ─────────────────────────────────────────────────────────────
 
@@ -114,6 +120,11 @@ export default function ProjectSettingsPage() {
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferredTo, setTransferredTo] = useState<string | null>(null);
 
+  // Bibliothèque de style — références visuelles par défaut du projet
+  const [references, setReferences] = useState<ProjectReference[]>([]);
+  const [referencePreviewUrls, setReferencePreviewUrls] = useState<Record<string, string>>({});
+  const [uploadingReference, setUploadingReference] = useState(false);
+
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
@@ -144,7 +155,75 @@ export default function ProjectSettingsPage() {
     getProjectContext(apiKey, projectId)
       .then(({ exists }) => setContextExists(exists))
       .catch(() => setContextExists(null));
+
+    listProjectReferences(apiKey, projectId)
+      .then((list) => {
+        setReferences(list);
+
+        // Le endpoint /content exige un Bearer token : une <img src> brute ne
+        // peut pas attacher de header, donc on résout les previews en amont
+        // (data: URL en démo, blob authentifié sinon) plutôt que de laisser
+        // AssetUploadGrid pointer directement vers l'URL de contenu.
+        if (isLocalMode()) {
+          const urls: Record<string, string> = {};
+          for (const r of list) {
+            const dataUrl = getDemoProjectReferenceDataUrl(projectId, r.id);
+            if (dataUrl) urls[r.id] = dataUrl;
+          }
+          setReferencePreviewUrls((prev) => ({ ...prev, ...urls }));
+        } else {
+          Promise.all(
+            list
+              .filter((r) => r.content_type.startsWith("image/"))
+              .map((r) =>
+                fetch(projectReferenceContentUrl(projectId, r.id), {
+                  headers: { Authorization: `Bearer ${apiKey}` },
+                })
+                  .then((res) => res.blob())
+                  .then((blob) => [r.id, URL.createObjectURL(blob)] as const)
+                  .catch(() => null)
+              )
+          ).then((pairs) => {
+            const urls: Record<string, string> = {};
+            for (const pair of pairs) {
+              if (pair) urls[pair[0]] = pair[1];
+            }
+            setReferencePreviewUrls((prev) => ({ ...prev, ...urls }));
+          });
+        }
+      })
+      .catch(() => setReferences([]));
   }, [projectId]);
+
+  async function handleUploadReference(file: File) {
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    setUploadingReference(true);
+    try {
+      const reference = await uploadProjectReference(apiKey, projectId, file);
+      setReferences((prev) => [...prev, reference]);
+
+      if (isLocalMode()) {
+        const dataUrl = getDemoProjectReferenceDataUrl(projectId, reference.id);
+        if (dataUrl) {
+          setReferencePreviewUrls((prev) => ({ ...prev, [reference.id]: dataUrl }));
+        }
+      } else if (reference.content_type.startsWith("image/")) {
+        fetch(projectReferenceContentUrl(projectId, reference.id), {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        })
+          .then((res) => res.blob())
+          .then((blob) => {
+            setReferencePreviewUrls((prev) => ({ ...prev, [reference.id]: URL.createObjectURL(blob) }));
+          })
+          .catch(() => {});
+      }
+    } catch {
+      // silencieux — pas de blocage du reste de la page pour un échec d'upload
+    } finally {
+      setUploadingReference(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -579,6 +658,22 @@ export default function ProjectSettingsPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* ── Bibliothèque de style ── */}
+              <section>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+                  Bibliothèque de style
+                </h3>
+                <p className="mb-3 text-sm text-foreground-muted">
+                  Références visuelles utilisées par défaut quand un ticket n&apos;apporte pas sa propre maquette.
+                </p>
+                <AssetUploadGrid
+                  assets={references}
+                  onUpload={handleUploadReference}
+                  contentUrl={(id) => referencePreviewUrls[id] ?? ""}
+                  uploading={uploadingReference}
+                />
+              </section>
 
               {/* ── Danger Zone ── */}
               <div className="rounded-xl border border-danger-border bg-danger-bg p-6">

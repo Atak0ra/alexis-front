@@ -16,6 +16,12 @@ vi.mock("@/components/app-header", () => ({
   AppHeader: () => <header data-testid="app-header" />,
 }));
 
+// jsdom doesn't implement Blob URLs — the reference preview fetch-and-blob
+// flow calls the real URL.createObjectURL, so stub it for this suite.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = vi.fn(() => "blob:mock-url");
+}
+
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-123",
   name: "Kara",
@@ -381,5 +387,70 @@ describe("ProjectSettingsPage", () => {
     await waitFor(() =>
       expect(downloadSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", "Kara")
     );
+  });
+
+  it("loads and displays project style references, and uploads a new one", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "listProjectReferences").mockResolvedValue([
+      { id: "r1", filename: "style.png", content_type: "image/png", size_bytes: 10, created_at: "2026-01-01T00:00:00Z" },
+    ]);
+    vi.spyOn(apiClient, "uploadProjectReference").mockResolvedValue({
+      id: "r2", filename: "second.png", content_type: "image/png", size_bytes: 20, created_at: "2026-01-01T00:00:00Z",
+    });
+    // Real (non-demo) mode: previews are fetched with an Authorization header
+    // and turned into blob URLs, since a plain <img src> can't attach headers.
+    const fetchMock = vi.fn().mockResolvedValue({
+      blob: () => Promise.resolve(new Blob(["data"])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProjectSettingsPage />);
+
+    expect(await screen.findByAltText("style.png")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/references/r1/content"),
+        expect.objectContaining({ headers: { Authorization: "Bearer alx_xxx" } })
+      )
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("resolves the preview for a newly uploaded reference immediately, without reload", async () => {
+    vi.spyOn(apiClient, "getProject").mockResolvedValue(FAKE_PROJECT);
+    vi.spyOn(apiClient, "listProjectReferences").mockResolvedValue([]);
+    const uploadSpy = vi.spyOn(apiClient, "uploadProjectReference").mockResolvedValue({
+      id: "r2", filename: "second.png", content_type: "image/png", size_bytes: 20, created_at: "2026-01-01T00:00:00Z",
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      blob: () => Promise.resolve(new Blob(["data"])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProjectSettingsPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/ajouter un fichier/i)).toBeInTheDocument());
+
+    const file = new File(["data"], "second.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText(/ajouter un fichier/i), { target: { files: [file] } });
+
+    await waitFor(() => expect(uploadSpy).toHaveBeenCalled());
+
+    // The riskiest part of this feature: right after upload, the page must
+    // fetch the *new* reference's content (with the auth header) and resolve
+    // it into a blob URL — not just render an <img> with an empty/broken src.
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/references/r2/content"),
+        expect.objectContaining({ headers: { Authorization: "Bearer alx_xxx" } })
+      )
+    );
+
+    const newImg = await screen.findByAltText("second.png");
+    expect(newImg).toBeInTheDocument();
+    await waitFor(() => expect(newImg).toHaveAttribute("src", "blob:mock-url"));
+
+    vi.unstubAllGlobals();
   });
 });
