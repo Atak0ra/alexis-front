@@ -57,6 +57,12 @@ const FAKE_TICKET: apiClient.TicketOut = {
   error_message: null,
 };
 
+// jsdom doesn't implement Blob URLs — NewIssueModal's staged-file preview
+// calls the real URL.createObjectURL, so stub it for this suite.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = vi.fn(() => "blob:mock-url");
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
@@ -101,6 +107,38 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     await waitFor(() => expect(createSpy).toHaveBeenCalled());
     const payload = createSpy.mock.calls[0][2];
     expect(payload.state).toBe("Backlog");
+  });
+
+  it("uploads staged mockup files after the ticket is created", async () => {
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+    vi.spyOn(apiClient, "createIssue").mockResolvedValue({
+      ...FAKE_ISSUE,
+      id: "issue-2",
+      title: "New ticket",
+    });
+    const uploadSpy = vi.spyOn(apiClient, "uploadIssueAsset").mockResolvedValue({
+      id: "asset-1", filename: "mockup.png", content_type: "image/png", size_bytes: 10, created_at: "2026-01-01T00:00:00Z",
+    });
+
+    render(<ProjectDetailPage />);
+
+    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    fireEvent.click(newTicketButton);
+
+    const file = new File(["data"], "mockup.png", { type: "image/png" });
+    const fileInput = screen.getByLabelText(/ajouter un fichier/i);
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    fireEvent.change(screen.getByPlaceholderText(/corriger le bug/i), {
+      target: { value: "New ticket" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(uploadSpy).toHaveBeenCalled());
+    const [, , issueId, uploadedFile] = uploadSpy.mock.calls[0];
+    expect(issueId).toBe("issue-2");
+    expect(uploadedFile.name).toBe("mockup.png");
   });
 
   it("renders issues normally when listTickets fails", async () => {

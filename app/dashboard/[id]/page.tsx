@@ -14,6 +14,7 @@ import {
   updateIssue,
   getProjectContext,
   deleteProject,
+  uploadIssueAsset,
   AlexisApiError,
   type ProjectOut,
   type ProjectStats,
@@ -23,6 +24,7 @@ import {
 import ProjectContextStep from "@/components/project-context-step";
 import ProjectContextCard from "@/components/project-context-card";
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
+import AssetUploadGrid from "@/components/asset-upload-grid";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Plus } from "lucide-react";
 
@@ -63,11 +65,12 @@ function NewIssueModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (title: string, description: string) => void;
+  onSubmit: (title: string, description: string, files: File[]) => void;
   submitting: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const titleId = useId();
   const descId = useId();
 
@@ -76,6 +79,7 @@ function NewIssueModal({
     if (open) {
       setTitle("");
       setDescription("");
+      setStagedFiles([]);
     }
   }, [open]);
 
@@ -111,6 +115,26 @@ function NewIssueModal({
             className="w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand resize-none"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1.5">
+            Maquette / visuel (optionnel)
+          </label>
+          <AssetUploadGrid
+            assets={stagedFiles.map((f, i) => ({
+              id: `staged-${i}`,
+              filename: f.name,
+              content_type: f.type,
+              size_bytes: f.size,
+              created_at: "",
+            }))}
+            onUpload={(file) => setStagedFiles((prev) => [...prev, file])}
+            contentUrl={(id) => {
+              const idx = Number(id.replace("staged-", ""));
+              return URL.createObjectURL(stagedFiles[idx]);
+            }}
+            uploading={false}
+          />
+        </div>
       </div>
       <ModalFooter className="flex justify-end gap-3">
         <button
@@ -123,7 +147,7 @@ function NewIssueModal({
         <button
           type="button"
           disabled={!title.trim() || submitting}
-          onClick={() => onSubmit(title.trim(), description.trim())}
+          onClick={() => onSubmit(title.trim(), description.trim(), stagedFiles)}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-50 transition-colors"
         >
           {submitting ? "Création…" : "Créer"}
@@ -228,11 +252,14 @@ export default function ProjectDetailPage() {
     };
   }
 
-  async function handleCreateIssue(title: string, description: string) {
+  async function handleCreateIssue(title: string, description: string, files: File[]) {
     setCreatingIssue(true);
     setCreateError(null);
     try {
       const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
+      for (const file of files) {
+        await uploadIssueAsset(apiKey, projectId, issue.id, file);
+      }
       setIssues((prev) => (prev ? [...prev, issue] : [issue]));
       setShowNewIssue(false);
     } catch (err) {
