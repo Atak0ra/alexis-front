@@ -104,7 +104,20 @@ describe("IssueDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/ajouter un fichier/i), { target: { files: [file] } });
 
     await waitFor(() => expect(uploadSpy).toHaveBeenCalled());
-    expect(await screen.findByAltText("second.png")).toBeInTheDocument();
+
+    // The riskiest part of this feature: right after upload, the page must
+    // fetch the *new* asset's content (with the auth header) and resolve it
+    // into a blob URL — not just render an <img> with an empty/broken src.
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/assets/a2/content"),
+        expect.objectContaining({ headers: { Authorization: "Bearer alx_xxx" } })
+      )
+    );
+
+    const secondImg = await screen.findByAltText("second.png");
+    expect(secondImg).toBeInTheDocument();
+    await waitFor(() => expect(secondImg).toHaveAttribute("src", "blob:mock-url"));
 
     vi.unstubAllGlobals();
   });

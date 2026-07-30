@@ -68,7 +68,7 @@ export default function IssueDetailPage() {
             const dataUrl = getDemoIssueAssetDataUrl(issueId, a.id);
             if (dataUrl) urls[a.id] = dataUrl;
           }
-          setAssetPreviewUrls(urls);
+          setAssetPreviewUrls((prev) => ({ ...prev, ...urls }));
         } else {
           Promise.all(
             list
