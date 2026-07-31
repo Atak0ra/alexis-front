@@ -58,9 +58,12 @@ const FAKE_TICKET: apiClient.TicketOut = {
 };
 
 // jsdom doesn't implement Blob URLs — NewIssueModal's staged-file preview
-// calls the real URL.createObjectURL, so stub it for this suite.
+// calls the real URL.createObjectURL/revokeObjectURL, so stub them for this suite.
 if (!URL.createObjectURL) {
   URL.createObjectURL = vi.fn(() => "blob:mock-url");
+}
+if (!URL.revokeObjectURL) {
+  URL.revokeObjectURL = vi.fn();
 }
 
 beforeEach(() => {
@@ -149,5 +152,72 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     await waitFor(() => expect(screen.getByText("Corriger la pagination")).toBeInTheDocument());
     expect(screen.queryByRole("link", { name: /voir la pr/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the created ticket visible and closes the modal even when a staged upload fails", async () => {
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+    vi.spyOn(apiClient, "createIssue").mockResolvedValue({
+      ...FAKE_ISSUE,
+      id: "issue-2",
+      title: "New ticket",
+    });
+    vi.spyOn(apiClient, "uploadIssueAsset").mockRejectedValue(
+      new apiClient.AlexisApiError(422, "Trop de fichiers")
+    );
+
+    render(<ProjectDetailPage />);
+
+    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    fireEvent.click(newTicketButton);
+
+    const file = new File(["data"], "mockup.png", { type: "image/png" });
+    const fileInput = screen.getByLabelText(/ajouter un fichier/i);
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    fireEvent.change(screen.getByPlaceholderText(/corriger le bug/i), {
+      target: { value: "New ticket" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    // The ticket must show up in the visible list...
+    await waitFor(() => expect(screen.getByText("New ticket")).toBeInTheDocument());
+    // ...and the modal must close, even though the asset upload rejected.
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /nouveau ticket/i })).not.toBeInTheDocument());
+    // No error banner should be shown for an upload-only failure.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("caps staged mockup files at 5 and ignores files beyond the limit", async () => {
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+    vi.spyOn(apiClient, "createIssue").mockResolvedValue({
+      ...FAKE_ISSUE,
+      id: "issue-3",
+      title: "Many files",
+    });
+    const uploadSpy = vi.spyOn(apiClient, "uploadIssueAsset").mockResolvedValue({
+      id: "asset-1", filename: "f.png", content_type: "image/png", size_bytes: 10, created_at: "2026-01-01T00:00:00Z",
+    });
+
+    render(<ProjectDetailPage />);
+
+    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    fireEvent.click(newTicketButton);
+
+    const fileInput = screen.getByLabelText(/ajouter un fichier/i);
+    const files = Array.from({ length: 6 }, (_, i) => new File(["data"], `f${i}.png`, { type: "image/png" }));
+    fireEvent.change(fileInput, { target: { files } });
+
+    // Only 5 preview thumbnails should be staged, not 6.
+    await waitFor(() => expect(screen.getAllByAltText(/f\d\.png/)).toHaveLength(5));
+    expect(screen.queryByAltText("f5.png")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/corriger le bug/i), {
+      target: { value: "Many files" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    await waitFor(() => expect(uploadSpy).toHaveBeenCalledTimes(5));
   });
 });

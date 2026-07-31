@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
@@ -73,6 +73,7 @@ function NewIssueModal({
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const titleId = useId();
   const descId = useId();
+  const MAX_STAGED_FILES = 5;
 
   // Reset fields when modal opens
   useEffect(() => {
@@ -82,6 +83,23 @@ function NewIssueModal({
       setStagedFiles([]);
     }
   }, [open]);
+
+  // Resolve staged-file preview URLs once per file-list change, not on every
+  // render — AssetUploadGrid calls contentUrl() during render, so creating a
+  // blob URL inline there would leak a new one on every keystroke.
+  const stagedPreviewUrls = useMemo(() => {
+    const urls: Record<string, string> = {};
+    stagedFiles.forEach((file, i) => {
+      urls[`staged-${i}`] = URL.createObjectURL(file);
+    });
+    return urls;
+  }, [stagedFiles]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(stagedPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [stagedPreviewUrls]);
 
   return (
     <Modal open={open} onClose={onClose} title="Nouveau ticket" titleId="new-issue-title">
@@ -127,13 +145,13 @@ function NewIssueModal({
               size_bytes: f.size,
               created_at: "",
             }))}
-            onUpload={(file) => setStagedFiles((prev) => [...prev, file])}
-            contentUrl={(id) => {
-              const idx = Number(id.replace("staged-", ""));
-              return URL.createObjectURL(stagedFiles[idx]);
-            }}
+            onUpload={(file) =>
+              setStagedFiles((prev) => (prev.length < MAX_STAGED_FILES ? [...prev, file] : prev))
+            }
+            contentUrl={(id) => stagedPreviewUrls[id] ?? ""}
             uploading={false}
           />
+          <p className="mt-1.5 text-xs text-foreground-subtle">5 fichiers maximum</p>
         </div>
       </div>
       <ModalFooter className="flex justify-end gap-3">
@@ -257,11 +275,18 @@ export default function ProjectDetailPage() {
     setCreateError(null);
     try {
       const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
-      for (const file of files) {
-        await uploadIssueAsset(apiKey, projectId, issue.id, file);
-      }
+      // Le ticket est créé côté backend à ce stade : on le rend visible et on
+      // ferme la modale immédiatement, avant de tenter les uploads. Un échec
+      // d'upload d'un fichier joint ne doit ni annuler la création ni bloquer
+      // les fichiers suivants — sinon le ticket reste "orphelin" (créé côté
+      // backend mais invisible) et un nouveau clic sur "Créer" en crée un doublon.
       setIssues((prev) => (prev ? [...prev, issue] : [issue]));
       setShowNewIssue(false);
+      for (const file of files) {
+        await uploadIssueAsset(apiKey, projectId, issue.id, file).catch(() => {
+          // Échec d'upload individuel : ignoré, on continue avec les fichiers suivants.
+        });
+      }
     } catch (err) {
       setCreateError(err instanceof AlexisApiError ? err.detail : "Impossible de créer le ticket. Réessayez.");
     } finally {
