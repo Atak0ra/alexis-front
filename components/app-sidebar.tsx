@@ -46,6 +46,9 @@ function SidebarNav({
           <NavItem href={base} active={pathname === base || pathname.includes("/issues/")}>
             Tickets
           </NavItem>
+          <NavItem href={`${base}/context`} active={pathname.endsWith("/context")}>
+            Contexte
+          </NavItem>
           <NavItem href={`${base}/settings`} active={pathname.endsWith("/settings")}>
             Paramètres
           </NavItem>

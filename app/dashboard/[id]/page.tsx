@@ -21,8 +21,6 @@ import {
   type Issue,
   type TicketOut,
 } from "@/lib/api-client";
-import ProjectContextStep from "@/components/project-context-step";
-import ProjectContextCard from "@/components/project-context-card";
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import AssetUploadGrid from "@/components/asset-upload-grid";
 import { Modal, ModalFooter } from "@/components/ui/modal";
@@ -229,7 +227,6 @@ export default function ProjectDetailPage() {
   const [deactivating, setDeactivating] = useState(false);
   const [showConfirmDeactivate, setShowConfirmDeactivate] = useState(false);
   const [contextExists, setContextExists] = useState<boolean | null>(null);
-  const [showContextModal, setShowContextModal] = useState(false);
   const [showNewIssue, setShowNewIssue] = useState(false);
   const [creatingIssue, setCreatingIssue] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -350,18 +347,9 @@ export default function ProjectDetailPage() {
 
       {project !== null && (
         <>
-          {/* ── Context card ── */}
-          {contextExists === true && (
-            <div className="mb-6">
-              <ProjectContextCard
-                projectId={projectId}
-                onContextUpdated={() => setContextExists(true)}
-              />
-            </div>
-          )}
-
-          {/* ── Context banner ── */}
-          {contextExists === false && !showContextModal && (
+          {/* ── Context banner (contexte pas encore généré — une fois généré, il
+              se consulte uniquement via l'onglet "Contexte" du menu latéral) ── */}
+          {contextExists === false && (
             <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-warning-border bg-warning-bg px-5 py-3.5">
               <div className="flex items-center gap-3 min-w-0">
                 <svg className="h-4 w-4 shrink-0 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -372,34 +360,14 @@ export default function ProjectDetailPage() {
                   <span className="font-medium">Alexis travaillera mieux avec un <code className="font-mono">.alexis/project.md</code>.</span>
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowContextModal(true)}
+              <Link
+                href={`/dashboard/${projectId}/context`}
                 className="shrink-0 rounded-lg bg-warning px-3 py-1.5 text-xs font-semibold text-white hover:bg-warning/90 transition-colors"
               >
                 Générer maintenant
-              </button>
+              </Link>
             </div>
           )}
-
-          {/* ── Context modal (accessible) ── */}
-          <Modal
-            open={showContextModal}
-            onClose={() => setShowContextModal(false)}
-            title="Contexte du projet"
-            titleId="context-modal-title"
-            maxWidth="max-w-lg"
-          >
-            <ProjectContextStep
-              projectId={projectId}
-              embedded
-              onDone={() => {
-                setShowContextModal(false);
-                setContextExists(true);
-              }}
-              onSkip={() => setShowContextModal(false)}
-            />
-          </Modal>
 
           {/* ── Project header ── */}
           <div className="flex flex-wrap items-start justify-between gap-4">

@@ -77,6 +77,31 @@ beforeEach(() => {
   });
 });
 
+describe("ProjectDetailPage — context banner", () => {
+  it("shows a banner linking to the Contexte page when no context exists yet", async () => {
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: false });
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+
+    render(<ProjectDetailPage />);
+
+    const link = await screen.findByRole("link", { name: /générer maintenant/i });
+    expect(link).toHaveAttribute("href", "/dashboard/proj-1/context");
+  });
+
+  it("shows no context banner and no inline context card once context exists", async () => {
+    vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+
+    render(<ProjectDetailPage />);
+
+    await screen.findByText("Kara");
+    expect(screen.queryByText(/pas encore de fichier de contexte/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Contexte du projet")).not.toBeInTheDocument();
+  });
+});
+
 describe("ProjectDetailPage — ticket/PR wiring", () => {
   it("shows a PR link on an issue row once ticket data (PR/cost) loads", async () => {
     vi.spyOn(apiClient, "listIssues").mockResolvedValue([FAKE_ISSUE]);

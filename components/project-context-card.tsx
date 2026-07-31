@@ -21,12 +21,15 @@ interface Props {
   onContextUpdated?: () => void;
   /** Intervalle de polling en ms pour ProjectContextStep (0 = immédiat, utile pour les tests) */
   _pollIntervalMs?: number;
+  /** Déplié dès le montage — utilisé sur la page dédiée /context où la carte
+   * est le contenu principal, pas un widget parmi d'autres. Défaut : replié. */
+  defaultExpanded?: boolean;
 }
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export default function ProjectContextCard({ projectId, onContextUpdated, _pollIntervalMs }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export default function ProjectContextCard({ projectId, onContextUpdated, _pollIntervalMs, defaultExpanded = false }: Props) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

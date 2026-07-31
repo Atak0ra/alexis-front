@@ -106,6 +106,16 @@ describe("AppSidebar — project context state", () => {
     await waitFor(() => expect(screen.getAllByRole("link", { name: "Tickets" }).length).toBeGreaterThan(0));
     expect(screen.getAllByRole("link", { name: "Tickets" })[0]).toHaveClass("bg-brand-light");
   });
+
+  it("shows a Contexte link between Tickets and Paramètres, marked active on the context route", async () => {
+    mockPathname = "/dashboard/proj-1/context";
+    render(<AppSidebar />);
+
+    await waitFor(() => expect(screen.getAllByRole("link", { name: "Contexte" }).length).toBeGreaterThan(0));
+    expect(screen.getAllByRole("link", { name: "Contexte" })[0]).toHaveClass("bg-brand-light");
+    expect(screen.getAllByRole("link", { name: "Tickets" })[0]).not.toHaveClass("bg-brand-light");
+    expect(screen.getAllByRole("link", { name: "Paramètres" })[0]).not.toHaveClass("bg-brand-light");
+  });
 });
 
 describe("AppSidebar — logout", () => {
