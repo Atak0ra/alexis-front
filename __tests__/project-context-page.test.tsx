@@ -93,7 +93,7 @@ describe("ProjectContextPage (/dashboard/[id]/context)", () => {
     unmount();
   });
 
-  it("shows the generate flow directly when context does not exist yet (no edit toggle needed)", async () => {
+  it("delegates to ProjectContextStep's generate flow when context does not exist yet, with no edit toggle", async () => {
     vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: false });
     vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "job-1" });
     vi.spyOn(apiClient, "getRepoSummaryStatus").mockResolvedValue({
@@ -103,7 +103,13 @@ describe("ProjectContextPage (/dashboard/[id]/context)", () => {
 
     render(<ProjectContextPage />);
 
-    await waitFor(() => expect(screen.getByText(/Décris ton nouveau projet/)).toBeInTheDocument());
+    // ProjectContextStep's own suite covers its internal phase transitions in
+    // depth — this only proves the page delegates to it once its own
+    // getProjectContext() resolves, and skips the Modifier/section-card UI
+    // entirely. The "detecting" phase renders synchronously once
+    // ProjectContextStep mounts, so this wait only bounds on the page's own
+    // promise, not ProjectContextStep's internal polling.
+    await waitFor(() => expect(screen.getByText(/Analyse du repo en cours/)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^modifier$/i })).not.toBeInTheDocument();
   });
 

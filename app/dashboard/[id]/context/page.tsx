@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProject, getProjectContext, getProjectContextContent, AlexisApiError, type ProjectOut } from "@/lib/api-client";
@@ -15,6 +15,75 @@ const TOKEN_CAP = 2000;
  * grandeur visé par le prompt context.md, pas un tokenizer exact. */
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+interface Section {
+  title: string;
+  body: string;
+}
+
+/** Découpe .alexis/project.md par titres ## — chaque section devient sa
+ * propre carte plutôt qu'un seul flux markdown continu. Tout ce qui précède
+ * le premier ## (le # Contexte projet du template) est ignoré : redondant
+ * avec le H1 de la page. */
+function splitSections(content: string): Section[] {
+  const lines = content.split("\n");
+  const sections: Section[] = [];
+  let title: string | null = null;
+  let body: string[] = [];
+
+  for (const line of lines) {
+    const match = line.match(/^##\s+(.+)/);
+    if (match) {
+      if (title !== null) sections.push({ title, body: body.join("\n").trim() });
+      title = match[1].trim();
+      body = [];
+    } else if (title !== null) {
+      body.push(line);
+    }
+  }
+  if (title !== null) sections.push({ title, body: body.join("\n").trim() });
+  return sections;
+}
+
+const SECTION_ICONS: Record<string, ReactNode> = {
+  "stack technique": (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+  ),
+  conventions: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.098 4.02 8.25 4.982 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+  ),
+  contraintes: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+  ),
+  pointeurs: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+  ),
+};
+
+const DEFAULT_ICON = (
+  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+);
+
+function SectionCard({ section }: { section: Section }) {
+  const icon = SECTION_ICONS[section.title.toLowerCase()] ?? DEFAULT_ICON;
+  return (
+    <div className="rounded-xl border border-border bg-surface-raised p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+          <svg className="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {icon}
+          </svg>
+        </div>
+        <p className="font-mono text-xs font-semibold uppercase tracking-widest text-foreground-subtle">
+          {section.title}
+        </p>
+      </div>
+      <div className="[&_p]:text-[15px] [&_p]:leading-relaxed [&_li]:text-[15px] [&_li]:leading-relaxed">
+        <MarkdownLite text={section.body} />
+      </div>
+    </div>
+  );
 }
 
 function BudgetGauge({ content }: { content: string }) {
@@ -105,7 +174,7 @@ export default function ProjectContextPage() {
 
   return (
     <div className="min-h-full">
-      <div className="mx-auto w-full max-w-3xl px-6 py-10 sm:px-10">
+      <div className="mx-auto w-full max-w-[1600px] px-6 py-8">
         {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-foreground-muted">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">
@@ -175,11 +244,14 @@ export default function ProjectContextPage() {
 
             <div className="mt-8 border-t border-border" />
 
-            {/* Document */}
-            <div
-              className="mt-2 [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:border-t [&_h3]:border-border [&_h3]:pt-6 [&_h3]:font-mono [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-widest [&_h3]:text-foreground-subtle first:[&_h3]:mt-0 first:[&_h3]:border-t-0 first:[&_h3]:pt-0 [&_p]:text-[15px] [&_p]:leading-relaxed [&_li]:text-[15px] [&_li]:leading-relaxed"
-            >
-              <MarkdownLite text={content ?? ""} />
+            {/* Sections — une carte par ## du document, pas un flux markdown
+                continu : à cette largeur de page, un seul long paragraphe
+                central aurait perdu toute la place gagnée par le container
+                plein largeur. */}
+            <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-4">
+              {splitSections(content ?? "").map((section) => (
+                <SectionCard key={section.title} section={section} />
+              ))}
             </div>
           </>
         )}
