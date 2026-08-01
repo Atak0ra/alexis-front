@@ -83,6 +83,13 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
         </ul>
       )}
 
+      {/* Free note */}
+      {isFree && (
+        <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-xs text-foreground-muted">
+          Plan de découverte — modèle mutualisé, moins rapide et moins performant qu&apos;un plan avec votre propre clé.
+        </p>
+      )}
+
       {/* BYOK note */}
       {isByok && (
         <p className="mt-4 rounded-lg bg-warning-bg px-3 py-2 text-xs text-warning">
