@@ -967,6 +967,8 @@ export interface ManagedSecretOut {
   /** True si la clé est configurée — badge ACTIF dans l'UI admin */
   is_active: boolean;
   updated_at: string;
+  /** Plans liés à cette clé (M2M, migration 0022). Liste d'UUIDs. */
+  plan_ids: string[];
 }
 
 export function adminListManagedSecrets(adminApiKey: string): Promise<ManagedSecretOut[]> {
@@ -992,6 +994,18 @@ export function adminToggleManagedSecretActive(
   return request(`/admin/managed-secrets/${key}/toggle-active`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+export function adminSetManagedSecretPlanIds(
+  adminApiKey: string,
+  key: string,
+  plan_ids: string[]
+): Promise<ManagedSecretOut> {
+  return request(`/admin/managed-secrets/${key}/plan-ids`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ plan_ids }),
   });
 }
 

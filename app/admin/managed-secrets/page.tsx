@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import {
   adminListManagedSecrets,
+  adminListPlans,
   adminUpdateManagedSecret,
   adminToggleManagedSecretActive,
+  adminSetManagedSecretPlanIds,
   ManagedSecretOut,
+  PlanOut,
   AlexisApiError,
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
@@ -27,17 +30,28 @@ const LABELS: Record<string, { name: string; description: string }> = {
 
 export default function AdminManagedSecretsPage() {
   const [secrets, setSecrets] = useState<ManagedSecretOut[]>([]);
+  const [plans, setPlans] = useState<PlanOut[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  // Multi-select plans : clé en cours d'édition des plans liés
+  const [editingPlansKey, setEditingPlansKey] = useState<string | null>(null);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
+  const [savingPlans, setSavingPlans] = useState(false);
 
   function load() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
-    adminListManagedSecrets(apiKey)
-      .then(setSecrets)
+    Promise.all([
+      adminListManagedSecrets(apiKey),
+      adminListPlans(apiKey),
+    ])
+      .then(([s, p]) => {
+        setSecrets(s);
+        setPlans(p);
+      })
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
       .finally(() => setLoading(false));
   }
@@ -73,6 +87,33 @@ export default function AdminManagedSecretsPage() {
     }
   }
 
+  function openPlanEditor(secret: ManagedSecretOut) {
+    setEditingPlansKey(secret.key);
+    setSelectedPlanIds(secret.plan_ids ?? []);
+  }
+
+  function togglePlanId(planId: string) {
+    setSelectedPlanIds((prev) =>
+      prev.includes(planId) ? prev.filter((id) => id !== planId) : [...prev, planId]
+    );
+  }
+
+  async function handleSavePlans(key: string) {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    setError(null);
+    setSavingPlans(true);
+    try {
+      const updated = await adminSetManagedSecretPlanIds(apiKey, key, selectedPlanIds);
+      setSecrets((prev) => prev.map((s) => (s.key === key ? updated : s)));
+      setEditingPlansKey(null);
+    } catch (err) {
+      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    } finally {
+      setSavingPlans(false);
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground">Clés gérées</h1>
@@ -96,6 +137,10 @@ export default function AdminManagedSecretsPage() {
           {secrets.map((secret) => {
             const label = LABELS[secret.key];
             const isToggling = togglingKey === secret.key;
+            const linkedPlanNames = (secret.plan_ids ?? [])
+              .map((id) => plans.find((p) => p.id === id)?.name ?? id)
+              .join(", ");
+
             return (
               <AdminCard key={secret.key} className="p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -127,6 +172,13 @@ export default function AdminManagedSecretsPage() {
                         Mise à jour le {new Date(secret.updated_at).toLocaleString("fr-FR")}
                       </p>
                     )}
+                    {/* Plans liés */}
+                    {(secret.plan_ids ?? []).length > 0 && editingPlansKey !== secret.key && (
+                      <p className="mt-1 text-xs text-foreground-subtle">
+                        Plans liés :{" "}
+                        <span className="font-medium text-foreground">{linkedPlanNames}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
@@ -151,7 +203,19 @@ export default function AdminManagedSecretsPage() {
                       </button>
                     )}
 
-                    {editingKey !== secret.key && (
+                    {/* Bouton Plans — toujours visible */}
+                    {editingKey !== secret.key && editingPlansKey !== secret.key && (
+                      <button
+                        type="button"
+                        onClick={() => openPlanEditor(secret)}
+                        className="text-sm text-foreground-subtle hover:text-foreground"
+                        title="Lier des plans à cette clé"
+                      >
+                        Plans
+                      </button>
+                    )}
+
+                    {editingKey !== secret.key && editingPlansKey !== secret.key && (
                       <button
                         type="button"
                         onClick={() => {
@@ -166,6 +230,7 @@ export default function AdminManagedSecretsPage() {
                   </div>
                 </div>
 
+                {/* Éditeur de clé API */}
                 {editingKey === secret.key && (
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center gap-3">
@@ -217,6 +282,61 @@ export default function AdminManagedSecretsPage() {
                         Supprimer la clé existante
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* Éditeur multi-select plans */}
+                {editingPlansKey === secret.key && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs font-medium text-foreground-subtle">
+                      Plans qui utilisent cette clé gérée :
+                    </p>
+                    {plans.length === 0 ? (
+                      <p className="text-xs text-foreground-subtle">
+                        Aucun plan configuré. Créez d&apos;abord des plans dans{" "}
+                        <a href="/admin/plans" className="text-brand hover:underline">
+                          Plans
+                        </a>
+                        .
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {plans.map((plan) => {
+                          const isSelected = selectedPlanIds.includes(plan.id);
+                          return (
+                            <button
+                              key={plan.id}
+                              type="button"
+                              onClick={() => togglePlanId(plan.id)}
+                              className={
+                                isSelected
+                                  ? "rounded-full border border-brand bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
+                                  : "rounded-full border border-border px-3 py-1 text-xs text-foreground-subtle hover:border-brand/50 hover:text-foreground"
+                              }
+                            >
+                              {isSelected ? "✓ " : ""}{plan.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSavePlans(secret.key)}
+                        disabled={savingPlans}
+                        className={adminButtonClass}
+                      >
+                        {savingPlans ? "Enregistrement…" : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingPlansKey(null)}
+                        className={adminGhostButtonClass}
+                      >
+                        Annuler
+                      </button>
+                    </div>
                   </div>
                 )}
               </AdminCard>
