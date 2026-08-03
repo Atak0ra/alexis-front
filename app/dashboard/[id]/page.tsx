@@ -389,9 +389,11 @@ export default function ProjectDetailPage() {
               )}>
                 {project.forge_provider}
               </span>
-              <span className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted">
-                {project.agent_choice}
-              </span>
+              {project.agent_choice && (
+                <span className="rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted">
+                  {project.agent_choice}
+                </span>
+              )}
               {project.is_active && (
                 <button
                   type="button"
