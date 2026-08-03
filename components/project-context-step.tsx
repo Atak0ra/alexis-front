@@ -148,30 +148,24 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     }
 
     // ── Charger le contenu déjà committé pour édition (bouton "Modifier" alors
-    // qu'un .alexis/project.md existe déjà) — sans ça resumeOrDetect tombait dans
-    // le cas générique "repo vide/nouveau" et réaffichait le formulaire de
-    // description au lieu du contenu existant.
+    // qu'un .alexis/project.md existe déjà) — lecture synchrone depuis la DB
+    // (Project.context_content, migration 0023) : réponse instantanée, plus de
+    // polling ni de boucle de retry.
     async function loadExistingContent(apiKey: string) {
-      let attempts = 0;
-      const maxAttempts = 30;
-      while (!cancelled && attempts < maxAttempts) {
-        attempts++;
-        try {
-          const { status: contentStatus, content } = await getProjectContextContent(apiKey, projectId);
-          if (contentStatus === "ready") {
-            if (!cancelled) {
-              if (content) { setDraftContent(content); setPhase("review"); }
-              else await detectRepo(apiKey);
-            }
-            return;
+      try {
+        const { status: contentStatus, content } = await getProjectContextContent(apiKey, projectId);
+        if (!cancelled) {
+          if (contentStatus === "ready" && content) {
+            setDraftContent(content);
+            setPhase("review");
+          } else {
+            await detectRepo(apiKey);
           }
-        } catch {
-          if (!cancelled) await detectRepo(apiKey);
-          return;
         }
-        await new Promise((resolve) => setTimeout(resolve, _pollIntervalMs));
+      } catch {
+        // 404 = pas de contexte en DB → formulaire de génération
+        if (!cancelled) await detectRepo(apiKey);
       }
-      if (!cancelled) await detectRepo(apiKey);
     }
 
     async function resumeOrDetect() {

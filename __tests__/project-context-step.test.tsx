@@ -468,19 +468,22 @@ describe("ProjectContextStep", () => {
       expect(enqueueSpy).not.toHaveBeenCalled();
     });
 
-    it("polls until the committed content is ready when status is done but content isn't cached yet", async () => {
+    it("falls back to repo detection when status is done but content returns 404 (no DB content yet)", async () => {
+      // Nouveau comportement (migration 0023) : getProjectContextContent est synchrone.
+      // Si le contenu n'est pas en DB, l'API retourne 404 → on retombe sur detectRepo.
       vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({ status: "done" });
-      vi.spyOn(apiClient, "getProjectContextContent")
-        .mockResolvedValueOnce({ status: "loading", content: null })
-        .mockResolvedValue({ status: "ready", content: DRAFT_CONTENT });
+      const contentSpy = vi.spyOn(apiClient, "getProjectContextContent").mockRejectedValue(
+        new Error("404 Not Found")
+      );
+      const enqueueSpy = vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "test-job-id" });
 
       renderStep();
 
       await waitFor(() =>
-        expect(screen.getByText("Relire et valider")).toBeInTheDocument(),
+        expect(enqueueSpy).toHaveBeenCalled(),
         { timeout: 3000 }
       );
-      expect((screen.getByLabelText(/Contenu de/) as HTMLTextAreaElement).value).toBe(DRAFT_CONTENT);
+      expect(contentSpy).toHaveBeenCalledTimes(1);
     });
 
     it("falls back to normal repo detection when there is nothing to resume", async () => {
