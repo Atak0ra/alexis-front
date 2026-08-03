@@ -7,6 +7,7 @@ import { clearApiKey, getApiKey, getKeyId } from "@/lib/session";
 import { getMe, listProjects, revokeApiKey, type ProjectOut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import NewProjectCTA from "@/components/new-project-cta";
+import { Modal, ModalFooter } from "@/components/ui/modal";
 
 function NavItem({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
@@ -105,6 +106,8 @@ export function AppSidebar() {
   const [email, setEmail] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const apiKey = getApiKey();
@@ -120,6 +123,7 @@ export function AppSidebar() {
   }, [pathname]);
 
   async function handleLogout() {
+    setLoggingOut(true);
     const apiKey = getApiKey();
     const keyId = getKeyId();
     if (apiKey && keyId) {
@@ -169,7 +173,7 @@ export function AppSidebar() {
               {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setConfirmLogout(true)}
                 className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
               >
                 Se déconnecter
@@ -194,13 +198,44 @@ export function AppSidebar() {
           {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setConfirmLogout(true)}
             className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
           >
             Se déconnecter
           </button>
         </div>
       </aside>
+
+      {/* Modale de confirmation de déconnexion */}
+      <Modal
+        open={confirmLogout}
+        onClose={() => { if (!loggingOut) setConfirmLogout(false); }}
+        title="Se déconnecter"
+        titleId="logout-modal-title"
+        maxWidth="max-w-sm"
+      >
+        <p className="text-sm text-foreground-muted">
+          Voulez-vous vraiment vous déconnecter&nbsp;? Vous devrez ressaisir vos identifiants pour revenir.
+        </p>
+        <ModalFooter className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setConfirmLogout(false)}
+            disabled={loggingOut}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground disabled:opacity-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-50"
+          >
+            {loggingOut ? "Déconnexion…" : "Se déconnecter"}
+          </button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }
