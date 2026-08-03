@@ -985,6 +985,16 @@ export function adminUpdateManagedSecret(
   });
 }
 
+export function adminToggleManagedSecretActive(
+  adminApiKey: string,
+  key: string
+): Promise<ManagedSecretOut> {
+  return request(`/admin/managed-secrets/${key}/toggle-active`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
 export interface AdminDashboardSummary {
   client_count: number;
   project_count: number;

@@ -1,22 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminListManagedSecrets, adminUpdateManagedSecret, ManagedSecretOut, AlexisApiError } from "@/lib/api-client";
+import {
+  adminListManagedSecrets,
+  adminUpdateManagedSecret,
+  adminToggleManagedSecretActive,
+  ManagedSecretOut,
+  AlexisApiError,
+} from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
 
 const LABELS: Record<string, { name: string; description: string }> = {
-  anthropic:   { name: "Anthropic",    description: "Claude Code — modèles claude-*" },
-  openai:      { name: "OpenAI",       description: "aider — gpt-4o, o1, o3…" },
-  gemini:      { name: "Google Gemini",description: "aider — gemini/gemini-2.0-flash…" },
+  anthropic:   { name: "Anthropic",       description: "Claude Code — modèles claude-*" },
+  openai:      { name: "OpenAI",          description: "aider — gpt-4o, o1, o3…" },
+  gemini:      { name: "Google Gemini",   description: "aider — gemini/gemini-2.0-flash…" },
   moonshot:    { name: "Moonshot / Kimi", description: "aider — moonshot/moonshot-v1-8k…" },
-  xai:         { name: "xAI / Grok",   description: "aider — xai/grok-3, xai/grok-3-mini…" },
-  groq:        { name: "Groq",         description: "aider — groq/llama-3.3-70b-versatile…" },
-  openrouter:  { name: "OpenRouter",   description: "aider — accès à +200 modèles" },
-  mistral:     { name: "Mistral",      description: "aider — mistral/mistral-large-latest…" },
-  deepseek:    { name: "DeepSeek",     description: "aider — deepseek/deepseek-chat…" },
-  together_ai: { name: "Together AI",  description: "aider — together_ai/…" },
-  cohere:      { name: "Cohere",       description: "aider — cohere/command-r-plus…" },
+  xai:         { name: "xAI / Grok",      description: "aider — xai/grok-3, xai/grok-3-mini…" },
+  groq:        { name: "Groq",            description: "aider — groq/llama-3.3-70b-versatile…" },
+  openrouter:  { name: "OpenRouter",      description: "aider — accès à +200 modèles" },
+  mistral:     { name: "Mistral",         description: "aider — mistral/mistral-large-latest…" },
+  deepseek:    { name: "DeepSeek",        description: "aider — deepseek/deepseek-chat…" },
+  together_ai: { name: "Together AI",     description: "aider — together_ai/…" },
+  cohere:      { name: "Cohere",          description: "aider — cohere/command-r-plus…" },
 };
 
 export default function AdminManagedSecretsPage() {
@@ -25,6 +31,7 @@ export default function AdminManagedSecretsPage() {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
 
   function load() {
     const apiKey = getAdminApiKey();
@@ -51,6 +58,21 @@ export default function AdminManagedSecretsPage() {
     }
   }
 
+  async function handleToggleActive(key: string) {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    setError(null);
+    setTogglingKey(key);
+    try {
+      const updated = await adminToggleManagedSecretActive(apiKey, key);
+      setSecrets((prev) => prev.map((s) => (s.key === key ? updated : s)));
+    } catch (err) {
+      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    } finally {
+      setTogglingKey(null);
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground">Clés gérées</h1>
@@ -73,6 +95,7 @@ export default function AdminManagedSecretsPage() {
         <div className="mt-6 space-y-3">
           {secrets.map((secret) => {
             const label = LABELS[secret.key];
+            const isToggling = togglingKey === secret.key;
             return (
               <AdminCard key={secret.key} className="p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -85,6 +108,10 @@ export default function AdminManagedSecretsPage() {
                       {secret.is_active ? (
                         <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                           ✓ ACTIF
+                        </span>
+                      ) : secret.has_value ? (
+                        <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                          ⏸ DÉSACTIVÉ
                         </span>
                       ) : (
                         <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-foreground-subtle">
@@ -102,18 +129,41 @@ export default function AdminManagedSecretsPage() {
                     )}
                   </div>
 
-                  {editingKey !== secret.key && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingKey(secret.key);
-                        setValue("");
-                      }}
-                      className="shrink-0 text-sm text-brand hover:text-brand-hover"
-                    >
-                      {secret.has_value ? "Remplacer" : "Configurer"}
-                    </button>
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {/* Bouton Activer / Désactiver — visible seulement si une valeur est configurée */}
+                    {secret.has_value && editingKey !== secret.key && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(secret.key)}
+                        disabled={isToggling}
+                        className={
+                          secret.is_active
+                            ? "text-sm text-foreground-subtle hover:text-danger disabled:opacity-50"
+                            : "text-sm text-success hover:text-success/80 disabled:opacity-50"
+                        }
+                        title={secret.is_active ? "Désactiver ce provider" : "Activer ce provider"}
+                      >
+                        {isToggling
+                          ? "…"
+                          : secret.is_active
+                          ? "Désactiver"
+                          : "Activer"}
+                      </button>
+                    )}
+
+                    {editingKey !== secret.key && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingKey(secret.key);
+                          setValue("");
+                        }}
+                        className="text-sm text-brand hover:text-brand-hover"
+                      >
+                        {secret.has_value ? "Remplacer" : "Configurer"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {editingKey === secret.key && (
