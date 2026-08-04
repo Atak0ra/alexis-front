@@ -112,7 +112,7 @@ export default function IssueDetailPage() {
           .then((blob) => {
             setAssetPreviewUrls((prev) => ({ ...prev, [asset.id]: URL.createObjectURL(blob) }));
           })
-          .catch(() => {});
+          .catch((err) => console.error("[issue] asset preview failed", err));
       }
     } catch {
       // silencieux — pas de blocage du reste de la page pour un échec d'upload
@@ -127,7 +127,7 @@ export default function IssueDetailPage() {
     if (!apiKey) return;
     getIssue(apiKey, projectId, issueId)
       .then(setIssue)
-      .catch(() => {});
+      .catch((err) => console.error("[issue] reload failed", err));
   }
 
   if (error || notFound) {
@@ -149,7 +149,7 @@ export default function IssueDetailPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-8">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8">
       {issue === null || project === null ? (
         <div className="mt-6 space-y-4">
           <div className="h-8 w-2/3 animate-pulse rounded-lg bg-surface-sunken" />

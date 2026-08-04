@@ -32,17 +32,12 @@ interface Props {
   embedded?: boolean;
 }
 
-type Phase = "detecting" | "form" | "polling" | "review" | "committing" | "done" | "failed";
+type Phase = "detecting" | "form" | "polling" | "review" | "done" | "failed";
 
 const GENERATION_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] = [
   { key: "cloning", label: "Clonage du dépôt" },
   { key: "running_agent", label: "Exécution de l'agent" },
   { key: "reading_result", label: "Lecture du résultat" },
-];
-
-const COMMIT_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] = [
-  { key: "writing_file", label: "Écriture du fichier" },
-  { key: "committing", label: "Commit & push" },
 ];
 
 function PhaseChecklist({
@@ -103,7 +98,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
 
   // ── Chrono de la phase en cours (remis à zéro à chaque changement de phase) ──
   useEffect(() => {
-    if (phase !== "polling" && phase !== "committing") return;
+    if (phase !== "polling") return;
     const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, [phase]);
@@ -183,13 +178,8 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
 
         if (status === "in_progress") {
           setGenPhase(statusPhase ?? null);
-          if (statusPhase === "writing_file" || statusPhase === "committing") {
-            setPhase("committing");
-            startCommitPolling();
-          } else {
-            setPhase("polling");
-            startPolling();
-          }
+          setPhase("polling");
+          startPolling();
           return;
         }
 
@@ -272,39 +262,21 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     }, _pollIntervalMs);
   }
 
-  // ── Poll statut commit (in_progress → done | failed) ─────────────────────
-  function startCommitPolling() {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(async () => {
-      try {
-        const apiKey = getApiKey();
-        if (!apiKey) return;
-        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
-        if (statusPhase) {
-          setGenPhase((prev) => {
-            if (statusPhase !== prev) setElapsedSec(0);
-            return statusPhase;
-          });
-        }
-        if (status === "done") {
-          clearInterval(intervalRef.current!);
-          setPhase("done");
-        } else if (status === "failed") {
-          clearInterval(intervalRef.current!);
-          setPhase("review"); // retour review pour réessayer
-          setError(
-            statusError
-              ? `Le commit a échoué : ${statusError}`
-              : "Le commit a échoué. Vérifiez vos droits sur le repo et réessayez."
-          );
-        }
-      } catch {
-        // network error — keep polling silently
-      }
-    }, _pollIntervalMs);
+  // ── Valider le draft ──────────────────────────────────────────────────────
+  async function handleCommit() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("Session absente");
+      await commitProjectContext(apiKey, projectId, draftContent);
+      setPhase("done");
+    } catch (err) {
+      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue lors de la validation.");
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  // ── Soumettre le brief → lancer la génération ─────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -327,26 +299,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     }
   }
 
-  // ── Valider le draft et committer ─────────────────────────────────────────
-  async function handleCommit() {
-    setError(null);
-    setSubmitting(true);
-    try {
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("Session absente");
-      setGenPhase(null);
-      setElapsedSec(0);
-      await commitProjectContext(apiKey, projectId, draftContent);
-      setPhase("committing");
-      startCommitPolling();
-    } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue lors du commit.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  // ── Régénérer (retour au formulaire) ──────────────────────────────────────
+  // ── Soumettre le brief → lancer la génération ─────────────────────────────
   function handleRegenerate() {
     setDraftContent("");
     setError(null);
@@ -506,8 +459,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
               <p className="mt-2 text-sm text-foreground-muted">
                 Alexis a généré le fichier{" "}
                 <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>.
-                Relisez, modifiez si besoin, puis cliquez <strong>Valider et committer</strong>.
-                Le fichier sera committé sur votre branche par défaut.
+                Relisez et modifiez si besoin, puis cliquez <strong>Valider</strong> pour enregistrer.
               </p>
             </div>
 
@@ -534,7 +486,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                   disabled={submitting || !draftContent.trim()}
                   className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
                 >
-                  {submitting ? <Spinner label="Envoi…" /> : "Valider et committer"}
+                  {submitting ? <Spinner label="Envoi…" /> : "Valider"}
                 </button>
                 <button
                   type="button"
@@ -552,44 +504,18 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
           </div>
         )}
 
-        {/* ── COMMITTING ── */}
-        {phase === "committing" && (
-          <div className="mt-8 space-y-6">
-            <h1 className="text-2xl font-bold text-foreground">Commit en cours…</h1>
-            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
-              <svg className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Commit et push en cours…</p>
-                <p className="mt-0.5 mb-3 text-xs text-foreground-muted">
-                  <code className="font-mono">.alexis/project.md</code> sera committé sur votre branche par défaut.
-                </p>
-                <PhaseChecklist steps={COMMIT_PHASE_STEPS} currentPhase={genPhase} elapsedSec={elapsedSec} />
-              </div>
-            </div>
-            <div className="text-right">
-              <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                Passer cette étape →
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* ── DONE ── */}
         {phase === "done" && (
           <div className="mt-8 space-y-6">
-            <h1 className="text-2xl font-bold text-foreground">Contexte committé ✓</h1>
+            <h1 className="text-2xl font-bold text-foreground">Contexte enregistré ✓</h1>
             <div className="flex items-start gap-4 rounded-xl border border-success-border bg-success-bg px-5 py-4">
               <svg className="mt-0.5 h-5 w-5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-foreground">Fichier de contexte committé avec succès</p>
+                <p className="text-sm font-medium text-foreground">Fichier de contexte enregistré avec succès</p>
                 <p className="mt-0.5 text-xs text-foreground-muted">
-                  <code className="font-mono">.alexis/project.md</code> a été committé sur votre branche par défaut.
-                  Alexis l&apos;utilisera dès le prochain run.
+                  Le contexte a été sauvegardé. Alexis l&apos;utilisera dès le prochain run.
                 </p>
               </div>
             </div>

@@ -136,11 +136,22 @@ export default function ProjectContextPage() {
 
     getProjectContext(apiKey, projectId)
       .then(({ exists }) => {
-        setContextExists(exists);
         if (exists) {
           getProjectContextContent(apiKey, projectId)
-            .then((res) => setContent(res.content))
-            .catch(() => setContent(null));
+            .then((res) => {
+              if (res.status === "not_found") {
+                // Le contexte n'est pas encore persisté en DB → afficher le formulaire
+                setContextExists(false);
+              } else {
+                setContextExists(true);
+                setContent(res.content);
+              }
+            })
+            .catch(() => {
+              setContextExists(false);
+            });
+        } else {
+          setContextExists(false);
         }
       })
       .catch(() => setContextExists(false));
@@ -152,9 +163,17 @@ export default function ProjectContextPage() {
     setContextExists(null);
     if (!apiKey) return;
     getProjectContext(apiKey, projectId).then(({ exists }) => {
-      setContextExists(exists);
       if (exists) {
-        getProjectContextContent(apiKey, projectId).then((res) => setContent(res.content));
+        getProjectContextContent(apiKey, projectId).then((res) => {
+          if (res.status === "not_found") {
+            setContextExists(false);
+          } else {
+            setContextExists(true);
+            setContent(res.content);
+          }
+        });
+      } else {
+        setContextExists(false);
       }
     });
   }

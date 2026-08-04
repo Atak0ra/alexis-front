@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
     if (!apiKey) return;
     adminGetRecentRuns(apiKey, { limit: 5 })
       .then(({ items }) => setRecentRuns(items))
-      .catch(() => {});
+      .catch((err) => console.error("[admin-dashboard] recent runs failed", err));
   }, []);
 
   const chartData = spend

@@ -736,9 +736,7 @@ export type ContextGenerationStatus = "in_progress" | "draft_ready" | "done" | "
 export type ContextGenerationPhase =
   | "cloning"
   | "running_agent"
-  | "reading_result"
-  | "writing_file"
-  | "committing";
+  | "reading_result";
 
 export interface ProjectContextStatus {
   status: ContextGenerationStatus;
@@ -821,7 +819,7 @@ export function commitProjectContext(
 }
 
 export interface ProjectContextContent {
-  status: "ready" | "loading";
+  status: "ready" | "not_found";
   content: string | null;
 }
 

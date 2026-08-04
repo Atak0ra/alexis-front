@@ -157,7 +157,7 @@ describe("ProjectContextStep", () => {
     expect(screen.getByRole("button", { name: /passer cette étape/i })).toBeInTheDocument();
   });
 
-  it("allows editing the draft content before committing", async () => {
+  it("allows editing the draft content before validating", async () => {
     vi.spyOn(apiClient, "getProjectContextStatus")
       .mockResolvedValueOnce(NOTHING_TO_RESUME)
       .mockResolvedValue({ status: "draft_ready" });
@@ -204,9 +204,9 @@ describe("ProjectContextStep", () => {
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
-  // ── COMMITTING phase ─────────────────────────────────────────────────────────
+  // ── VALIDATION phase ───────────────────────────────────────────────────────────
 
-  it("clicking Valider et committer enters committing phase", async () => {
+  it("clicking Valider enters done phase directly (no polling)", async () => {
     vi.spyOn(apiClient, "getProjectContextStatus")
       .mockResolvedValueOnce(NOTHING_TO_RESUME)
       .mockResolvedValue({ status: "draft_ready" });
@@ -219,11 +219,11 @@ describe("ProjectContextStep", () => {
     await waitFor(() => expect(screen.getByText("Relire et valider")).toBeInTheDocument(), { timeout: 3000 });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Valider et committer" }));
+      fireEvent.click(screen.getByRole("button", { name: "Valider" }));
     });
 
     await waitFor(() =>
-      expect(screen.getByText("Commit en cours…")).toBeInTheDocument(),
+      expect(screen.getByText("Contexte enregistré ✓")).toBeInTheDocument(),
       { timeout: 3000 }
     );
     expect(apiClient.commitProjectContext).toHaveBeenCalledWith("alx_xxx", "p1", DRAFT_CONTENT);
@@ -231,13 +231,12 @@ describe("ProjectContextStep", () => {
 
   // ── DONE phase ───────────────────────────────────────────────────────────────
 
-  it("shows done confirmation when commit status becomes done", async () => {
+  it("shows done confirmation when commit succeeds", async () => {
     vi.spyOn(apiClient, "commitProjectContext").mockResolvedValue(undefined);
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
       .mockResolvedValueOnce(NOTHING_TO_RESUME)
-      .mockResolvedValueOnce({ status: "draft_ready" })
-      .mockResolvedValue({ status: "done" });
+      .mockResolvedValue({ status: "draft_ready" });
 
     renderStep();
     await submitBrief();
@@ -245,14 +244,14 @@ describe("ProjectContextStep", () => {
     await waitFor(() => expect(screen.getByText("Relire et valider")).toBeInTheDocument(), { timeout: 3000 });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Valider et committer" }));
+      fireEvent.click(screen.getByRole("button", { name: "Valider" }));
     });
 
     await waitFor(() =>
-      expect(screen.getByText("Contexte committé ✓")).toBeInTheDocument(),
+      expect(screen.getByText("Contexte enregistré ✓")).toBeInTheDocument(),
       { timeout: 3000 }
     );
-    expect(screen.getByText("Fichier de contexte committé avec succès")).toBeInTheDocument();
+    expect(screen.getByText("Fichier de contexte enregistré avec succès")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Aller au tableau de bord" })).toBeInTheDocument();
   });
 
@@ -261,8 +260,7 @@ describe("ProjectContextStep", () => {
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
       .mockResolvedValueOnce(NOTHING_TO_RESUME)
-      .mockResolvedValueOnce({ status: "draft_ready" })
-      .mockResolvedValue({ status: "done" });
+      .mockResolvedValue({ status: "draft_ready" });
     const onDone = vi.fn();
 
     renderStep({ onDone });
@@ -271,10 +269,10 @@ describe("ProjectContextStep", () => {
     await waitFor(() => expect(screen.getByText("Relire et valider")).toBeInTheDocument(), { timeout: 3000 });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Valider et committer" }));
+      fireEvent.click(screen.getByRole("button", { name: "Valider" }));
     });
 
-    await waitFor(() => expect(screen.getByText("Contexte committé ✓")).toBeInTheDocument(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText("Contexte enregistré ✓")).toBeInTheDocument(), { timeout: 3000 });
 
     expect(screen.getByRole("button", { name: "Fermer" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
@@ -287,8 +285,7 @@ describe("ProjectContextStep", () => {
     vi.spyOn(apiClient, "getProjectContextDraft").mockResolvedValue({ content: DRAFT_CONTENT });
     vi.spyOn(apiClient, "getProjectContextStatus")
       .mockResolvedValueOnce(NOTHING_TO_RESUME)
-      .mockResolvedValueOnce({ status: "draft_ready" })
-      .mockResolvedValue({ status: "done" });
+      .mockResolvedValue({ status: "draft_ready" });
 
     renderStep();
     await submitBrief();
@@ -296,10 +293,10 @@ describe("ProjectContextStep", () => {
     await waitFor(() => expect(screen.getByText("Relire et valider")).toBeInTheDocument(), { timeout: 3000 });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Valider et committer" }));
+      fireEvent.click(screen.getByRole("button", { name: "Valider" }));
     });
 
-    await waitFor(() => expect(screen.getByText("Contexte committé ✓")).toBeInTheDocument(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText("Contexte enregistré ✓")).toBeInTheDocument(), { timeout: 3000 });
 
     fireEvent.click(screen.getAllByRole("button", { name: /passer cette étape/i })[0]);
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
@@ -399,20 +396,6 @@ describe("ProjectContextStep", () => {
       );
       expect(screen.queryByLabelText("Décris ton projet en quelques phrases")).not.toBeInTheDocument();
       expect(enqueueSpy).not.toHaveBeenCalled();
-    });
-
-    it("jumps straight to the committing phase when a commit is already in_progress", async () => {
-      vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue({
-        status: "in_progress",
-        phase: "committing",
-      });
-
-      renderStep();
-
-      await waitFor(() =>
-        expect(screen.getByText("Commit en cours…")).toBeInTheDocument(),
-        { timeout: 3000 }
-      );
     });
 
     it("jumps straight to the review phase with the draft when status is already draft_ready", async () => {

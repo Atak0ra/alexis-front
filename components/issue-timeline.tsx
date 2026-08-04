@@ -223,7 +223,7 @@ export default function IssueTimeline({
               )}
             </div>
 
-            <div className={cn("flex-1 pb-2", !isActive && "opacity-70")}>
+            <div className={cn("min-w-0 flex-1 pb-2", !isActive && "opacity-70")}>
               <p
                 className={cn(
                   "text-sm font-semibold transition-all duration-300",

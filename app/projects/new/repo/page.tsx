@@ -50,7 +50,7 @@ export default function RepoPage() {
           setGithubUsername(github_username);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("[new-repo] getMe prefill failed", err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hosted]);
 

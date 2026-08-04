@@ -115,7 +115,7 @@ export function AppSidebar() {
     listProjects(apiKey).then(setProjects).catch(() => setProjects([]));
     getMe(apiKey)
       .then((me) => { setEmail(me.email); setEmailVerified(me.email_verified); })
-      .catch(() => {});
+      .catch((err) => console.error("[app-sidebar] getMe failed", err));
   }, []);
 
   useEffect(() => {

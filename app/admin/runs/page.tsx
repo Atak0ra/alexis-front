@@ -32,7 +32,7 @@ export default function AdminRunsPage() {
   useEffect(() => {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
-    adminListClients(apiKey).then(setClients).catch(() => {});
+    adminListClients(apiKey).then(setClients).catch((err) => console.error("[admin-runs] list clients failed", err));
   }, []);
 
   // Projets du client sélectionné — filtre en cascade, pas de liste globale
