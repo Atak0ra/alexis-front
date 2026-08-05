@@ -25,6 +25,7 @@ import {
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import AssetUploadGrid from "@/components/asset-upload-grid";
 import { Modal, ModalFooter } from "@/components/ui/modal";
+import { useNotificationsContext } from "@/lib/notifications-context";
 import { Plus } from "lucide-react";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
@@ -259,6 +260,30 @@ export default function ProjectDetailPage() {
       .then(setTickets)
       .catch(() => setTickets([]));
   }, [projectId, apiKey]);
+
+  // Applique en direct les transitions d'état poussées par le backend (SSE) sur
+  // le Kanban — sans ça `issues` reste figé sur le snapshot du mount : une notif
+  // "Spec" arrive dans la cloche mais la carte reste en "Todo" tant que la page
+  // n'est pas rechargée manuellement.
+  const { notifications } = useNotificationsContext();
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    setIssues((prev) => {
+      if (!prev) return prev;
+      let changed = false;
+      const next = prev.map((issue) => {
+        // `notifications` est trié du plus récent au plus ancien — le premier
+        // match est donc le dernier état connu pour ce ticket.
+        const latest = notifications.find((n) => n.project_id === projectId && n.issue_id === issue.id);
+        if (latest && latest.state !== issue.state) {
+          changed = true;
+          return { ...issue, state: latest.state };
+        }
+        return issue;
+      });
+      return changed ? next : prev;
+    });
+  }, [notifications, projectId]);
 
   const ticketsByIdentifier: Record<string, TicketSummary> = {};
   for (const t of tickets) {

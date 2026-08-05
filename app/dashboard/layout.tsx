@@ -6,7 +6,7 @@ import { getApiKey } from "@/lib/session";
 import { getMe, resendVerification } from "@/lib/api-client";
 import { AppSidebar } from "@/components/app-sidebar";
 import { NotificationBell } from "@/components/notification-bell";
-import { useNotifications } from "@/hooks/use-notifications";
+import { NotificationsProvider, useNotificationsContext } from "@/lib/notifications-context";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -14,9 +14,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
-
-  const { notifications, unreadCount, loading: notifLoading, markRead, markAllRead } =
-    useNotifications(apiKey);
 
   useEffect(() => {
     const key = getApiKey();
@@ -56,6 +53,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
+    <NotificationsProvider apiKey={apiKey}>
+      <DashboardShell
+        emailVerified={emailVerified}
+        resendState={resendState}
+        onResend={handleResend}
+      >
+        {children}
+      </DashboardShell>
+    </NotificationsProvider>
+  );
+}
+
+/**
+ * Rendu séparé du provider pour pouvoir consommer NotificationsContext —
+ * un composant ne peut pas lire le contexte qu'il fournit lui-même.
+ */
+function DashboardShell({
+  children,
+  emailVerified,
+  resendState,
+  onResend,
+}: {
+  children: ReactNode;
+  emailVerified: boolean | null;
+  resendState: "idle" | "sending" | "sent" | "error";
+  onResend: () => void;
+}) {
+  const { notifications, unreadCount, loading: notifLoading, markRead, markAllRead } =
+    useNotificationsContext();
+
+  return (
     <div className="flex min-h-screen flex-col bg-surface lg:flex-row">
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -70,7 +98,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleResend}
+                  onClick={onResend}
                   disabled={resendState === "sending" || resendState === "sent"}
                   className="shrink-0 rounded-lg border border-danger/30 bg-white px-3 py-1 text-xs font-semibold text-danger hover:bg-danger-bg disabled:opacity-50 disabled:pointer-events-none transition-colors"
                 >

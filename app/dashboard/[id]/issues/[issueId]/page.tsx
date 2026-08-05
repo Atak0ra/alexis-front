@@ -17,6 +17,7 @@ import {
   type IssueAsset,
 } from "@/lib/api-client";
 import { isLocalMode, getDemoIssueAssetDataUrl } from "@/lib/demo-data";
+import { useNotificationsContext } from "@/lib/notifications-context";
 import IssueTimeline from "@/components/issue-timeline";
 import AssetUploadGrid from "@/components/asset-upload-grid";
 
@@ -93,6 +94,17 @@ export default function IssueDetailPage() {
       })
       .catch(() => setAssets([]));
   }, [projectId, issueId, apiKey]);
+
+  // Applique en direct la transition d'état poussée par le backend (SSE) — sans
+  // ça la page reste figée sur le snapshot du mount tant qu'elle n'est pas
+  // rechargée manuellement (même bug que sur le Kanban projet).
+  const { notifications } = useNotificationsContext();
+  useEffect(() => {
+    const latest = notifications.find((n) => n.project_id === projectId && n.issue_id === issueId);
+    if (latest) {
+      setIssue((prev) => (prev && prev.state !== latest.state ? { ...prev, state: latest.state } : prev));
+    }
+  }, [notifications, projectId, issueId]);
 
   async function handleUploadAsset(file: File) {
     setUploadingAsset(true);

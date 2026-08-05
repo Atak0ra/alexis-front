@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import ProjectDetailPage from "@/app/dashboard/[id]/page";
 import * as apiClient from "@/lib/api-client";
 import * as session from "@/lib/session";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, DEFAULT_MODELS } from "@/lib/project-defaults";
+import { NotificationsProvider } from "@/lib/notifications-context";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "proj-1" }),
@@ -242,5 +243,77 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Créer" }));
 
     await waitFor(() => expect(uploadSpy).toHaveBeenCalledTimes(5));
+  });
+});
+
+// ── Reconciliation Kanban ↔ notifications SSE ──────────────────────────────
+//
+// Bug réel : le Kanban charge `issues` une seule fois au mount ; sans lien
+// avec le flux de notifications, une carte reste affichée dans sa colonne
+// d'origine même après que le backend a fait avancer le ticket (ex: Todo →
+// Spec), tant que la page n'est pas rechargée manuellement.
+
+function makeOpenSseStream(events: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  let idx = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (idx < events.length) controller.enqueue(encoder.encode(events[idx++]));
+      // Ne ferme jamais — simule une connexion SSE longue durée.
+    },
+  });
+}
+
+describe("ProjectDetailPage — reconciliation Kanban / notifications", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("déplace une carte vers sa nouvelle colonne dès qu'une notif SSE arrive pour ce ticket", async () => {
+    const issueInTodo = { ...FAKE_ISSUE, state: "Todo" };
+    vi.spyOn(apiClient, "listIssues").mockResolvedValue([issueInTodo]);
+    vi.spyOn(apiClient, "listTickets").mockResolvedValue([]);
+
+    const incomingNotif = {
+      id: "notif-1",
+      project_id: "proj-1",
+      issue_id: issueInTodo.id,
+      issue_identifier: issueInTodo.identifier,
+      state: "Spec",
+      severity: "info",
+      title: "KARA-1 : Spec en cours",
+      body: "Alexis rédige la spec fonctionnelle.",
+      read_at: null,
+      created_at: new Date().toISOString(),
+    };
+    const ssePayload = `data: ${JSON.stringify(incomingNotif)}\n\n`;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/notifications/stream")) {
+          return Promise.resolve({ ok: true, body: makeOpenSseStream([ssePayload]) });
+        }
+        if (url.includes("/notifications")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      })
+    );
+
+    render(
+      <NotificationsProvider apiKey="alx_xxx">
+        <ProjectDetailPage />
+      </NotificationsProvider>
+    );
+
+    // La notif SSE peut être traitée avant le premier render observable côté
+    // test — on n'affirme donc pas un passage transitoire par "todo", juste
+    // l'état final : la carte doit finir dans "spec", jamais rester en "todo".
+    const specColumn = await screen.findByTestId("kanban-column-spec");
+    await waitFor(() => expect(within(specColumn).getByText("Corriger la pagination")).toBeInTheDocument());
+
+    const todoColumn = screen.getByTestId("kanban-column-todo");
+    expect(within(todoColumn).queryByText("Corriger la pagination")).not.toBeInTheDocument();
   });
 });
