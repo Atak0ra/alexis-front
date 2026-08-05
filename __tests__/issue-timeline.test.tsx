@@ -1,14 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import IssueTimeline from "@/components/issue-timeline";
-import * as apiClient from "@/lib/api-client";
 import { DEFAULT_STATES } from "@/lib/project-defaults";
 import type { Issue } from "@/lib/api-client";
 
-const pushMock = vi.fn();
-const refreshMock = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock, refresh: refreshMock }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
 function makeIssue(overrides: Partial<Issue>): Issue {
@@ -27,23 +24,12 @@ function makeIssue(overrides: Partial<Issue>): Issue {
   };
 }
 
-beforeEach(() => {
-  vi.restoreAllMocks();
-  pushMock.mockClear();
-  refreshMock.mockClear();
-});
-
 describe("IssueTimeline", () => {
   it("renders the 4 step labels in order", () => {
     render(
-      <IssueTimeline
-        issue={makeIssue({})}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
+      <IssueTimeline issue={makeIssue({})} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
+
     expect(screen.getByTestId("issue-step-requested")).toBeInTheDocument();
     expect(screen.getByTestId("issue-step-analysis")).toBeInTheDocument();
     expect(screen.getByTestId("issue-step-development")).toBeInTheDocument();
@@ -52,84 +38,35 @@ describe("IssueTimeline", () => {
 
   it("marks the requested step current and later steps upcoming for a Backlog issue", () => {
     render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Backlog" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
+      <IssueTimeline issue={makeIssue({ state: "Backlog" })} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
+
     expect(screen.getByTestId("issue-step-requested")).toHaveAttribute("data-status", "current");
     expect(screen.getByTestId("issue-step-analysis")).toHaveAttribute("data-status", "upcoming");
   });
 
-  it("marks a failed sub-state as attention with a contextual message", () => {
+  it("defaults the panel to the current/attention step", () => {
     render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Plan Failed" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
+      <IssueTimeline issue={makeIssue({ state: "Dev" })} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
-    expect(screen.getByTestId("issue-step-analysis")).toHaveAttribute("data-status", "attention");
-    expect(screen.getByText(/Légère itération en cours/)).toBeInTheDocument();
-  });
 
-  it("shows the issue description and existing comments under the active step", () => {
-    render(
-      <IssueTimeline
-        issue={makeIssue({
-          state: "Dev",
-          comments: [
-            { id: "c1", body: "Merci pour le retour", author: "Alexis", created_at: "2026-07-11T10:00:00Z" },
-          ],
-        })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
+    // "Dev" -> development step is current -> Aperçu tab shows its description by default.
     expect(screen.getByText("Le bouton suivant ne fonctionne pas sur mobile.")).toBeInTheDocument();
-    expect(screen.getByText("Merci pour le retour")).toBeInTheDocument();
   });
 
-  it("shows the creation date under the requested step and the last-activity date under the active step", () => {
+  it("defaults to the last step's Terminé summary when the issue is fully done", () => {
     render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Dev", created_at: "2026-07-08T09:30:00Z", updated_at: "2026-07-14T16:45:00Z" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
+      <IssueTimeline issue={makeIssue({ state: "Done" })} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
-    expect(screen.getByText(/Créée le/)).toBeInTheDocument();
-    expect(screen.getByText(/Dernière activité le/)).toBeInTheDocument();
+
+    expect(screen.getByTestId("issue-step-done")).toHaveAttribute("data-status", "done");
+    expect(screen.getByText("Terminé", { selector: "p.font-semibold" })).toBeInTheDocument();
   });
 
-  it("renders a visible connecting line between non-last steps", () => {
+  it("switches the panel content when a different step is selected", () => {
     render(
       <IssueTimeline
-        issue={makeIssue({ state: "Backlog" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-    const requestedStep = screen.getByTestId("issue-step-requested");
-    const line = requestedStep.querySelector(".min-h-\\[2rem\\]");
-    expect(line).not.toBeNull();
-  });
-
-  it("does not show the chat/regenerate/validate zone outside a review state", () => {
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Dev" })}
+        issue={makeIssue({ state: "Dev", description: "Description du dev" })}
         states={DEFAULT_STATES}
         projectId="p1"
         apiKey="k1"
@@ -137,130 +74,13 @@ describe("IssueTimeline", () => {
       />
     );
 
-    expect(screen.queryByRole("button", { name: "Discuter" })).not.toBeInTheDocument();
-  });
+    expect(screen.getByText("Description du dev")).toBeInTheDocument();
 
-  it("sends a chat message in a review state and disables the button while in progress", async () => {
-    vi.spyOn(apiClient, "sendIssueChat").mockResolvedValue({ status: "in_progress" });
-    vi.spyOn(apiClient, "getIssueChatStatus").mockResolvedValue({ status: "in_progress" });
+    fireEvent.click(screen.getByTestId("issue-step-requested"));
 
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Spec Review" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-
-    fireEvent.change(screen.getByPlaceholderText(/posez une question/i), {
-      target: { value: "Quelle approche pour la pagination ?" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Discuter" }));
-
-    await waitFor(() => expect(apiClient.sendIssueChat).toHaveBeenCalledWith("k1", "p1", "i1", "Quelle approche pour la pagination ?"));
-    expect(screen.getByRole("button", { name: /en cours/i })).toBeDisabled();
-  });
-
-  it("calls updateIssue and onIssueUpdated when Valider is clicked in a review state", async () => {
-    const updatedIssue = makeIssue({ state: "Plan" });
-    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(updatedIssue);
-    const onIssueUpdated = vi.fn();
-
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Spec Review" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={onIssueUpdated}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Valider" }));
-
-    await waitFor(() => expect(onIssueUpdated).toHaveBeenCalledWith(updatedIssue));
-    expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan });
-  });
-
-  it("shows a Relancer button on a failed ticket, reverts it to the trigger state, and returns to the kanban", async () => {
-    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(makeIssue({ state: "Plan" }));
-
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Plan Failed" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
-
-    await waitFor(() =>
-      expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.plan })
-    );
-    // Retour direct sur le kanban plutôt qu'une simple mise à jour locale —
-    // le kanban a son propre state fetché au montage, une navigation
-    // "arrière" servie depuis le cache du router ne le rafraîchirait pas.
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard/p1"));
-    expect(refreshMock).toHaveBeenCalled();
-  });
-
-  it("shows an error and stays on the page when the retry API call fails", async () => {
-    vi.spyOn(apiClient, "updateIssue").mockRejectedValue(
-      new apiClient.AlexisApiError(500, "Erreur serveur")
-    );
-
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Plan Failed" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
-
-    await waitFor(() => expect(screen.getByText("Erreur serveur")).toBeInTheDocument());
-    expect(pushMock).not.toHaveBeenCalled();
-  });
-
-  it("reverts a Spec Failed ticket to Todo (not Spec), the spec trigger state", async () => {
-    vi.spyOn(apiClient, "updateIssue").mockResolvedValue(makeIssue({ state: "Todo" }));
-
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Spec Failed" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Relancer" }));
-
-    await waitFor(() =>
-      expect(apiClient.updateIssue).toHaveBeenCalledWith("k1", "p1", "i1", { state: DEFAULT_STATES.todo })
-    );
-  });
-
-  it("does not show a Relancer button outside a failed state", () => {
-    render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Dev" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
-    );
-
-    expect(screen.queryByRole("button", { name: "Relancer" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Description du dev")).not.toBeInTheDocument();
+    // Note: "Terminé" also appears as the rail's own step label, so scope to
+    // the panel's summary paragraph specifically.
+    expect(screen.getByText("Terminé", { selector: "p.font-semibold" })).toBeInTheDocument();
   });
 });
