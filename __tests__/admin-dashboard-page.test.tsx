@@ -21,19 +21,17 @@ beforeEach(() => {
       { bucket: "2026-07-21", cost_usd: 32.5 },
     ],
   });
-  // Le KPI "Coût" est lu depuis adminGetKpis (total_cost_display), pas
+  // Le KPI "Coût" est lu depuis adminGetKpis (total_cost_usd), pas
   // adminGetSpendSeries.total_usd — endpoint séparé ajouté avec le cockpit.
   vi.spyOn(apiClient, "adminGetKpis").mockResolvedValue({
     total_cost_usd: 42.5,
-    total_cost_display: 39.1,
-    display_currency: "EUR",
     run_count: 12,
     success_rate: 0.9,
     failure_rate: 0.1,
     avg_cost_per_run_usd: 3.5,
     avg_duration_ms: 45000,
-    mrr_eur: 500,
-    margin_display: 460.9,
+    mrr_usd: 500,
+    margin_usd: 460.9,
   });
   vi.spyOn(apiClient, "adminGetCostByModel").mockResolvedValue([]);
   vi.spyOn(apiClient, "adminGetCostByStep").mockResolvedValue([]);
@@ -48,7 +46,7 @@ describe("AdminDashboardPage", () => {
 
     await waitFor(() => expect(screen.getByText("4")).toBeInTheDocument());
     expect(screen.getByText("9")).toBeInTheDocument();
-    expect(screen.getByText("39.10 EUR")).toBeInTheDocument();
+    expect(screen.getByText("$42.5000")).toBeInTheDocument();
   });
 
   it("defaults to the 30j preset and fetches a 29-day-wide range", async () => {

@@ -9,8 +9,9 @@ import { getAdminApiKey } from "@/lib/session";
 import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
 
 const EMPTY_FORM: PlanPayload = {
-  name: "", monthly_price_eur: 0, forced_agent_choice: null,
+  name: "", monthly_price_usd: 0, forced_agent_choice: null,
   spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null,
+  max_projects: null,
 };
 
 function toNullableNumber(raw: string): number | null {
@@ -47,9 +48,10 @@ export default function AdminPlansPage() {
   function startEdit(plan: PlanOut) {
     setEditingId(plan.id);
     setForm({
-      name: plan.name, monthly_price_eur: plan.monthly_price_eur, forced_agent_choice: plan.forced_agent_choice,
+      name: plan.name, monthly_price_usd: plan.monthly_price_usd, forced_agent_choice: plan.forced_agent_choice,
       spec_max_budget_usd: plan.spec_max_budget_usd, plan_max_budget_usd: plan.plan_max_budget_usd,
       dev_max_budget_usd: plan.dev_max_budget_usd, monthly_max_budget_usd: plan.monthly_max_budget_usd,
+      max_projects: plan.max_projects,
     });
   }
 
@@ -116,6 +118,7 @@ export default function AdminPlansPage() {
               <th className="px-5 py-3 font-medium">Prix / mois</th>
               <th className="px-5 py-3 font-medium">Agent forcé</th>
               <th className="px-5 py-3 font-medium">Plafond mensuel</th>
+              <th className="px-5 py-3 font-medium">Projets max</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -123,12 +126,15 @@ export default function AdminPlansPage() {
             {plans.map((plan) => (
               <tr key={plan.id} className="border-b border-border last:border-0">
                 <td className="px-5 py-3.5 font-medium text-foreground">{plan.name}</td>
-                <td className="px-5 py-3.5 text-foreground-muted">{plan.monthly_price_eur}€</td>
+                <td className="px-5 py-3.5 text-foreground-muted">${plan.monthly_price_usd}</td>
                 <td className="px-5 py-3.5 text-foreground-muted">{plan.forced_agent_choice ?? "—"}</td>
-                <td className="px-5 py-3.5 font-mono text-foreground-muted">
-                  {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
-                </td>
-                <td className="px-5 py-3.5 text-right">
+                 <td className="px-5 py-3.5 font-mono text-foreground-muted">
+                   {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
+                 </td>
+                 <td className="px-5 py-3.5 text-foreground-muted">
+                   {plan.max_projects != null ? plan.max_projects : "illimité"}
+                 </td>
+                 <td className="px-5 py-3.5 text-right">
                   {confirmDeleteId === plan.id ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="text-xs text-foreground-muted">Confirmer ?</span>
@@ -191,12 +197,12 @@ export default function AdminPlansPage() {
               />
             </div>
             <div>
-              <label htmlFor="plan-price" className="mb-1.5 block text-sm font-medium text-foreground">Prix (€/mois)</label>
+              <label htmlFor="plan-price" className="mb-1.5 block text-sm font-medium text-foreground">Prix ($/mois)</label>
               <input
                 id="plan-price"
                 type="number"
-                value={form.monthly_price_eur}
-                onChange={(e) => setForm({ ...form, monthly_price_eur: Number(e.target.value) })}
+                value={form.monthly_price_usd}
+                onChange={(e) => setForm({ ...form, monthly_price_usd: Number(e.target.value) })}
                 className={adminInputClass}
               />
             </div>
@@ -212,6 +218,20 @@ export default function AdminPlansPage() {
                 <option value="aider">aider</option>
                 <option value="claude">claude</option>
               </select>
+            </div>
+            <div>
+              <label htmlFor="plan-max-projects" className="mb-1.5 block text-sm font-medium text-foreground">
+                Projets max <span className="text-foreground-subtle font-normal">(vide = illimité)</span>
+              </label>
+              <input
+                id="plan-max-projects"
+                type="number"
+                min="1"
+                step="1"
+                value={form.max_projects ?? ""}
+                onChange={(e) => setForm({ ...form, max_projects: toNullableNumber(e.target.value) })}
+                className={adminInputClass}
+              />
             </div>
             {BUDGET_FIELDS.map(([id, label, field]) => (
               <div key={id}>

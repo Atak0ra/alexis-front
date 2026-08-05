@@ -9,10 +9,10 @@ import {
 import {
   adminGetDashboardSummary, adminGetSpendSeries, adminGetKpis,
   adminGetCostByModel, adminGetCostByStep, adminGetSuccessByStep,
-  adminGetTopClients, adminGetRecentRuns,
+  adminGetTopClients, adminGetRecentRuns, adminGetActiveRuns,
   AdminDashboardSummary, AdminSpendSeries, AdminKpis,
   AdminCostByModelItem, AdminCostByStepItem, AdminSuccessByStepItem,
-  AdminTopClientItem, AdminRecentRun, AlexisApiError,
+  AdminTopClientItem, AdminRecentRun, AdminActiveRun, AlexisApiError,
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard } from "../_components/chrome";
@@ -43,11 +43,13 @@ function formatBucket(bucket: string, granularity: AdminSpendSeries["granularity
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 }
 
-function fmtCurrency(value: number, currency: string): string {
-  return `${value.toFixed(2)} ${currency}`;
+function fmtUsd(value: number | null | undefined, decimals = 2): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return `$${value.toFixed(decimals)}`;
 }
 
-function fmtPct(value: number): string {
+function fmtPct(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
   return `${(value * 100).toFixed(1)} %`;
 }
 
@@ -86,6 +88,7 @@ export default function AdminDashboardPage() {
   const [successByStep, setSuccessByStep] = useState<AdminSuccessByStepItem[]>([]);
   const [topClients, setTopClients] = useState<AdminTopClientItem[]>([]);
   const [recentRuns, setRecentRuns] = useState<AdminRecentRun[]>([]);
+  const [activeRuns, setActiveRuns] = useState<AdminActiveRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<AdminRecentRun | null>(null);
   const [preset, setPreset] = useState<Preset>("30d");
   const [customStart, setCustomStart] = useState(DEFAULT_RANGE.start);
@@ -136,11 +139,23 @@ export default function AdminDashboardPage() {
       .catch((err) => console.error("[admin-dashboard] recent runs failed", err));
   }, []);
 
+  // Runs en cours — polling toutes les 5 s.
+  useEffect(() => {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    const fetchActive = () => {
+      adminGetActiveRuns(apiKey)
+        .then(setActiveRuns)
+        .catch((err) => console.error("[admin-dashboard] active runs failed", err));
+    };
+    fetchActive();
+    const id = setInterval(fetchActive, 5000);
+    return () => clearInterval(id);
+  }, []);
+
   const chartData = spend
     ? spend.series.map((p) => ({ ...p, label: formatBucket(p.bucket, spend.granularity) }))
     : [];
-
-  const currency = kpis?.display_currency ?? "EUR";
 
   return (
     <div className="space-y-8">
@@ -183,20 +198,20 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard label="Clients" value={summary ? String(summary.client_count) : "—"} />
         <KpiCard label="Projets" value={summary ? String(summary.project_count) : "—"} />
-        <KpiCard label={`Coût (${currency})`} value={kpis ? fmtCurrency(kpis.total_cost_display, currency) : "—"} accent />
+        <KpiCard label="Coût (USD)" value={kpis ? fmtUsd(kpis.total_cost_usd, 4) : "—"} accent />
         <KpiCard label="Runs" value={kpis ? String(kpis.run_count) : "—"}
           sub={kpis ? `Succès ${fmtPct(kpis.success_rate)} · Échecs ${fmtPct(kpis.failure_rate)}` : undefined} />
-        <KpiCard label="MRR (€)" value={kpis ? `${kpis.mrr_eur} €` : "—"} />
-        <KpiCard label={`Marge est. (${currency})`}
-          value={kpis ? fmtCurrency(kpis.margin_display, currency) : "—"}
-          sub={kpis ? `Coût moy. $${kpis.avg_cost_per_run_usd.toFixed(4)}/run · ${fmtMs(kpis.avg_duration_ms)}` : undefined}
-          accent={kpis ? kpis.margin_display > 0 : false} />
+        <KpiCard label="MRR ($)" value={kpis ? fmtUsd(kpis.mrr_usd, 0) : "—"} />
+        <KpiCard label="Marge est. (USD)"
+          value={kpis ? fmtUsd(kpis.margin_usd, 2) : "—"}
+          sub={kpis ? `Coût moy. ${fmtUsd(kpis.avg_cost_per_run_usd, 4)}/run · ${fmtMs(kpis.avg_duration_ms)}` : undefined}
+          accent={kpis ? kpis.margin_usd > 0 : false} />
       </div>
 
       {/* ── Courbe dépenses + Donut modèles ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <AdminCard className="p-5 lg:col-span-2">
-          <p className="mb-4 text-sm font-semibold text-foreground">Dépenses dans le temps</p>
+          <p className="mb-4 text-sm font-semibold text-foreground">Dépenses dans le temps (USD interne)</p>
           <div className="h-64">
             {!spend ? (
               <div className="h-full animate-pulse rounded-lg bg-surface-sunken" />
@@ -212,7 +227,7 @@ export default function AdminDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#E4E4E7" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#71717A" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#71717A" }} axisLine={false} tickLine={false} width={45} />
-                  <Tooltip formatter={(v) => [`$${Number(v).toFixed(4)}`, "Coût"]} contentStyle={{ borderRadius: 12, borderColor: "#E4E4E7" }} />
+                  <Tooltip formatter={(v) => [`$${Number(v).toFixed(4)}`, "Coût USD"]} contentStyle={{ borderRadius: 12, borderColor: "#E4E4E7" }} />
                   <Area type="monotone" dataKey="cost_usd" stroke="#4F46E5" fill="url(#spendGrad)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -244,7 +259,9 @@ export default function AdminDashboardPage() {
       {/* ── Coût par step + Succès/échecs ── */}
       <div className="grid gap-6 lg:grid-cols-2">
         <AdminCard className="p-5">
-          <p className="mb-4 text-sm font-semibold text-foreground">Coût par step ($)</p>
+          <p className="mb-4 text-sm font-semibold text-foreground">
+            Coût par step (USD)
+          </p>
           <div className="h-56">
             {costByStep.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-foreground-muted">Aucune donnée</div>
@@ -292,7 +309,9 @@ export default function AdminDashboardPage() {
             <thead>
               <tr className="border-b border-border text-left text-xs text-foreground-subtle">
                 <th className="pb-2 font-medium">Email</th>
-                <th className="pb-2 text-right font-medium">Coût ($)</th>
+                <th className="pb-2 text-right font-medium">
+                  Coût ($)
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -310,6 +329,58 @@ export default function AdminDashboardPage() {
           </table>
         </AdminCard>
       )}
+
+      {/* ── Runs en cours ── */}
+      <AdminCard className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground">
+            Runs en cours
+            {activeRuns.length > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+                {activeRuns.length}
+              </span>
+            )}
+          </p>
+          <span className="text-xs text-foreground-muted">Rafraîchi toutes les 5 s</span>
+        </div>
+        {activeRuns.length === 0 ? (
+          <p className="py-4 text-center text-sm text-foreground-muted">Aucun run en cours</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-foreground-subtle">
+                  <th className="pb-2 font-medium">Ticket</th>
+                  <th className="pb-2 font-medium">Client</th>
+                  <th className="pb-2 font-medium">Projet</th>
+                  <th className="pb-2 font-medium">Step</th>
+                  <th className="pb-2 font-medium">Démarré</th>
+                  <th className="pb-2 font-medium">Container</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeRuns.map((r) => (
+                  <tr key={`${r.project_id}-${r.identifier}`} className="border-b border-border/50 last:border-0">
+                    <td className="py-2 font-mono text-xs text-foreground">{r.identifier}</td>
+                    <td className="py-2 text-foreground-muted">{r.client_email}</td>
+                    <td className="py-2 text-foreground-muted">{r.project_name}</td>
+                    <td className="py-2">
+                      <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">{r.step}</span>
+                    </td>
+                    <td className="py-2 text-xs text-foreground-muted">
+                      {r.started_at ? new Date(r.started_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—"}
+                    </td>
+                    <td className="py-2 font-mono text-xs text-foreground-muted">
+                      {r.container_id ? r.container_id.slice(0, 12) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminCard>
 
       {/* ── Derniers runs (aperçu) ── */}
       <AdminCard className="p-5">
@@ -330,7 +401,7 @@ export default function AdminDashboardPage() {
                 <th className="pb-2 font-medium">Client</th>
                 <th className="pb-2 font-medium">Step</th>
                 <th className="pb-2 font-medium">Statut</th>
-                <th className="pb-2 text-right font-medium">Coût ($)</th>
+                <th className="pb-2 text-right font-medium">Coût</th>
                 <th className="pb-2 font-medium">Date</th>
               </tr>
             </thead>
@@ -355,8 +426,10 @@ export default function AdminDashboardPage() {
                   <td className="py-2 text-foreground-muted">{r.client_email}</td>
                   <td className="py-2 text-foreground-muted">{r.step}</td>
                   <td className="py-2"><StatusBadge status={r.status} /></td>
-                  <td className="py-2 text-right font-mono text-xs">{r.cost_usd != null ? `$${r.cost_usd.toFixed(4)}` : "—"}</td>
-                  <td className="py-2 text-xs text-foreground-muted">{new Date(r.created_at).toLocaleDateString("fr-FR")}</td>
+                  <td className="py-2 text-right font-mono text-xs">
+                    {r.cost_usd != null ? `$${r.cost_usd.toFixed(4)}` : "—"}
+                  </td>
+                  <td className="py-2 text-xs text-foreground-muted">{new Date(r.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                 </tr>
               ))}
             </tbody>

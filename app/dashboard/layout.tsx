@@ -5,32 +5,39 @@ import { useRouter } from "next/navigation";
 import { getApiKey } from "@/lib/session";
 import { getMe, resendVerification } from "@/lib/api-client";
 import { AppSidebar } from "@/components/app-sidebar";
+import { NotificationBell } from "@/components/notification-bell";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [checked, setChecked] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
+  const { notifications, unreadCount, loading: notifLoading, markRead, markAllRead } =
+    useNotifications(apiKey);
+
   useEffect(() => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
+    const key = getApiKey();
+    if (!key) {
       router.replace("/login");
       return;
     }
+    setApiKey(key);
     setChecked(true);
     // Récupère le profil pour savoir si l'email est vérifié
-    getMe(apiKey)
+    getMe(key)
       .then((profile) => setEmailVerified(profile.email_verified))
       .catch(() => setEmailVerified(null)); // fail-open : on n'affiche pas le bandeau si /me échoue
   }, [router]);
 
   async function handleResend() {
-    const apiKey = getApiKey();
-    if (!apiKey) return;
+    const key = getApiKey();
+    if (!key) return;
     setResendState("sending");
     try {
-      await resendVerification(apiKey);
+      await resendVerification(key);
       setResendState("sent");
     } catch {
       setResendState("error");
@@ -83,6 +90,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         )}
+
+        {/* Barre supérieure avec la cloche */}
+        <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:px-6">
+          <NotificationBell
+            notifications={notifications}
+            unreadCount={unreadCount}
+            loading={notifLoading}
+            markRead={markRead}
+            markAllRead={markAllRead}
+          />
+        </div>
+
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>

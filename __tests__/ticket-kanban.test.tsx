@@ -233,14 +233,14 @@ describe("TicketKanban", () => {
         projectId="p1"
         onMoveIssue={vi.fn()}
         ticketsByIdentifier={{
-          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_display: 0.39, display_currency: "EUR" },
+          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_usd: 0.39 },
         }}
       />
     );
 
     const prLink = screen.getByRole("link", { name: /voir la pr/i });
     expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/9");
-    expect(screen.getByText("0.39 EUR")).toBeInTheDocument();
+    expect(screen.getByText("$0.3900")).toBeInTheDocument();
   });
 
   it("clicking the PR link does not navigate to the issue detail page", () => {
@@ -252,7 +252,7 @@ describe("TicketKanban", () => {
         projectId="p1"
         onMoveIssue={vi.fn()}
         ticketsByIdentifier={{
-          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_display: 0.39, display_currency: "EUR" },
+          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_usd: 0.39 },
         }}
       />
     );

@@ -49,8 +49,6 @@ const FAKE_TICKET: apiClient.TicketOut = {
   status: "in_progress",
   agent: "claude",
   cost_usd: 2.5,
-  cost_display: 2.3,
-  display_currency: "EUR",
   updated_at: "2026-07-10T00:00:00Z",
   pr_url: "https://github.com/acme/kara/pull/7",
   pr_title: "Fix pagination",
@@ -73,7 +71,7 @@ beforeEach(() => {
   vi.spyOn(apiClient, "getProjectContext").mockResolvedValue({ exists: true });
   vi.spyOn(apiClient, "getProjectStats").mockResolvedValue({
     resolved: 1, in_progress: 1, failed: 0,
-    total_cost_usd: 2.5, total_cost_display: 2.3, display_currency: "EUR",
+    total_cost_usd: 2.5,
   });
 });
 

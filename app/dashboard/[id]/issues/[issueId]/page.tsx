@@ -150,7 +150,7 @@ export default function IssueDetailPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-8">
+    <div className="mx-auto w-full max-w-[1600px] px-6 py-8">
       {issue === null || project === null ? (
         <div className="mt-6 space-y-4">
           <div className="h-8 w-2/3 animate-pulse rounded-lg bg-surface-sunken" />

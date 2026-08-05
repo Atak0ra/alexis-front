@@ -131,7 +131,7 @@ function ProjectCard({ project, stats }: { project: ProjectOut; stats: StatsStat
             <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-foreground-muted">Coût cumulé</span>
               <span className="font-mono text-sm font-semibold text-foreground">
-                {(stats.total_cost_display ?? 0).toFixed(2)} {stats.display_currency ?? "EUR"}
+                ${(stats.total_cost_usd ?? 0).toFixed(4)}
               </span>
             </div>
           </>
@@ -193,10 +193,10 @@ function MyPlanCard({ plan }: { plan: PlanPublicOut }) {
         <div>
           <p className="text-xs text-foreground-subtle">Mon plan</p>
           <p className="font-semibold text-foreground">{plan.display_name ?? plan.name}</p>
-          {plan.monthly_price_eur === 0 ? (
+          {plan.monthly_price_usd === 0 ? (
             <p className="text-xs text-foreground-muted">Gratuit</p>
           ) : (
-            <p className="text-xs text-foreground-muted">{plan.monthly_price_eur} € / mois</p>
+            <p className="text-xs text-foreground-muted">${plan.monthly_price_usd} / mois</p>
           )}
         </div>
       </div>
@@ -244,13 +244,12 @@ export default function DashboardPage() {
   const totalResolved = allStats.reduce((acc, s) => acc + s.resolved, 0);
   const totalInProgress = allStats.reduce((acc, s) => acc + s.in_progress, 0);
   const totalFailed = allStats.reduce((acc, s) => acc + s.failed, 0);
-  const totalCost = allStats.reduce((acc, s) => acc + (s.total_cost_display ?? 0), 0);
-  const displayCurrency = allStats[0]?.display_currency ?? "EUR";
+  const totalCost = allStats.reduce((acc, s) => acc + (s.total_cost_usd ?? 0), 0);
 
   const isFreePlan = plan?.name === "free";
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-8">
+    <div className="mx-auto w-full max-w-[1600px] px-6 py-8">
       {/* Bannière plan gratuit */}
       {isFreePlan && <FreePlanBanner />}
 
@@ -316,7 +315,7 @@ export default function DashboardPage() {
           />
           <KpiCard
             label="Coût total"
-            value={`${totalCost.toFixed(2)} ${displayCurrency}`}
+            value={`$${totalCost.toFixed(4)}`}
             color="brand"
             icon={
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

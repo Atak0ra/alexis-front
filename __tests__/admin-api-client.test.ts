@@ -48,13 +48,13 @@ describe("admin api-client", () => {
     expect(url).toContain("/admin/plans");
     expect(options.method ?? "GET").toBe("GET");
 
-    mockFetchOnce({ id: "p1", name: "enterprise", monthly_price_eur: 900, forced_agent_choice: null, spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null });
-    await adminCreatePlan("alx_admin_xxx", { name: "enterprise", monthly_price_eur: 900 });
+    mockFetchOnce({ id: "p1", name: "enterprise", monthly_price_usd: 900, forced_agent_choice: null, spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null });
+    await adminCreatePlan("alx_admin_xxx", { name: "enterprise", monthly_price_usd: 900 });
     [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(options.method).toBe("POST");
 
-    mockFetchOnce({ id: "p1", name: "enterprise", monthly_price_eur: 950, forced_agent_choice: null, spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null });
-    await adminUpdatePlan("alx_admin_xxx", "p1", { monthly_price_eur: 950 });
+    mockFetchOnce({ id: "p1", name: "enterprise", monthly_price_usd: 950, forced_agent_choice: null, spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null });
+    await adminUpdatePlan("alx_admin_xxx", "p1", { monthly_price_usd: 950 });
     [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/admin/plans/p1");
     expect(options.method).toBe("PATCH");

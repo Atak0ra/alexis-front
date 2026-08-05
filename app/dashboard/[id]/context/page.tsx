@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProject, getProjectContext, getProjectContextContent, AlexisApiError, type ProjectOut } from "@/lib/api-client";
+import { getProject, getProjectContext, getProjectContextContent, AlexisApiError, friendlyError, type ProjectOut } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import ProjectContextStep from "@/components/project-context-step";
 import MarkdownLite from "@/components/markdown-lite";
@@ -132,7 +132,7 @@ export default function ProjectContextPage() {
 
     getProject(apiKey, projectId)
       .then(setProject)
-      .catch((err) => setLoadError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
+      .catch((err) => setLoadError(friendlyError(err)));
 
     getProjectContext(apiKey, projectId)
       .then(({ exists }) => {

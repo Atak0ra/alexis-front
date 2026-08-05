@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getMe, deleteAccount, AlexisApiError, type ClientProfile } from "@/lib/api-client";
+import { getMe, deleteAccount, friendlyError, type ClientProfile } from "@/lib/api-client";
 import { getApiKey, clearApiKey } from "@/lib/session";
 
 export default function AccountSettingsPage() {
@@ -20,7 +20,7 @@ export default function AccountSettingsPage() {
     if (!apiKey) return;
     getMe(apiKey)
       .then(setProfile)
-      .catch((err) => setLoadError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
+      .catch((err) => setLoadError(friendlyError(err)));
   }, []);
 
   async function handleDelete() {
@@ -34,7 +34,7 @@ export default function AccountSettingsPage() {
       clearApiKey();
       router.push("/");
     } catch (err) {
-      setDeleteError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setDeleteError(friendlyError(err));
       setDeleting(false);
     }
   }
@@ -63,8 +63,7 @@ export default function AccountSettingsPage() {
               </h2>
               <p className="mt-2 text-sm text-danger/80">
                 Supprime définitivement ton compte : tous tes projets, tickets, l&apos;historique des runs
-                et les clés API chiffrées seront effacés, ainsi que le code cloné (volumes Docker) de tes
-                projets. <strong>Irréversible.</strong>
+                et l&apos;ensemble du code de tes projets seront <strong>définitivement effacés</strong>.
               </p>
 
               <div className="mt-4 space-y-3">
@@ -107,9 +106,9 @@ export default function AccountSettingsPage() {
                     {profile.plan.display_name ?? profile.plan.name}
                   </p>
                   <p className="mt-0.5 text-sm text-foreground-muted">
-                    {profile.plan.monthly_price_eur === 0
+                    {profile.plan.monthly_price_usd === 0
                       ? "Gratuit"
-                      : `${profile.plan.monthly_price_eur} € / mois`}
+                      : `$${profile.plan.monthly_price_usd} / mois`}
                   </p>
                   {profile.plan.description && (
                     <p className="mt-3 text-sm text-foreground-muted">{profile.plan.description}</p>

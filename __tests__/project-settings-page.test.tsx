@@ -57,7 +57,7 @@ beforeEach(() => {
     id: "client-1", email: "a@b.com", email_verified: true, github_username: null, forced_agent_choice: null,
     plan: {
       id: "plan-byok", name: "byok", display_name: "BYOK", description: null, features: null,
-      monthly_price_eur: 0, requires_own_key: true, max_members: 1, is_public: true, sort_order: 0,
+      monthly_price_usd: 0, requires_own_key: true, max_members: 1, is_public: true, sort_order: 0,
     },
   });
 });

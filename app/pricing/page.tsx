@@ -8,15 +8,15 @@ import { listPublicPlans, type PlanPublicOut } from "@/lib/api-client";
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
 function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: boolean }) {
-  const isFree = plan.monthly_price_eur === 0;
+  const isFree = plan.monthly_price_usd === 0;
   const isByok = plan.name === "byok";
   const isEntreprise = plan.name === "entreprise";
 
   const priceLabel = isFree
     ? "Gratuit"
     : isEntreprise
-    ? `À partir de ${plan.monthly_price_eur} € / mois`
-    : `${plan.monthly_price_eur} € / mois`;
+    ? `À partir de $${plan.monthly_price_usd} / mois`
+    : `$${plan.monthly_price_usd} / mois`;
 
   const ctaLabel = isByok
     ? "Commencer avec ma clé"

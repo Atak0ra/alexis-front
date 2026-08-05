@@ -214,9 +214,16 @@ export function AppSidebar() {
         titleId="logout-modal-title"
         maxWidth="max-w-sm"
       >
-        <p className="text-sm text-foreground-muted">
-          Voulez-vous vraiment vous déconnecter&nbsp;? Vous devrez ressaisir vos identifiants pour revenir.
-        </p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </span>
+          <p className="text-sm text-foreground-muted">
+            Tu devras ressaisir tes identifiants pour revenir.
+          </p>
+        </div>
         <ModalFooter className="flex justify-end gap-3">
           <button
             type="button"
@@ -230,7 +237,7 @@ export function AppSidebar() {
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
           >
             {loggingOut ? "Déconnexion…" : "Se déconnecter"}
           </button>

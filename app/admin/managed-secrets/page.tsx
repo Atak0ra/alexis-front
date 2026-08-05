@@ -5,6 +5,7 @@ import {
   adminListManagedSecrets,
   adminListPlans,
   adminUpdateManagedSecret,
+  adminUpdateManagedSecretModels,
   adminToggleManagedSecretActive,
   adminSetManagedSecretPlanIds,
   ManagedSecretOut,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
+import { Modal, ModalFooter } from "@/components/ui/modal";
 
 const LABELS: Record<string, { name: string; description: string }> = {
   anthropic:   { name: "Anthropic",       description: "Claude Code — modèles claude-*" },
@@ -28,101 +30,121 @@ const LABELS: Record<string, { name: string; description: string }> = {
   cohere:      { name: "Cohere",          description: "aider — cohere/command-r-plus…" },
 };
 
+type EmptyModels = { spec: string; plan: string; dev: string };
+const EMPTY_MODELS: EmptyModels = { spec: "", plan: "", dev: "" };
+
 export default function AdminManagedSecretsPage() {
   const [secrets, setSecrets] = useState<ManagedSecretOut[]>([]);
   const [plans, setPlans] = useState<PlanOut[]>([]);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [togglingKey, setTogglingKey] = useState<string | null>(null);
-  // Multi-select plans : clé en cours d'édition des plans liés
-  const [editingPlansKey, setEditingPlansKey] = useState<string | null>(null);
-  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
-  const [savingPlans, setSavingPlans] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+
+  // ── Modale de configuration (une seule, par provider) ──
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [modalValue, setModalValue] = useState("");
+  const [modalModels, setModalModels] = useState<EmptyModels>(EMPTY_MODELS);
+  const [modalPlanIds, setModalPlanIds] = useState<string[]>([]);
+  const [modalActive, setModalActive] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   function load() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
-    Promise.all([
-      adminListManagedSecrets(apiKey),
-      adminListPlans(apiKey),
-    ])
+    Promise.all([adminListManagedSecrets(apiKey), adminListPlans(apiKey)])
       .then(([s, p]) => {
         setSecrets(s);
         setPlans(p);
       })
-      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
+      .catch((err) => setListError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
       .finally(() => setLoading(false));
   }
 
   useEffect(load, []);
 
-  async function handleSave(key: string) {
-    const apiKey = getAdminApiKey();
-    if (!apiKey) return;
-    setError(null);
-    try {
-      await adminUpdateManagedSecret(apiKey, key, value.trim() || null);
-      setEditingKey(null);
-      setValue("");
-      load();
-    } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
-    }
+  function openModal(secret: ManagedSecretOut) {
+    setOpenKey(secret.key);
+    setModalValue("");
+    setModalModels(secret.models ? { ...EMPTY_MODELS, ...secret.models } : EMPTY_MODELS);
+    setModalPlanIds(secret.plan_ids ?? []);
+    setModalActive(secret.is_active);
+    setModalError(null);
   }
 
-  async function handleToggleActive(key: string) {
-    const apiKey = getAdminApiKey();
-    if (!apiKey) return;
-    setError(null);
-    setTogglingKey(key);
-    try {
-      const updated = await adminToggleManagedSecretActive(apiKey, key);
-      setSecrets((prev) => prev.map((s) => (s.key === key ? updated : s)));
-    } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
-    } finally {
-      setTogglingKey(null);
-    }
-  }
-
-  function openPlanEditor(secret: ManagedSecretOut) {
-    setEditingPlansKey(secret.key);
-    setSelectedPlanIds(secret.plan_ids ?? []);
+  function closeModal() {
+    if (saving) return;
+    setOpenKey(null);
   }
 
   function togglePlanId(planId: string) {
-    setSelectedPlanIds((prev) =>
-      prev.includes(planId) ? prev.filter((id) => id !== planId) : [...prev, planId]
-    );
+    setModalPlanIds((prev) => (prev.includes(planId) ? prev.filter((id) => id !== planId) : [...prev, planId]));
   }
 
-  async function handleSavePlans(key: string) {
+  async function handleSave() {
     const apiKey = getAdminApiKey();
-    if (!apiKey) return;
-    setError(null);
-    setSavingPlans(true);
+    if (!apiKey || !openKey) return;
+    const current = secrets.find((s) => s.key === openKey);
+    const modelsFilled = modalModels.spec.trim() && modalModels.plan.trim() && modalModels.dev.trim();
+
+    setModalError(null);
+    setSaving(true);
     try {
-      const updated = await adminSetManagedSecretPlanIds(apiKey, key, selectedPlanIds);
-      setSecrets((prev) => prev.map((s) => (s.key === key ? updated : s)));
-      setEditingPlansKey(null);
+      // 1. Clé API — uniquement si saisie (laisser vide = ne pas modifier).
+      if (modalValue.trim()) {
+        await adminUpdateManagedSecret(apiKey, openKey, modalValue.trim());
+      }
+      // 2. Modèles — l'API exige les 3 renseignés, on n'appelle donc que si complet.
+      if (modelsFilled) {
+        await adminUpdateManagedSecretModels(apiKey, openKey, {
+          spec: modalModels.spec.trim(),
+          plan: modalModels.plan.trim(),
+          dev: modalModels.dev.trim(),
+        });
+      }
+      // 3. Plans liés — toujours envoyé, remplace la liste complète (idempotent).
+      await adminSetManagedSecretPlanIds(apiKey, openKey, modalPlanIds);
+      // 4. Activation — uniquement si l'état désiré diffère de l'état courant.
+      if (current && modalActive !== current.is_active) {
+        await adminToggleManagedSecretActive(apiKey, openKey);
+      }
+      load();
+      setOpenKey(null);
     } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setModalError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
     } finally {
-      setSavingPlans(false);
+      setSaving(false);
     }
   }
+
+  async function handleRemoveValue() {
+    const apiKey = getAdminApiKey();
+    if (!apiKey || !openKey) return;
+    setModalError(null);
+    setSaving(true);
+    try {
+      await adminUpdateManagedSecret(apiKey, openKey, null);
+      setModalValue("");
+      load();
+      setOpenKey(null);
+    } catch (err) {
+      setModalError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const openSecret = secrets.find((s) => s.key === openKey) ?? null;
+  const openLabel = openKey ? LABELS[openKey] : null;
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground">Clés gérées</h1>
       <p className="mt-1 text-sm text-foreground-muted">
         Clés API des providers LLM utilisées pour les projets sans clé personnelle (BYOK).
-        Stockées chiffrées (Fernet/AES). Jamais affichées en clair une fois enregistrées.
+        Stockées de manière chiffrée et sécurisée. Jamais affichées en clair une fois enregistrées.
       </p>
 
-      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+      {listError && <p className="mt-4 text-sm text-danger">{listError}</p>}
 
       {loading && (
         <div className="mt-6 space-y-3">
@@ -136,10 +158,16 @@ export default function AdminManagedSecretsPage() {
         <div className="mt-6 space-y-3">
           {secrets.map((secret) => {
             const label = LABELS[secret.key];
-            const isToggling = togglingKey === secret.key;
             const linkedPlanNames = (secret.plan_ids ?? [])
               .map((id) => plans.find((p) => p.id === id)?.name ?? id)
               .join(", ");
+            const modelTags = secret.models
+              ? ([
+                  { step: "spec", model: secret.models.spec },
+                  { step: "plan", model: secret.models.plan },
+                  { step: "dev",  model: secret.models.dev },
+                ] as const).filter((m) => m.model)
+              : [];
 
             return (
               <AdminCard key={secret.key} className="p-5">
@@ -152,198 +180,184 @@ export default function AdminManagedSecretsPage() {
                       </span>
                       {secret.is_active ? (
                         <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                          ✓ ACTIF
+                          ✓ Actif
                         </span>
                       ) : secret.has_value ? (
                         <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                          ⏸ DÉSACTIVÉ
+                          ⏸ Désactivé
                         </span>
                       ) : (
                         <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-foreground-subtle">
-                          non configurée
+                          Non configurée
                         </span>
                       )}
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-subtle">
                       {label?.description ?? ""} — <code className="font-mono">{secret.env_var}</code>
                     </p>
-                    {secret.has_value && (
-                      <p className="mt-0.5 text-xs text-foreground-subtle">
-                        Mise à jour le {new Date(secret.updated_at).toLocaleString("fr-FR")}
-                      </p>
-                    )}
-                    {/* Plans liés */}
-                    {(secret.plan_ids ?? []).length > 0 && editingPlansKey !== secret.key && (
-                      <p className="mt-1 text-xs text-foreground-subtle">
-                        Plans liés :{" "}
-                        <span className="font-medium text-foreground">{linkedPlanNames}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    {/* Bouton Activer / Désactiver — visible seulement si une valeur est configurée */}
-                    {secret.has_value && editingKey !== secret.key && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(secret.key)}
-                        disabled={isToggling}
-                        className={
-                          secret.is_active
-                            ? "text-sm text-foreground-subtle hover:text-danger disabled:opacity-50"
-                            : "text-sm text-success hover:text-success/80 disabled:opacity-50"
-                        }
-                        title={secret.is_active ? "Désactiver ce provider" : "Activer ce provider"}
-                      >
-                        {isToggling
-                          ? "…"
-                          : secret.is_active
-                          ? "Désactiver"
-                          : "Activer"}
-                      </button>
-                    )}
-
-                    {/* Bouton Plans — toujours visible */}
-                    {editingKey !== secret.key && editingPlansKey !== secret.key && (
-                      <button
-                        type="button"
-                        onClick={() => openPlanEditor(secret)}
-                        className="text-sm text-foreground-subtle hover:text-foreground"
-                        title="Lier des plans à cette clé"
-                      >
-                        Plans
-                      </button>
-                    )}
-
-                    {editingKey !== secret.key && editingPlansKey !== secret.key && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingKey(secret.key);
-                          setValue("");
-                        }}
-                        className="text-sm text-brand hover:text-brand-hover"
-                      >
-                        {secret.has_value ? "Remplacer" : "Configurer"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Éditeur de clé API */}
-                {editingKey === secret.key && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="password"
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        placeholder="Nouvelle clé API…"
-                        className={`flex-1 ${adminInputClass}`}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSave(secret.key)}
-                        disabled={!value.trim()}
-                        className={adminButtonClass}
-                      >
-                        Enregistrer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingKey(null);
-                          setValue("");
-                        }}
-                        className={adminGhostButtonClass}
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                    {secret.has_value && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const apiKey = getAdminApiKey();
-                          if (!apiKey) return;
-                          setError(null);
-                          try {
-                            await adminUpdateManagedSecret(apiKey, secret.key, null);
-                            setEditingKey(null);
-                            setValue("");
-                            load();
-                          } catch (err) {
-                            setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
-                          }
-                        }}
-                        className="text-xs text-danger hover:underline"
-                      >
-                        Supprimer la clé existante
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Éditeur multi-select plans */}
-                {editingPlansKey === secret.key && (
-                  <div className="mt-4 space-y-3">
-                    <p className="text-xs font-medium text-foreground-subtle">
-                      Plans qui utilisent cette clé gérée :
-                    </p>
-                    {plans.length === 0 ? (
-                      <p className="text-xs text-foreground-subtle">
-                        Aucun plan configuré. Créez d&apos;abord des plans dans{" "}
-                        <a href="/admin/plans" className="text-brand hover:underline">
-                          Plans
-                        </a>
-                        .
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {plans.map((plan) => {
-                          const isSelected = selectedPlanIds.includes(plan.id);
-                          return (
-                            <button
-                              key={plan.id}
-                              type="button"
-                              onClick={() => togglePlanId(plan.id)}
-                              className={
-                                isSelected
-                                  ? "rounded-full border border-brand bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
-                                  : "rounded-full border border-border px-3 py-1 text-xs text-foreground-subtle hover:border-brand/50 hover:text-foreground"
-                              }
-                            >
-                              {isSelected ? "✓ " : ""}{plan.name}
-                            </button>
-                          );
-                        })}
+                    {modelTags.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {modelTags.map(({ step, model }) => (
+                          <span
+                            key={step}
+                            className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-sunken px-2 py-0.5 text-xs"
+                          >
+                            <span className="font-semibold uppercase text-foreground-subtle">{step}</span>
+                            <span className="font-mono text-foreground">{model}</span>
+                          </span>
+                        ))}
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleSavePlans(secret.key)}
-                        disabled={savingPlans}
-                        className={adminButtonClass}
-                      >
-                        {savingPlans ? "Enregistrement…" : "Enregistrer"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingPlansKey(null)}
-                        className={adminGhostButtonClass}
-                      >
-                        Annuler
-                      </button>
-                    </div>
+                    {linkedPlanNames && (
+                      <p className="mt-1 text-xs text-foreground-subtle">
+                        Plans liés : <span className="font-medium text-foreground">{linkedPlanNames}</span>
+                      </p>
+                    )}
                   </div>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => openModal(secret)}
+                    className={`shrink-0 ${secret.has_value ? adminGhostButtonClass : adminButtonClass}`}
+                  >
+                    {secret.has_value ? "Modifier" : "Configurer"}
+                  </button>
+                </div>
               </AdminCard>
             );
           })}
         </div>
       )}
+
+      {/* ── Modale de configuration : clé + modèles + plans + actif, en un seul endroit ── */}
+      <Modal
+        open={openKey !== null}
+        onClose={closeModal}
+        title={openLabel?.name ?? openKey ?? ""}
+        titleId="managed-secret-modal-title"
+        maxWidth="max-w-lg"
+      >
+        {openSecret && (
+          <div className="space-y-5">
+            {/* Clé API */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                Clé API
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="password"
+                  value={modalValue}
+                  onChange={(e) => setModalValue(e.target.value)}
+                  placeholder={openSecret.has_value ? "•••••• (laisser vide pour ne pas modifier)" : "Nouvelle clé API…"}
+                  className={`flex-1 ${adminInputClass}`}
+                  autoFocus
+                />
+                {openSecret.has_value && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveValue}
+                    disabled={saving}
+                    className="shrink-0 text-xs text-danger hover:underline disabled:opacity-50"
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Variable d&apos;environnement : <code className="font-mono">{openSecret.env_var}</code>
+              </p>
+            </div>
+
+            {/* Modèles par étape */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                Modèles par étape
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {(["spec", "plan", "dev"] as const).map((step) => (
+                  <div key={step}>
+                    <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-foreground-subtle">
+                      {step}
+                    </label>
+                    <input
+                      type="text"
+                      value={modalModels[step]}
+                      onChange={(e) => setModalModels((prev) => ({ ...prev, [step]: e.target.value }))}
+                      placeholder={step === "spec" ? `ex: ${openKey}/nom-du-modele` : ""}
+                      className={adminInputClass}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Les 3 étapes doivent être renseignées pour pouvoir activer ce provider.
+              </p>
+            </div>
+
+            {/* Plans liés */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-foreground-subtle">
+                Plans liés
+              </label>
+              {plans.length === 0 ? (
+                <p className="text-xs text-foreground-subtle">
+                  Aucun plan configuré. Créez d&apos;abord des plans dans{" "}
+                  <a href="/admin/plans" className="text-brand hover:underline">Plans</a>.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {plans.map((plan) => {
+                    const isSelected = modalPlanIds.includes(plan.id);
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => togglePlanId(plan.id)}
+                        className={
+                          isSelected
+                            ? "rounded-full border border-brand bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
+                            : "rounded-full border border-border px-3 py-1 text-xs text-foreground-subtle hover:border-brand/50 hover:text-foreground"
+                        }
+                      >
+                        {isSelected ? "✓ " : ""}{plan.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Les projets des clients sur ces plans (sans clé perso) utiliseront cette clé.
+              </p>
+            </div>
+
+            {/* Actif */}
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={modalActive}
+                onChange={(e) => setModalActive(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              />
+              <span className="text-sm font-medium text-foreground">Provider actif</span>
+            </label>
+            <p className="-mt-3 text-xs text-foreground-subtle">
+              Nécessite une clé API et les 3 modèles renseignés (ici, ou déjà enregistrés).
+            </p>
+
+            {modalError && <p className="text-sm text-danger">{modalError}</p>}
+          </div>
+        )}
+
+        <ModalFooter className="flex justify-end gap-3">
+          <button type="button" onClick={closeModal} disabled={saving} className={adminGhostButtonClass}>
+            Annuler
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving} className={adminButtonClass}>
+            {saving ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

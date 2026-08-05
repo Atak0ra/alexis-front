@@ -117,7 +117,7 @@ export default function AgentPage() {
                 {agentChoice === "claude" ? (
                   <FieldHint
                     title="Clé API Anthropic (Claude)"
-                    description="Votre clé API Anthropic commençant par sk-ant-. Alexis l'injecte dans le conteneur Docker qui exécute Claude pour traiter vos tickets."
+                    description="Votre clé API Anthropic commençant par sk-ant-. Alexis l'utilise dans un environnement isolé et sécurisé pour traiter vos tickets avec Claude."
                     href="https://console.anthropic.com/settings/keys"
                     hrefLabel="Créer une clé Anthropic →"
                   />
@@ -156,7 +156,7 @@ export default function AgentPage() {
                   </Label>
                   <FieldHint
                     title="Base URL de l'API"
-                    description="Laissez vide pour OpenAI. Pour OpenRouter : https://openrouter.ai/api/v1. Pour Groq : https://api.groq.com/openai/v1. Aider utilisera cette URL à la place de l'endpoint OpenAI par défaut."
+                    description="Laissez vide pour OpenAI. Pour OpenRouter : https://openrouter.ai/api/v1. Pour Groq : https://api.groq.com/openai/v1. Aider utilisera cette adresse à la place de l'adresse OpenAI par défaut."
                   />
                 </div>
                 <Input

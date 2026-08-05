@@ -17,7 +17,7 @@ import {
   listProjectReferences,
   uploadProjectReference,
   projectReferenceContentUrl,
-  AlexisApiError,
+  friendlyError,
   type ProjectOut,
   type ClientProfile,
   type ProjectReference,
@@ -148,7 +148,7 @@ export default function ProjectSettingsPage() {
         setForgeProvider(p.forge_provider);
       })
       .catch((err) =>
-        setLoadError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue")
+        setLoadError(friendlyError(err))
       );
 
     getProjectContext(apiKey, projectId)
@@ -252,7 +252,7 @@ export default function ProjectSettingsPage() {
       setAgentApiKey("");
       setForgeToken("");
     } catch (err) {
-      setSaveError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setSaveError(friendlyError(err));
     } finally {
       setSaving(false);
     }
@@ -268,7 +268,7 @@ export default function ProjectSettingsPage() {
       await purgeProject(apiKey, projectId);
       router.push("/dashboard");
     } catch (err) {
-      setPurgeError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setPurgeError(friendlyError(err));
       setPurging(false);
     }
   }
@@ -284,7 +284,7 @@ export default function ProjectSettingsPage() {
       if (!apiKey || !project) throw new Error("Session absente");
       await downloadProject(apiKey, projectId, project.name);
     } catch (err) {
-      setDownloadError(err instanceof AlexisApiError ? err.detail : "Erreur de téléchargement");
+      setDownloadError(friendlyError(err));
     } finally {
       setDownloading(false);
     }
@@ -302,7 +302,7 @@ export default function ProjectSettingsPage() {
       setTransferredTo(result.new_owner);
       setTransferConfirming(false);
     } catch (err) {
-      setTransferError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setTransferError(friendlyError(err));
     } finally {
       setTransferring(false);
     }
@@ -571,7 +571,7 @@ export default function ProjectSettingsPage() {
                   </div>
                   <SecretField
                     id="forge-token"
-                    label="Token forge"
+                    label="Clé d'accès (GitHub/GitLab)"
                     placeholder="ghp_… ou glpat-…"
                     value={forgeToken}
                     onChange={setForgeToken}
@@ -682,7 +682,7 @@ export default function ProjectSettingsPage() {
                 Zone de danger
               </h3>
               <p className="mt-2 text-sm text-danger/80">
-                La suppression est <strong>irréversible</strong>. Tous les tickets, l&apos;historique des runs et les clés API chiffrées seront définitivement supprimés. Le repo cloné (volume Docker) sera également effacé.
+                La suppression est <strong>irréversible</strong>. Tous les tickets, l&apos;historique des runs et le code du projet seront définitivement supprimés.
               </p>
 
               <div className="mt-4 space-y-3">

@@ -158,9 +158,9 @@ export default function AdminRunsPage() {
                     <th className="pb-2 font-medium">Step</th>
                     <th className="pb-2 font-medium">Statut</th>
                     <th className="pb-2 font-medium">Modèle</th>
-                    <th className="pb-2 text-right font-medium">Coût ($)</th>
+                    <th className="pb-2 text-right font-medium">Coût</th>
                     <th className="pb-2 text-right font-medium">Durée</th>
-                    <th className="pb-2 font-medium">Date</th>
+                    <th className="pb-2 pl-4 font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,7 +190,7 @@ export default function AdminRunsPage() {
                       </td>
                       <td className="py-2 text-right font-mono text-xs">{r.cost_usd != null ? `$${r.cost_usd.toFixed(4)}` : "—"}</td>
                       <td className="py-2 text-right text-xs text-foreground-muted">{r.duration_ms != null ? fmtMs(r.duration_ms) : "—"}</td>
-                      <td className="py-2 text-xs text-foreground-muted">{new Date(r.created_at).toLocaleDateString("fr-FR")}</td>
+                      <td className="py-2 pl-4 text-xs text-foreground-muted">{new Date(r.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                     </tr>
                   ))}
                 </tbody>

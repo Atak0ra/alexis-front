@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const SEEDED_PLAN: apiClient.PlanOut = {
-  id: "plan-standard", name: "standard", monthly_price_eur: 150, forced_agent_choice: null,
+  id: "plan-standard", name: "standard", monthly_price_usd: 150, forced_agent_choice: null,
   spec_max_budget_usd: 2, plan_max_budget_usd: 2, dev_max_budget_usd: 6, monthly_max_budget_usd: 75,
 };
 
@@ -24,13 +24,13 @@ describe("AdminPlansPage", () => {
   it("renders the plans table", async () => {
     render(<AdminPlansPage />);
     await waitFor(() => expect(screen.getByText("standard")).toBeInTheDocument());
-    expect(screen.getByText("150€")).toBeInTheDocument();
+    expect(screen.getByText("$150")).toBeInTheDocument();
     expect(screen.getByText("$75.00")).toBeInTheDocument();
   });
 
   it("creates a new plan from the form", async () => {
     const createSpy = vi.spyOn(apiClient, "adminCreatePlan").mockResolvedValue({
-      ...SEEDED_PLAN, id: "plan-new", name: "enterprise", monthly_price_eur: 900,
+      ...SEEDED_PLAN, id: "plan-new", name: "enterprise", monthly_price_usd: 900,
     });
 
     render(<AdminPlansPage />);
@@ -44,7 +44,7 @@ describe("AdminPlansPage", () => {
     await waitFor(() =>
       expect(createSpy).toHaveBeenCalledWith(
         "alx_admin_xxx",
-        expect.objectContaining({ name: "enterprise", monthly_price_eur: 900 })
+        expect.objectContaining({ name: "enterprise", monthly_price_usd: 900 })
       )
     );
   });

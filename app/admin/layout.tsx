@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAdminApiKey, getAdminApiKey } from "@/lib/session";
+import { Modal, ModalFooter } from "@/components/ui/modal";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Cockpit" },
@@ -57,13 +58,18 @@ function AdminNav({
         })}
       </nav>
 
-      <button
-        type="button"
-        onClick={onLogout}
-        className="mt-auto block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground-muted hover:bg-surface-sunken hover:text-foreground transition-colors"
-      >
-        Déconnexion
-      </button>
+      <div className="mt-auto border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:border-danger/30 hover:bg-danger-bg hover:text-danger"
+        >
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Se déconnecter
+        </button>
+      </div>
     </>
   );
 }
@@ -73,6 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     if (pathname === "/admin/login") {
@@ -118,7 +125,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-surface">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-surface-raised px-4 py-6">
-        <AdminNav pathname={pathname} onLogout={handleLogout} />
+        <AdminNav pathname={pathname} onLogout={() => setConfirmLogout(true)} />
       </aside>
 
       {/* ── Mobile drawer overlay ── */}
@@ -152,7 +159,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AdminNav
           pathname={pathname}
           onNavigate={() => setDrawerOpen(false)}
-          onLogout={handleLogout}
+          onLogout={() => {
+            setDrawerOpen(false);
+            setConfirmLogout(true);
+          }}
         />
       </aside>
 
@@ -176,6 +186,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
+
+      {/* Modale de confirmation de déconnexion */}
+      <Modal
+        open={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        title="Se déconnecter"
+        titleId="admin-logout-modal-title"
+        maxWidth="max-w-sm"
+      >
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </span>
+          <p className="text-sm text-foreground-muted">
+            Tu devras ressaisir tes identifiants pour revenir sur le cockpit.
+          </p>
+        </div>
+        <ModalFooter className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setConfirmLogout(false)}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
+          >
+            Se déconnecter
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

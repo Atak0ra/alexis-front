@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
           </p>
           <h1 className="mt-2 text-2xl font-bold text-foreground">Bon retour</h1>
           <p className="mt-1.5 text-sm text-foreground-muted">
-            Réservé aux comptes créés via <span className="font-mono">make create-admin</span>.
+            Connecte-toi pour accéder au cockpit d&apos;administration.
           </p>
         </div>
 

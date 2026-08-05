@@ -83,6 +83,15 @@ export function RunDetailModal({ run, onClose }: { run: AdminRecentRun; onClose:
             </pre>
           </section>
         )}
+
+        {run.stdout && (
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground-subtle">Logs agent</h3>
+            <pre className="max-h-96 overflow-y-auto rounded-xl bg-surface-sunken p-4 text-xs text-foreground-muted whitespace-pre-wrap break-words font-mono">
+              {run.stdout}
+            </pre>
+          </section>
+        )}
       </div>
 
       <ModalFooter>

@@ -30,6 +30,41 @@ export class AlexisApiError extends Error {
   }
 }
 
+/**
+ * Transforme une erreur API en message lisible pour un utilisateur non-technique.
+ * Préfère le message `detail` du serveur quand il est déjà en français et compréhensible,
+ * sinon retourne un message générique adapté au code HTTP.
+ */
+export function friendlyError(err: unknown): string {
+  if (!(err instanceof AlexisApiError)) {
+    return "Une erreur est survenue. Merci de réessayer.";
+  }
+  // Le serveur a renvoyé un message explicite → on l'affiche tel quel
+  if (err.detail && err.detail !== err.status.toString()) {
+    return err.detail;
+  }
+  switch (err.status) {
+    case 401:
+      return "Votre session a expiré. Veuillez vous reconnecter.";
+    case 403:
+      return "Vous n'avez pas accès à cette ressource.";
+    case 404:
+      return "Ressource introuvable.";
+    case 409:
+      return "Une action est déjà en cours. Veuillez patienter.";
+    case 422:
+      return "Les informations saisies sont invalides. Vérifiez le formulaire.";
+    case 429:
+      return "Trop de tentatives. Veuillez patienter quelques instants.";
+    case 500:
+    case 502:
+    case 503:
+      return "Une erreur est survenue côté serveur. Merci de réessayer.";
+    default:
+      return "Une erreur est survenue. Merci de réessayer.";
+  }
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -99,8 +134,6 @@ export interface ProjectStats {
   in_progress: number;
   failed: number;
   total_cost_usd: number;
-  total_cost_display: number;
-  display_currency: string;
 }
 
 // ─── Issues (tracker natif) ───────────────────────────────────────────────────
@@ -184,7 +217,7 @@ export interface PlanPublicOut {
   display_name: string | null;
   description: string | null;
   features: string[] | null;
-  monthly_price_eur: number;
+  monthly_price_usd: number;
   requires_own_key: boolean;
   max_members: number | null;
   is_public: boolean;
@@ -452,8 +485,6 @@ export interface TicketOut {
   status: "resolved" | "in_progress" | "failed";
   agent: string;
   cost_usd: number;
-  cost_display: number;
-  display_currency: string;
   updated_at: string;
   pr_url: string | null;
   pr_title: string | null;
@@ -908,22 +939,24 @@ export function adminDeleteClient(adminApiKey: string, clientId: string): Promis
 export interface PlanOut {
   id: string;
   name: string;
-  monthly_price_eur: number;
+  monthly_price_usd: number;
   forced_agent_choice: string | null;
   spec_max_budget_usd: number | null;
   plan_max_budget_usd: number | null;
   dev_max_budget_usd: number | null;
   monthly_max_budget_usd: number | null;
+  max_projects: number | null;
 }
 
 export interface PlanPayload {
   name: string;
-  monthly_price_eur: number;
+  monthly_price_usd: number;
   forced_agent_choice?: string | null;
   spec_max_budget_usd?: number | null;
   plan_max_budget_usd?: number | null;
   dev_max_budget_usd?: number | null;
   monthly_max_budget_usd?: number | null;
+  max_projects?: number | null;
 }
 
 export function adminListPlans(adminApiKey: string): Promise<PlanOut[]> {
@@ -967,6 +1000,8 @@ export interface ManagedSecretOut {
   updated_at: string;
   /** Plans liés à cette clé (M2M, migration 0022). Liste d'UUIDs. */
   plan_ids: string[];
+  /** Modèles LLM par step (spec/plan/dev) portés par cette clé gérée. */
+  models: { spec: string; plan: string; dev: string } | null;
 }
 
 export function adminListManagedSecrets(adminApiKey: string): Promise<ManagedSecretOut[]> {
@@ -976,12 +1011,28 @@ export function adminListManagedSecrets(adminApiKey: string): Promise<ManagedSec
 export function adminUpdateManagedSecret(
   adminApiKey: string,
   key: string,
-  value: string | null
+  value: string | null,
+  models?: { spec: string; plan: string; dev: string } | null
 ): Promise<ManagedSecretOut> {
   return request(`/admin/managed-secrets/${key}`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${adminApiKey}` },
-    body: JSON.stringify({ value }),
+    body: JSON.stringify({ value, ...(models !== undefined ? { models } : {}) }),
+  });
+}
+
+/** PUT /admin/managed-secrets/{key}/models — met à jour uniquement les modèles
+ * spec/plan/dev, sans toucher à la valeur de la clé (contrairement à
+ * adminUpdateManagedSecret, dont le champ `value` est obligatoire côté API). */
+export function adminUpdateManagedSecretModels(
+  adminApiKey: string,
+  key: string,
+  models: { spec: string; plan: string; dev: string }
+): Promise<ManagedSecretOut> {
+  return request(`/admin/managed-secrets/${key}/models`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify(models),
   });
 }
 
@@ -1037,15 +1088,13 @@ export function adminGetSpendSeries(adminApiKey: string, start: string, end: str
 
 export interface AdminKpis {
   total_cost_usd: number;
-  total_cost_display: number;
-  display_currency: string;
   run_count: number;
   success_rate: number;
   failure_rate: number;
   avg_cost_per_run_usd: number;
   avg_duration_ms: number;
-  mrr_eur: number;
-  margin_display: number;
+  mrr_usd: number;
+  margin_usd: number;
 }
 
 export function adminGetKpis(adminApiKey: string, start: string, end: string): Promise<AdminKpis> {
@@ -1102,6 +1151,23 @@ export function adminGetTopClients(adminApiKey: string, start: string, end: stri
   });
 }
 
+export interface AdminActiveRun {
+  identifier: string;
+  step: string;
+  container_id: string | null;
+  started_at: string | null;
+  client_email: string;
+  client_id: string;
+  project_name: string;
+  project_id: string;
+}
+
+export function adminGetActiveRuns(adminApiKey: string): Promise<AdminActiveRun[]> {
+  return request("/admin/dashboard/active-runs", {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
 export interface AdminRecentRun {
   id: string;
   identifier: string;
@@ -1116,6 +1182,7 @@ export interface AdminRecentRun {
   client_id: string;
   project_name: string;
   project_id: string;
+  stdout: string | null;
 }
 
 export interface AdminRecentRunsPage {
@@ -1163,26 +1230,6 @@ export function adminUpdateDefaultModels(adminApiKey: string, payload: Partial<A
   });
 }
 
-export interface AdminDisplayCurrency {
-  display_currency: string;
-}
-
-export function adminGetDisplayCurrency(adminApiKey: string): Promise<AdminDisplayCurrency> {
-  return request("/admin/settings/display-currency", { headers: { Authorization: `Bearer ${adminApiKey}` } });
-}
-
-export function adminUpdateDisplayCurrency(adminApiKey: string, display_currency: string): Promise<AdminDisplayCurrency> {
-  return request("/admin/settings/display-currency", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${adminApiKey}` },
-    body: JSON.stringify({ display_currency }),
-  });
-}
-
-export interface AdminFxRates {
-  fx_rates: Record<string, number>;
-}
-
 // ── Providers LLM ─────────────────────────────────────────────────────────────
 
 export interface AdminProviderItem {
@@ -1215,20 +1262,6 @@ export function adminUpdateProviderModel(adminApiKey: string, payload: AdminProv
   });
 }
 
-// ── Taux de change ─────────────────────────────────────────────────────────────
-
-export function adminGetFxRates(adminApiKey: string): Promise<AdminFxRates> {
-  return request("/admin/settings/fx-rates", { headers: { Authorization: `Bearer ${adminApiKey}` } });
-}
-
-export function adminUpdateFxRates(adminApiKey: string, fx_rates: Record<string, number>): Promise<AdminFxRates> {
-  return request("/admin/settings/fx-rates", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${adminApiKey}` },
-    body: JSON.stringify({ fx_rates }),
-  });
-}
-
 export interface AdminProjectToggle {
   project_id: string;
   is_active: boolean;
@@ -1238,5 +1271,58 @@ export function adminToggleProjectActive(adminApiKey: string, projectId: string)
   return request(`/admin/settings/projects/${projectId}/toggle-active`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+// ─── Backlog auto-généré ──────────────────────────────────────────────────────
+
+export interface BacklogTicketDraft {
+  title: string;
+  description: string;
+  labels: string[];
+}
+
+export interface BacklogDraftOut {
+  tickets: BacklogTicketDraft[];
+}
+
+export interface BacklogStatusOut {
+  status: "in_progress" | "draft_ready" | "done" | "failed" | null;
+  error?: string | null;
+}
+
+export function createBacklog(apiKey: string, projectId: string, brief: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}/backlog`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ brief }),
+  });
+}
+
+export function getBacklogStatus(apiKey: string, projectId: string): Promise<BacklogStatusOut> {
+  if (isLocalMode()) return Promise.resolve({ status: null });
+  return request(`/projects/${projectId}/backlog/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getBacklogDraft(apiKey: string, projectId: string): Promise<BacklogDraftOut> {
+  if (isLocalMode()) return Promise.resolve({ tickets: [] });
+  return request(`/projects/${projectId}/backlog/draft`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function commitBacklog(
+  apiKey: string,
+  projectId: string,
+  tickets: BacklogTicketDraft[]
+): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}/backlog/commit`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ tickets }),
   });
 }

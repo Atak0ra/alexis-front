@@ -8,6 +8,8 @@ export default function ContextPage() {
   const router = useRouter();
   const params = useSearchParams();
   const projectId = params.get("projectId");
+  // new=true → projet tout neuf (repo vide) → on enchaîne sur l'étape backlog
+  const isNew = params.get("new") === "true";
 
   useEffect(() => {
     if (!projectId) router.replace("/dashboard");
@@ -15,5 +17,19 @@ export default function ContextPage() {
 
   if (!projectId) return null;
 
-  return <ProjectContextStep projectId={projectId} />;
+  function handleContextDone() {
+    if (isNew) {
+      router.push(`/projects/new/backlog?projectId=${projectId}`);
+    } else {
+      router.push("/dashboard");
+    }
+  }
+
+  return (
+    <ProjectContextStep
+      projectId={projectId}
+      onDone={handleContextDone}
+      onSkip={() => router.push("/dashboard")}
+    />
+  );
 }

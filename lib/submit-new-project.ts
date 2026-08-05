@@ -10,7 +10,7 @@
  * Utilisé par repo/page.tsx (plan géré) et agent/page.tsx (plan BYOK).
  */
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { createProject, getProjectContext, AlexisApiError } from "@/lib/api-client";
+import { createProject, getProjectContext, friendlyError } from "@/lib/api-client";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, getDefaultModels } from "@/lib/project-defaults";
 
 export interface NewProjectDraftForSubmit {
@@ -84,10 +84,13 @@ export async function submitNewProject({
     if (exists) {
       router.push("/dashboard");
     } else {
-      router.push(`/projects/new/context?projectId=${project.id}`);
+      // new=true → projet sans code existant (hébergé ou repo vide) :
+      // après le contexte, on enchaîne sur l'étape backlog.
+      const newParam = draft.hosted ? "&new=true" : "";
+      router.push(`/projects/new/context?projectId=${project.id}${newParam}`);
     }
   } catch (err) {
-    onError?.(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    onError?.(friendlyError(err));
   } finally {
     onFinally?.();
   }

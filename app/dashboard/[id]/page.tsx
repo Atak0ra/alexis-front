@@ -16,6 +16,7 @@ import {
   deleteProject,
   uploadIssueAsset,
   AlexisApiError,
+  friendlyError,
   type ProjectOut,
   type ProjectStats,
   type Issue,
@@ -45,7 +46,7 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
       </div>
       <div className="rounded-xl border border-border bg-surface-raised p-4 text-center">
         <p className="font-mono text-3xl font-bold text-foreground">
-          {(stats.total_cost_display ?? 0).toFixed(2)} {stats.display_currency ?? "EUR"}
+          ${(stats.total_cost_usd ?? 0).toFixed(4)}
         </p>
         <p className="mt-1 text-xs font-medium text-foreground-muted">Coût cumulé</p>
       </div>
@@ -239,7 +240,7 @@ export default function ProjectDetailPage() {
     getProject(apiKey, projectId)
       .then(setProject)
       .catch((err) =>
-        setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue")
+        setError(friendlyError(err))
       );
 
     getProjectContext(apiKey, projectId)
@@ -263,7 +264,7 @@ export default function ProjectDetailPage() {
   for (const t of tickets) {
     ticketsByIdentifier[t.id] = {
       pr_url: t.pr_url, pr_title: t.pr_title,
-      cost_display: t.cost_display, display_currency: t.display_currency,
+      cost_usd: t.cost_usd,
     };
   }
 
