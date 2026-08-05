@@ -14,9 +14,8 @@ User feedback pinpointed three issues:
 Move from a single centered vertical stack to a two-column layout:
 
 - **Left rail** (compact, sticky, ~260px): 4 steps as dot + label only, no embedded content. `done`, `current`, and `attention` steps are clickable; `upcoming` is greyed out and inert. Clicking a step selects it and drives the right panel.
-- **Right panel** (flex-1, wide): content depends on the selected step's status:
-  - **Selected step is current/attention** (there is always at most one): two tabs, **Aperçu** (description, dates, attention warning if applicable) and **Discussion** (comment list + chat textarea + action buttons, or just the Relancer button on failure, or an "Aucune activité" placeholder — same conditions as today).
-  - **Selected step is done** (a past step): a simple "Terminé" summary card. No comment replay — `issue.comments` is a flat list for the whole issue with no per-step attribution or step-transition timestamps in the API today, so filtering comments by step would be fabricated precision. This is a known backend gap; out of scope here.
+- **Right panel** (flex-1, wide): every reachable step shows the same two tabs, **Aperçu** (description, dates, attention warning if applicable, plus a "Terminé" badge when the step is done) and **Discussion** (the full comment list — `issue.comments` is a flat, un-attributed list for the whole issue, shown as-is on every step rather than fabricating a per-step filter). The **action zone** (chat textarea + Discuter/Régénérer/Valider, or the Relancer button, or the "Aucune activité" placeholder) only renders when the selected step is the current/attention one — a past step shows its full history read-only, no actions.
+  - Revision 2026-08-05: the first version of this spec collapsed done steps into a bare "Terminé" summary with no detail. User feedback after using it: clicking through past steps must still show the history, not just the state — losing detail on click wasn't worth the cleaner card. Superseded by the always-show-history behavior above.
   - **Selected step is upcoming**: not reachable (rail item is inert), no panel state needed.
 
 Default selection on page load: the current/attention step (today's default focus).
