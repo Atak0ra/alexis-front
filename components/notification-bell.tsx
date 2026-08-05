@@ -4,6 +4,7 @@
  * NotificationBell — icône cloche avec badge de compteur non-lu.
  *
  * Clique → ouvre/ferme le NotificationPanel.
+ * Échap → ferme le panel et rend le focus à la cloche.
  * Le badge disparaît quand unreadCount === 0.
  */
 
@@ -29,8 +30,9 @@ export function NotificationBell({
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Fermer le panel si clic en dehors
+  // Fermer le panel si clic en dehors, ou sur Échap (avec retour du focus).
   useEffect(() => {
     if (!open) return;
     function handleClickOutside(e: MouseEvent) {
@@ -38,13 +40,24 @@ export function NotificationBell({
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         aria-label={
           unreadCount > 0
