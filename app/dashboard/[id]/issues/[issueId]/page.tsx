@@ -11,6 +11,7 @@ import {
   uploadIssueAsset,
   issueAssetContentUrl,
   AlexisApiError,
+  friendlyError,
   type ProjectOut,
   type Issue,
   type IssueAsset,
@@ -39,7 +40,7 @@ export default function IssueDetailPage() {
 
     getProject(apiKey, projectId)
       .then(setProject)
-      .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
+      .catch((err) => setError(friendlyError(err)));
 
     // Utilise getIssue (GET /issues/{id}) plutôt que listIssues + find :
     // - 404 propre si l'issue n'existe pas
@@ -50,7 +51,7 @@ export default function IssueDetailPage() {
         if (err instanceof AlexisApiError && err.status === 404) {
           setNotFound(true);
         } else {
-          setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+          setError(friendlyError(err));
         }
       });
 
@@ -149,7 +150,7 @@ export default function IssueDetailPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8">
+    <div className="mx-auto w-full max-w-6xl px-6 py-8">
       {issue === null || project === null ? (
         <div className="mt-6 space-y-4">
           <div className="h-8 w-2/3 animate-pulse rounded-lg bg-surface-sunken" />
