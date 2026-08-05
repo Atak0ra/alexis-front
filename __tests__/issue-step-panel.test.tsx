@@ -55,18 +55,41 @@ beforeEach(() => {
 });
 
 describe("IssueStepPanel", () => {
-  it("shows a plain Terminé summary for a done step, with no tabs or actions", () => {
+  it("still shows the Terminé badge, description and dates for a done step", () => {
     renderPanel(ANALYSIS_DONE, makeIssue({ state: "Dev" }));
 
-    expect(screen.getByText("Terminé")).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Aperçu" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Discuter" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("step-done-badge")).toHaveTextContent("Terminé");
+    expect(screen.getByRole("tab", { name: "Aperçu" })).toBeInTheDocument();
+    expect(screen.getByText("Le bouton suivant ne fonctionne pas sur mobile.")).toBeInTheDocument();
   });
 
-  it("shows the creation date on a done requested step's summary", () => {
+  it("shows no action buttons for a done step even when the underlying issue is in review", () => {
+    renderPanel(ANALYSIS_DONE, makeIssue({ state: "Spec Review" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Discussion" }));
+
+    expect(screen.queryByRole("button", { name: "Discuter" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Régénérer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Valider" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Relancer" })).not.toBeInTheDocument();
+  });
+
+  it("shows existing comments under the Discussion tab for a done step (full ticket history, not step-scoped)", () => {
+    renderPanel(
+      ANALYSIS_DONE,
+      makeIssue({
+        state: "Dev",
+        comments: [{ id: "c1", body: "Merci pour le retour", author: "Alexis", created_at: "2026-07-11T10:00:00Z" }],
+      })
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Discussion" }));
+
+    expect(screen.getByText("Merci pour le retour")).toBeInTheDocument();
+  });
+
+  it("shows the creation date on a done requested step's Aperçu tab", () => {
     renderPanel(REQUESTED_DONE, makeIssue({ state: "Dev" }));
 
-    expect(screen.getByText("Terminé")).toBeInTheDocument();
+    expect(screen.getByTestId("step-done-badge")).toBeInTheDocument();
     expect(screen.getByText(/Créée le/)).toBeInTheDocument();
   });
 

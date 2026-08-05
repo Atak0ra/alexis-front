@@ -54,33 +54,28 @@ describe("IssueTimeline", () => {
     expect(screen.getByText("Le bouton suivant ne fonctionne pas sur mobile.")).toBeInTheDocument();
   });
 
-  it("defaults to the last step's Terminé summary when the issue is fully done", () => {
+  it("defaults to the last step, marked done, when the issue is fully done", () => {
     render(
       <IssueTimeline issue={makeIssue({ state: "Done" })} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
 
     expect(screen.getByTestId("issue-step-done")).toHaveAttribute("data-status", "done");
-    expect(screen.getByText("Terminé", { selector: "p.font-semibold" })).toBeInTheDocument();
+    expect(screen.getByTestId("step-done-badge")).toBeInTheDocument();
   });
 
-  it("switches the panel content when a different step is selected", () => {
+  it("switches which step-specific details show when a different step is selected", () => {
     render(
-      <IssueTimeline
-        issue={makeIssue({ state: "Dev", description: "Description du dev" })}
-        states={DEFAULT_STATES}
-        projectId="p1"
-        apiKey="k1"
-        onIssueUpdated={vi.fn()}
-      />
+      <IssueTimeline issue={makeIssue({ state: "Dev" })} states={DEFAULT_STATES} projectId="p1" apiKey="k1" onIssueUpdated={vi.fn()} />
     );
 
-    expect(screen.getByText("Description du dev")).toBeInTheDocument();
+    // Development (current) selected by default: no creation date, no done badge.
+    expect(screen.queryByText(/Créée le/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("step-done-badge")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("issue-step-requested"));
 
-    expect(screen.queryByText("Description du dev")).not.toBeInTheDocument();
-    // Note: "Terminé" also appears as the rail's own step label, so scope to
-    // the panel's summary paragraph specifically.
-    expect(screen.getByText("Terminé", { selector: "p.font-semibold" })).toBeInTheDocument();
+    // Requested (done) now selected: creation date and done badge appear.
+    expect(screen.getByText(/Créée le/)).toBeInTheDocument();
+    expect(screen.getByTestId("step-done-badge")).toBeInTheDocument();
   });
 });

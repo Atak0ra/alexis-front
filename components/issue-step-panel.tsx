@@ -167,16 +167,10 @@ export default function IssueStepPanel({
     }
   }
 
-  if (step.status === "done") {
-    return (
-      <div className="rounded-xl border border-border bg-surface-raised p-4">
-        <p className="text-sm font-semibold text-foreground">Terminé</p>
-        {step.id === "requested" && (
-          <p className="mt-1 text-xs text-foreground-subtle">Créée le {formatDate(issue.created_at)}</p>
-        )}
-      </div>
-    );
-  }
+  const isActiveStep = step.status === "current" || step.status === "attention";
+  const showChat = isActiveStep && inReview;
+  const showRetry = isActiveStep && !inReview && !!retryTargetState;
+  const showPlaceholder = issue.comments.length === 0 && !showChat && !showRetry;
 
   return (
     <div className="rounded-xl border border-border bg-surface-raised">
@@ -192,6 +186,14 @@ export default function IssueStepPanel({
       <div role="tabpanel" className="p-4">
         {activeTab === "apercu" ? (
           <div className="space-y-3">
+            {step.status === "done" && (
+              <span
+                data-testid="step-done-badge"
+                className="inline-flex items-center rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-foreground-subtle"
+              >
+                Terminé
+              </span>
+            )}
             {step.status === "attention" && (
               <p className="text-xs font-medium text-warning">Légère itération en cours. Alexis ajuste le travail.</p>
             )}
@@ -226,7 +228,7 @@ export default function IssueStepPanel({
               </ul>
             )}
 
-            {inReview && (
+            {showChat && (
               <div className="flex flex-col gap-3">
                 <textarea
                   value={chatMessage}
@@ -276,7 +278,7 @@ export default function IssueStepPanel({
               </div>
             )}
 
-            {!inReview && retryTargetState && (
+            {showRetry && (
               <div className="flex flex-col gap-2">
                 {chatError && <p className="text-xs font-medium text-red-500">{chatError}</p>}
                 <button
@@ -291,7 +293,7 @@ export default function IssueStepPanel({
               </div>
             )}
 
-            {!inReview && !retryTargetState && issue.comments.length === 0 && (
+            {showPlaceholder && (
               <p className="text-xs text-foreground-subtle">Aucune activité pour l&apos;instant.</p>
             )}
           </div>
