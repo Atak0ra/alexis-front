@@ -100,11 +100,14 @@ export default function IssueDetailPage() {
   // rechargée manuellement (même bug que sur le Kanban projet).
   const { notifications } = useNotificationsContext();
   useEffect(() => {
+    if (!project) return;
     const latest = notifications.find((n) => n.project_id === projectId && n.issue_id === issueId);
-    if (latest) {
-      setIssue((prev) => (prev && prev.state !== latest.state ? { ...prev, state: latest.state } : prev));
-    }
-  }, [notifications, projectId, issueId]);
+    if (!latest) return;
+    // `latest.state` est la clé interne du workflow (ex: "spec_review"), pas
+    // le libellé affiché — on la résout via project.states (cf. page projet).
+    const label = project.states[latest.state] ?? latest.state;
+    setIssue((prev) => (prev && prev.state !== label ? { ...prev, state: label } : prev));
+  }, [notifications, projectId, issueId, project]);
 
   async function handleUploadAsset(file: File) {
     setUploadingAsset(true);

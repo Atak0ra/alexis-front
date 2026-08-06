@@ -279,7 +279,7 @@ describe("ProjectDetailPage — reconciliation Kanban / notifications", () => {
       project_id: "proj-1",
       issue_id: issueInTodo.id,
       issue_identifier: issueInTodo.identifier,
-      state: "Spec",
+      state: "spec", // clé interne du workflow, pas le libellé — résolu via project.states
       severity: "info",
       title: "KARA-1 : Spec en cours",
       body: "Alexis rédige la spec fonctionnelle.",

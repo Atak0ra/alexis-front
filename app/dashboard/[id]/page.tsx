@@ -267,7 +267,7 @@ export default function ProjectDetailPage() {
   // n'est pas rechargée manuellement.
   const { notifications } = useNotificationsContext();
   useEffect(() => {
-    if (notifications.length === 0) return;
+    if (notifications.length === 0 || !project) return;
     setIssues((prev) => {
       if (!prev) return prev;
       let changed = false;
@@ -275,15 +275,20 @@ export default function ProjectDetailPage() {
         // `notifications` est trié du plus récent au plus ancien — le premier
         // match est donc le dernier état connu pour ce ticket.
         const latest = notifications.find((n) => n.project_id === projectId && n.issue_id === issue.id);
-        if (latest && latest.state !== issue.state) {
+        if (!latest) return issue;
+        // `latest.state` est la clé interne du workflow (ex: "spec_review"),
+        // pas le libellé affiché sur la carte — on la résout via project.states,
+        // comme le fait déjà TicketKanban pour retrouver la colonne d'une issue.
+        const label = project.states[latest.state] ?? latest.state;
+        if (label !== issue.state) {
           changed = true;
-          return { ...issue, state: latest.state };
+          return { ...issue, state: label };
         }
         return issue;
       });
       return changed ? next : prev;
     });
-  }, [notifications, projectId]);
+  }, [notifications, projectId, project]);
 
   const ticketsByIdentifier: Record<string, TicketSummary> = {};
   for (const t of tickets) {
