@@ -96,62 +96,6 @@ const VALUE_PROPS = [
   },
 ] as const;
 
-// ─── Live pipeline preview ────────────────────────────────────────────────────
-
-function LivePipelinePreview() {
-  return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-modal">
-      {/* Window chrome */}
-      <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-4 py-3">
-        <div className="h-3 w-3 rounded-full bg-danger/60" />
-        <div className="h-3 w-3 rounded-full bg-warning/60" />
-        <div className="h-3 w-3 rounded-full bg-success/60" />
-        <span className="ml-3 font-mono text-xs text-foreground-muted">alexis · tableau de bord</span>
-      </div>
-
-      {/* Fake dashboard content */}
-      <div className="p-6">
-        {/* KPI row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-success-border bg-success-bg p-3 text-center">
-            <p className="text-2xl font-bold text-success">47</p>
-            <p className="text-xs text-success/70">Résolus</p>
-          </div>
-          <div className="rounded-xl border border-warning-border bg-warning-bg p-3 text-center">
-            <p className="text-2xl font-bold text-warning">3</p>
-            <p className="text-xs text-warning/70">En cours</p>
-          </div>
-          <div className="rounded-xl border border-border bg-surface-sunken p-3 text-center">
-            <p className="font-mono text-2xl font-bold text-foreground">131 €</p>
-            <p className="text-xs text-foreground-muted">Coût</p>
-          </div>
-        </div>
-
-        {/* Ticket list preview */}
-        <div className="mt-4 space-y-2">
-          {[
-            { id: "KARA-142", title: "Pagination côté serveur sur /admin/users", status: "resolved", cost: "3,15 €" },
-            { id: "KARA-145", title: "Webhooks GitHub pour les événements PR", status: "in_progress", cost: "1,10 €" },
-            { id: "SHOP-89", title: "Filtre par catégorie sur le catalogue", status: "resolved", cost: "2,39 €" },
-          ].map((t) => (
-            <div key={t.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2.5">
-              <div
-                className={cn(
-                  "h-2 w-2 shrink-0 rounded-full",
-                  t.status === "resolved" ? "bg-success" : "bg-warning animate-pulse"
-                )}
-              />
-              <span className="font-mono text-xs text-foreground-muted">{t.id}</span>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{t.title}</span>
-              <span className="font-mono text-xs font-semibold text-foreground-muted">{t.cost}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RootPage() {
@@ -162,25 +106,9 @@ export default function RootPage() {
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
-        {/* Background gradient */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79,70,229,0.12) 0%, transparent 70%)",
-          }}
-        />
-
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center px-6 pb-24 pt-20 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand-light px-4 py-1.5 text-xs font-semibold text-brand">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-            Agent de développement, pour solopreneurs et agences
-          </div>
-
           {/* Headline */}
-          <h1 className="mt-6 max-w-3xl text-5xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
+          <h1 className="max-w-3xl text-5xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
             Une idée.{" "}
             <span className="text-brand">Un projet livré.</span>
           </h1>
@@ -215,9 +143,10 @@ export default function RootPage() {
             Aucune carte bancaire requise · Démarrez en 5 minutes
           </p>
 
-          {/* Dashboard preview */}
-          <div className="mt-16 w-full max-w-2xl">
-            <LivePipelinePreview />
+          {/* Ticket ticker — un vrai identifiant + état, format des notifs produit */}
+          <div className="mt-12 inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 font-mono text-xs text-foreground-muted">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+            KARA-142 · Spec Review
           </div>
         </div>
       </section>

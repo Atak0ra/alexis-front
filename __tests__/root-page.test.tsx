@@ -9,28 +9,18 @@ describe("RootPage", () => {
     expect(screen.getByRole("heading", { name: /un projet livré/i })).toBeInTheDocument();
   });
 
-  it("shows the pipeline stages with descriptions", () => {
+  it("removes the generic audience badge from the hero", () => {
     render(<RootPage />);
-    // Stage labels
-    expect(screen.getAllByText("Todo").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Spec").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Dev").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Livraison").length).toBeGreaterThan(0);
-    // Stage descriptions
-    expect(screen.getByText(/prêt à être pris en charge/)).toBeInTheDocument();
-    expect(screen.getByText(/rédige une spécification/)).toBeInTheDocument();
-    expect(screen.getAllByText(/écrit le code/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/livré sur votre dépôt/)).toBeInTheDocument();
-    // Ticket preview
-    expect(screen.getByText("KARA-142")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/agent de développement, pour solopreneurs et agences/i)
+    ).not.toBeInTheDocument();
   });
 
-  it("shows the value-props section", () => {
+  it("shows a static ticket ticker instead of the fake dashboard screenshot", () => {
     render(<RootPage />);
-    expect(screen.getByText("Zéro configuration manuelle")).toBeInTheDocument();
-    expect(screen.getByText("Ticket → code testé → livré")).toBeInTheDocument();
-    expect(screen.getByText("Plusieurs projets, un seul tableau de bord")).toBeInTheDocument();
-    expect(screen.getByText("Coûts transparents et traçables")).toBeInTheDocument();
+    expect(screen.getByText("KARA-142 · Spec Review")).toBeInTheDocument();
+    // The fake browser-chrome preview (KPI row) is gone.
+    expect(screen.queryByText("Résolus")).not.toBeInTheDocument();
   });
 
   it("links Connexion to /login and CTA links to /login?mode=signup", () => {
