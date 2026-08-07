@@ -58,14 +58,14 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
 
 // ─── Types de demande ─────────────────────────────────────────────────────────
 
-export const ISSUE_TYPES = [
+const ISSUE_TYPES = [
   { value: "feature",     label: "Évolution",   Icon: Sparkles },
   { value: "bug",         label: "Bug",          Icon: Bug },
   { value: "improvement", label: "Amélioration", Icon: Wrench },
   { value: "question",    label: "Question",     Icon: MessageCircle },
 ] as const;
 
-export type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
+type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
 
 // ─── Modal nouveau ticket ─────────────────────────────────────────────────────
 
