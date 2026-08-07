@@ -33,4 +33,20 @@ describe("RootPage", () => {
       expect(link).toHaveAttribute("href", "/login?mode=signup");
     }
   });
+
+  it("shows the pipeline section with all 7 real stages and the human-validation gate", () => {
+    render(<RootPage />);
+    expect(screen.getByRole("heading", { name: /de l'idée au projet livré, en 7 étapes/i })).toBeInTheDocument();
+    expect(screen.getByText(/chaque projet est découpé en tickets/i)).toBeInTheDocument();
+    for (const label of ["Backlog", "Todo", "Spec", "Plan", "Dev", "To Merge", "Done"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    expect(screen.getAllByText("Vous validez avant la suite")).toHaveLength(4);
+  });
+
+  it("removes the old generic value-props grid", () => {
+    render(<RootPage />);
+    expect(screen.queryByText("Zéro configuration manuelle")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ticket → code testé → livré")).not.toBeInTheDocument();
+  });
 });
