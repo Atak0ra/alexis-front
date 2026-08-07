@@ -46,7 +46,8 @@ describe("AdminManagedSecretsPage", () => {
     render(<AdminManagedSecretsPage />);
     await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
 
-    expect(screen.getByText(/claude-sonnet-4-5 \/ claude-sonnet-4-5 \/ claude-sonnet-4-5/)).toBeInTheDocument();
+    // Les modèles sont rendus dans des éléments séparés (spec / plan / dev)
+    expect(screen.getAllByText("claude-sonnet-4-5").length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText("standard")).toBeInTheDocument();
   });
 

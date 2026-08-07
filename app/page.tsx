@@ -180,7 +180,7 @@ export default function RootPage() {
           </div>
 
           {/* Headline */}
-          <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-tight tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mt-6 max-w-3xl text-5xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
             Une idée.{" "}
             <span className="text-brand">Un projet livré.</span>
           </h1>

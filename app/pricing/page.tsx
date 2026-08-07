@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { listPublicPlans, type PlanPublicOut } from "@/lib/api-client";
+import { getApiKey } from "@/lib/session";
 
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
 
       {/* Price */}
       <div className="mt-6">
-        <span className="text-3xl font-extrabold text-foreground">{priceLabel}</span>
+        <span className="text-3xl font-bold text-foreground">{priceLabel}</span>
         {!isFree && !isEntreprise && (
           <span className="ml-1 text-sm text-foreground-subtle">HT</span>
         )}
@@ -157,8 +158,10 @@ function PlanSkeleton() {
 export default function PricingPage() {
   const [plans, setPlans] = useState<PlanPublicOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
+    setLoggedIn(!!getApiKey());
     listPublicPlans()
       .then(setPlans)
       .catch(() => setError("Impossible de charger les plans. Réessayez plus tard."));
@@ -169,7 +172,7 @@ export default function PricingPage() {
       <div className="mx-auto max-w-5xl">
         {/* Hero */}
         <div className="text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             Des plans pour chaque besoin
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-foreground-muted">
@@ -232,12 +235,17 @@ export default function PricingPage() {
           </dl>
         </div>
 
-        {/* Back to login */}
-        <div className="mt-10 text-center">
-          <Link href="/login" className="text-sm text-brand hover:underline">
-            ← Retour à la connexion
-          </Link>
-        </div>
+        {/* Back link — adapté selon l'état de session */}
+        {loggedIn !== null && (
+          <div className="mt-10 text-center">
+            <Link
+              href={loggedIn ? "/dashboard" : "/login"}
+              className="text-sm text-brand hover:underline"
+            >
+              {loggedIn ? "← Retour au tableau de bord" : "← Retour à la connexion"}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

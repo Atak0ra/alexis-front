@@ -5,7 +5,10 @@
  * - la construction du payload (champs BYOK envoyés uniquement si isByok)
  * - les modèles par défaut (vide en non-BYOK → le back applique ses propres
  *   défauts, cohérent avec le forçage Groq/aider côté serveur)
- * - la redirection post-création (getProjectContext → /dashboard ou /context)
+ * - la redirection post-création :
+ *     • repo avec code (exists=true)  → /projects/new/context (étape 4/4)
+ *     • repo vide    (exists=false)   → /projects/new/context?new=true (étape 4/5)
+ *       puis context → /projects/new/backlog (étape 5/5)
  *
  * Utilisé par repo/page.tsx (plan géré) et agent/page.tsx (plan BYOK).
  */
@@ -41,7 +44,11 @@ export interface SubmitNewProjectOptions {
 }
 
 /**
- * Crée le projet puis redirige vers /dashboard ou /projects/new/context.
+ * Crée le projet puis redirige vers l'étape Contexte.
+ *
+ * Règle de routage :
+ * - exists=false (repo vide) → context?new=true → backlog (wizard 5 étapes)
+ * - exists=true  (repo avec code) → context (wizard 4 étapes, pas de backlog)
  *
  * Règle BYOK :
  * - isByok=true  → envoie agent_choice, agent_api_key, agent_base_url, models
@@ -82,12 +89,13 @@ export async function submitNewProject({
 
     const { exists } = await getProjectContext(apiKey, project.id);
     if (exists) {
-      router.push("/dashboard");
+      // Repo avec code existant → étape Contexte seule (4 étapes au total).
+      // Le backlog n'est pas proposé : le code est déjà là.
+      router.push(`/projects/new/context?projectId=${project.id}`);
     } else {
-      // new=true → projet sans code existant (hébergé ou repo vide) :
-      // après le contexte, on enchaîne sur l'étape backlog.
-      const newParam = draft.hosted ? "&new=true" : "";
-      router.push(`/projects/new/context?projectId=${project.id}${newParam}`);
+      // Repo vide → étape Contexte (description obligatoire + cahier des charges
+      // optionnel), puis étape Backlog (5 étapes au total).
+      router.push(`/projects/new/context?projectId=${project.id}&new=true`);
     }
   } catch (err) {
     onError?.(friendlyError(err));

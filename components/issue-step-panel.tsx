@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Loader2, RefreshCw, SendHorizonal } from "lucide-react";
+import { CircleCheck, CircleX, Loader2, RefreshCw, SendHorizonal, TriangleAlert } from "lucide-react";
 import { getRetryTargetState, type StepState } from "@/lib/issue-steps";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,7 @@ import {
   type ChatStatus,
 } from "@/lib/api-client";
 import MarkdownLite from "@/components/markdown-lite";
+import { humanizeErrorComment } from "@/lib/humanize-comment";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", {
@@ -210,19 +211,57 @@ export default function IssueStepPanel({
             {issue.comments.length > 0 && (
               <ul className="space-y-3">
                 {issue.comments.map((c) => (
-                  <li
-                    key={c.id}
-                    className={cn(
-                      "rounded-lg p-3",
-                      c.author === "alexis" ? "bg-brand/10 border border-brand/20" : "bg-surface-sunken"
-                    )}
-                  >
-                    <p className="text-xs font-medium text-foreground-muted">
-                      {c.author === "alexis" ? "Alexis" : "Vous"} · {formatDate(c.created_at)}
-                    </p>
-                    <div className="mt-1 text-sm text-foreground">
-                      <MarkdownLite text={c.body} />
-                    </div>
+                  <li key={c.id}>
+                    {(() => {
+                      const humanized = c.author === "alexis" ? humanizeErrorComment(c.body) : null;
+                      if (humanized) {
+                        return (
+                          <div className={cn(
+                            "rounded-lg p-3 border",
+                            humanized.isFinal
+                              ? "bg-danger/5 border-danger/20"
+                              : "bg-warning/5 border-warning/20"
+                          )}>
+                            <p className="text-xs font-medium text-foreground-muted mb-2">
+                              Alexis · {formatDate(c.created_at)}
+                            </p>
+                            <p className={cn(
+                              "flex items-center gap-1.5 text-sm font-semibold",
+                              humanized.isFinal ? "text-danger" : "text-warning"
+                            )}>
+                              {humanized.isFinal
+                                ? <CircleX className="h-4 w-4 shrink-0" />
+                                : <TriangleAlert className="h-4 w-4 shrink-0" />}
+                              {humanized.title}
+                            </p>
+                            <p className="mt-1 text-sm text-foreground-muted">{humanized.hint}</p>
+                            {humanized.detail && (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-xs text-foreground-subtle hover:text-foreground transition-colors select-none">
+                                  Détails techniques
+                                </summary>
+                                <pre className="mt-1.5 overflow-x-auto rounded-lg bg-surface-sunken p-3 font-mono text-xs text-foreground-muted whitespace-pre-wrap break-words">
+                                  {humanized.detail}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className={cn(
+                          "rounded-lg p-3",
+                          c.author === "alexis" ? "bg-brand/10 border border-brand/20" : "bg-surface-sunken"
+                        )}>
+                          <p className="text-xs font-medium text-foreground-muted">
+                            {c.author === "alexis" ? "Alexis" : "Vous"} · {formatDate(c.created_at)}
+                          </p>
+                          <div className="mt-1 text-sm text-foreground">
+                            <MarkdownLite text={c.body} />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </li>
                 ))}
               </ul>

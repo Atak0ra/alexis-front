@@ -1,29 +1,173 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Bug,
+  CheckCircle2,
+  Code2,
+  FileText,
+  GitMerge,
+  Info,
+  Inbox,
+  ListTodo,
+  MessageCircle,
+  Ruler,
+  Sparkles,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Issue } from "@/lib/api-client";
+
+// ─── Tag de type de demande ───────────────────────────────────────────────────
+
+interface IssueTypeConfig {
+  label: string;
+  Icon: LucideIcon;
+  className: string;
+}
+
+const ISSUE_TYPE_MAP: Record<string, IssueTypeConfig> = {
+  feature:     { label: "Évolution",   Icon: Sparkles,       className: "bg-brand/10 text-brand" },
+  bug:         { label: "Bug",          Icon: Bug,            className: "bg-danger/10 text-danger" },
+  improvement: { label: "Amélioration", Icon: Wrench,         className: "bg-warning/15 text-warning" },
+  question:    { label: "Question",     Icon: MessageCircle,  className: "bg-surface-sunken text-foreground-muted" },
+};
+
+function IssueTypeTag({ labels }: { labels: string[] }) {
+  const typeLabel = labels.find((l) => l in ISSUE_TYPE_MAP);
+  if (!typeLabel) return null;
+  const { label, Icon, className } = ISSUE_TYPE_MAP[typeLabel];
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", className)}>
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+// ─── Tooltip stylé pour les en-têtes de colonne ───────────────────────────────
+
+function ColumnTooltip({ description }: { description: string }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label="En savoir plus sur cette étape"
+        aria-expanded={open}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="flex items-center text-foreground-muted/60 transition-colors hover:text-foreground-muted focus-visible:outline-none focus-visible:text-foreground-muted"
+      >
+        <Info className="h-3 w-3" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <span
+          role="tooltip"
+          className={cn(
+            "pointer-events-none absolute top-full left-1/2 z-50 mt-2 w-52 -translate-x-1/2",
+            "rounded-lg border border-border bg-surface-raised px-3 py-2 shadow-lg",
+            "text-[11px] leading-snug text-foreground-muted",
+          )}
+        >
+          {/* Flèche vers le haut */}
+          <span
+            aria-hidden="true"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-border"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[-1px] border-4 border-transparent border-b-surface-raised"
+          />
+          {description}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ─── Colonnes ─────────────────────────────────────────────────────────────────
 
 export interface TicketSummary {
   pr_url: string | null;
   pr_title: string | null;
   cost_usd: number;
+  /** Titre court humanisé de l'erreur (ex: "Incident technique temporaire") */
+  error_message: string | null;
+  /** Phrase d'explication client-friendly */
+  error_hint: string | null;
 }
 
 interface Column {
   key: string;
+  /** Libellé technique interne (fallback si states non défini) */
   label: string;
+  /** Libellé client-friendly affiché dans l'en-tête */
+  displayLabel: string;
+  /** Description affichée dans le tooltip */
+  description: string;
+  /** Icône Lucide de la colonne */
+  Icon: LucideIcon;
 }
 
 const COLUMNS: Column[] = [
-  { key: "backlog", label: "Backlog" },
-  { key: "todo", label: "Todo" },
-  { key: "spec", label: "Spec" },
-  { key: "plan", label: "Plan" },
-  { key: "dev", label: "Dev" },
-  { key: "to_merge", label: "To Merge" },
-  { key: "done", label: "Done" },
+  {
+    key: "backlog",
+    label: "Backlog",
+    displayLabel: "À planifier",
+    description: "Demandes reçues, pas encore priorisées.",
+    Icon: Inbox,
+  },
+  {
+    key: "todo",
+    label: "Todo",
+    displayLabel: "À faire",
+    description: "Prêtes à être traitées par Alexis.",
+    Icon: ListTodo,
+  },
+  {
+    key: "spec",
+    label: "Spec",
+    displayLabel: "Cadrage",
+    description: "Alexis rédige la spécification fonctionnelle.",
+    Icon: FileText,
+  },
+  {
+    key: "plan",
+    label: "Plan",
+    displayLabel: "Conception",
+    description: "Alexis établit le plan technique.",
+    Icon: Ruler,
+  },
+  {
+    key: "dev",
+    label: "Dev",
+    displayLabel: "Développement",
+    description: "Alexis code la fonctionnalité et propose les modifications pour relecture.",
+    Icon: Code2,
+  },
+  {
+    key: "to_merge",
+    label: "To Merge",
+    displayLabel: "Finalisation",
+    description: "Les modifications sont intégrées dans votre projet.",
+    Icon: GitMerge,
+  },
+  {
+    key: "done",
+    label: "Done",
+    displayLabel: "Terminé",
+    description: "Livré et fusionné avec succès.",
+    Icon: CheckCircle2,
+  },
 ];
 
 // Les sous-états review/failed n'ont pas leur propre colonne — ils restent
@@ -125,11 +269,16 @@ export default function TicketKanban({
           onDrop={(e) => handleDrop(e, col.key)}
           className="flex w-[85vw] shrink-0 snap-start flex-col rounded-xl bg-surface-sunken/40 p-2 sm:w-64 sm:snap-align-none"
         >
+          {/* En-tête de colonne */}
           <div className="mb-2 flex items-center justify-between px-1.5 py-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-              {states[col.key] ?? col.label}
-            </p>
-            <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] font-medium text-foreground-subtle">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <col.Icon className="h-3.5 w-3.5 shrink-0 text-foreground-muted" aria-hidden="true" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted truncate">
+                {col.displayLabel}
+              </p>
+              <ColumnTooltip description={col.description} />
+            </div>
+            <span className="ml-1 shrink-0 rounded-full bg-surface px-1.5 py-0.5 text-[11px] font-medium text-foreground-subtle">
               {byColumn[col.key].length}
             </span>
           </div>
@@ -157,12 +306,16 @@ export default function TicketKanban({
                   className="w-full cursor-pointer space-y-1.5 px-3 py-2.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:rounded-lg"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-mono text-[11px] text-foreground-subtle">{issue.identifier}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="font-mono text-[11px] text-foreground-subtle shrink-0">{issue.identifier}</p>
+                      <IssueTypeTag labels={issue.labels} />
+                    </div>
                     {/* Alternative au glisser-déposer — le drag HTML5 natif ne
                         fonctionne pas au toucher, et n'est pas accessible au
                         clavier/lecteur d'écran. Fonctionne partout, pas
                         seulement sur mobile. */}
                     <select
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       aria-label={`Déplacer ${issue.identifier}`}
                       value={col.key}
                       onClick={(e) => e.stopPropagation()}
@@ -174,7 +327,7 @@ export default function TicketKanban({
                     >
                       {COLUMNS.map((c) => (
                         <option key={c.key} value={c.key}>
-                          {states[c.key] ?? c.label}
+                          {c.displayLabel}
                         </option>
                       ))}
                     </select>
@@ -232,11 +385,25 @@ export default function TicketKanban({
                     </div>
                   )}
 
+                  {/* Erreur humanisée — visible uniquement sur les cartes en échec */}
+                  {isFailure && ticket?.error_message && (
+                    <div className="mt-1 rounded-md bg-danger/5 px-2 py-1.5">
+                      <p className="text-[11px] font-semibold text-danger leading-snug">
+                        {ticket.error_message}
+                      </p>
+                      {ticket.error_hint && (
+                        <p className="mt-0.5 text-[11px] text-foreground-subtle leading-snug">
+                          {ticket.error_hint}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {(ticket?.pr_url || (ticket && (ticket.cost_usd ?? 0) > 0)) && (
                     <div className="flex items-center gap-2 pt-0.5">
                       {ticket && (ticket.cost_usd ?? 0) > 0 && (
                         <span className="font-mono text-[11px] text-foreground-subtle">
-                          ${ticket.cost_usd.toFixed(4)}
+                          ${(ticket.cost_usd ?? 0).toFixed(4)}
                         </span>
                       )}
                       {ticket?.pr_url && (
@@ -248,7 +415,7 @@ export default function TicketKanban({
                           onClick={(e) => e.stopPropagation()}
                           className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
                         >
-                          Voir la PR ↗
+                          Voir les modifications ↗
                         </a>
                       )}
                     </div>

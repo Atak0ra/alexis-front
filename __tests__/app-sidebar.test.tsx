@@ -35,6 +35,29 @@ const FAKE_PROJECTS: apiClient.ProjectOut[] = [
   },
 ];
 
+const FAKE_PROJECTS_WITH_INACTIVE: apiClient.ProjectOut[] = [
+  ...FAKE_PROJECTS,
+  {
+    id: "proj-2",
+    name: "deleted-project",
+    repo_url: "https://github.com/acme/deleted.git",
+    is_hosted: false,
+    agent_choice: "claude",
+    agent_base_url: null,
+    has_agent_api_key: false,
+    issue_prefix: null,
+    forge_provider: "github",
+    has_forge_token: true,
+    states: DEFAULT_STATES,
+    trigger_states: DEFAULT_TRIGGER_STATES,
+    models: DEFAULT_MODELS,
+    code_review_enabled: true,
+    run_timeout_seconds: 1800,
+    is_active: false,
+    created_at: "2026-07-10T00:00:00Z",
+  },
+];
+
 beforeEach(() => {
   vi.restoreAllMocks();
   pushMock.mockClear();
@@ -118,18 +141,23 @@ describe("AppSidebar — project context state", () => {
   });
 });
 
-describe("AppSidebar — logout", () => {
-  it("revokes the key, clears the session, and redirects to the landing page", async () => {
-    const revokeSpy = vi.spyOn(apiClient, "revokeApiKey").mockResolvedValue(undefined);
-    const clearSpy = vi.spyOn(session, "clearApiKey");
+describe("AppSidebar — inactive projects", () => {
+  it("does not show inactive (soft-deleted) projects in the sidebar list", async () => {
+    vi.spyOn(apiClient, "listProjects").mockResolvedValue(FAKE_PROJECTS_WITH_INACTIVE);
 
     render(<AppSidebar />);
-    await waitFor(() => expect(screen.getAllByText(/Se déconnecter/).length).toBeGreaterThan(0));
 
-    fireEvent.click(screen.getAllByRole("button", { name: /se déconnecter/i })[0]);
+    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
+    expect(screen.queryByText("deleted-project")).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("alx_xxx", "key-1"));
-    expect(clearSpy).toHaveBeenCalled();
-    expect(pushMock).toHaveBeenCalledWith("/");
+  it("still shows active projects when inactive ones are present", async () => {
+    vi.spyOn(apiClient, "listProjects").mockResolvedValue(FAKE_PROJECTS_WITH_INACTIVE);
+
+    render(<AppSidebar />);
+
+    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
+    expect(screen.getAllByText("kara").length).toBeGreaterThan(0);
   });
 });
+

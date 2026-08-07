@@ -7,7 +7,6 @@ import {
   getBacklogStatus,
   getBacklogDraft,
   commitBacklog,
-  uploadProjectReference,
   AlexisApiError,
   type BacklogTicketDraft,
 } from "@/lib/api-client";
@@ -25,10 +24,6 @@ interface Props {
 
 type Phase = "form" | "polling" | "review" | "done" | "failed";
 
-const ALLOWED_TYPES = ["text/plain", "text/markdown", "application/pdf", "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
-
 export default function ProjectBacklogStep({
   projectId,
   onDone,
@@ -36,9 +31,6 @@ export default function ProjectBacklogStep({
   _pollIntervalMs = 2000,
 }: Props) {
   const router = useRouter();
-  const [brief, setBrief] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("form");
   const [tickets, setTickets] = useState<BacklogTicketDraft[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -88,42 +80,16 @@ export default function ProjectBacklogStep({
     }, _pollIntervalMs);
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFileError(null);
-    const f = e.target.files?.[0] ?? null;
-    if (!f) { setFile(null); return; }
-    if (f.size > MAX_FILE_SIZE) {
-      setFileError("Fichier trop volumineux (max 10 Mo).");
-      setFile(null);
-      return;
-    }
-    setFile(f);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleGenerate() {
     setError(null);
     setSubmitting(true);
     try {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Session absente");
-
-      // Upload du fichier si fourni — son contenu sera disponible comme référence projet
-      let fileBrief = "";
-      if (file) {
-        try {
-          await uploadProjectReference(apiKey, projectId, file);
-          fileBrief = `\n\n[Fichier joint : ${file.name}]`;
-        } catch {
-          // Upload échoué — on continue avec le brief texte seul
-        }
-      }
-
-      const finalBrief = (brief.trim() + fileBrief).trim();
-      if (!finalBrief) throw new Error("Veuillez fournir un brief ou un fichier.");
-
       setElapsedSec(0);
-      await createBacklog(apiKey, projectId, finalBrief);
+      // Le brief est vide : le job s'appuie sur context_content + references
+      // déjà fournis à l'étape Contexte.
+      await createBacklog(apiKey, projectId, "");
       setPhase("polling");
       startPolling();
     } catch (err) {
@@ -177,64 +143,26 @@ export default function ProjectBacklogStep({
           <>
             <h1 className="text-2xl font-bold text-foreground">Backlog de départ</h1>
             <p className="mt-2 text-sm text-foreground-muted">
-              Décris ton projet ou colle ton cahier des charges. Alexis génère un backlog de tickets
-              fins et actionnables que tu pourras relire et modifier avant de valider.
+              Alexis va générer un backlog de tickets fins et actionnables à partir du contexte
+              et du cahier des charges fournis à l&apos;étape précédente.
+              Tu pourras relire et modifier chaque ticket avant de valider.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {/* Texte libre */}
-              <div>
-                <label htmlFor="brief" className="mb-1.5 block text-sm font-medium text-foreground">
-                  Idée ou cahier des charges
-                </label>
-                <p className="mb-2 text-xs text-foreground-subtle">
-                  Décris les fonctionnalités souhaitées, la stack, les contraintes. Plus c&apos;est précis, meilleurs sont les tickets.
-                </p>
-                <textarea
-                  id="brief"
-                  value={brief}
-                  onChange={(e) => setBrief(e.target.value)}
-                  rows={8}
-                  placeholder="Ex : Application de gestion de tâches pour équipes. Authentification email/mot de passe. Tableau Kanban avec colonnes personnalisables. Notifications par email. API REST + frontend React..."
-                  className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
-                />
-              </div>
+            {error && <ErrorBanner message={error} />}
 
-              {/* Upload fichier */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Fichier (optionnel)
-                </label>
-                <p className="mb-2 text-xs text-foreground-subtle">
-                  PDF, Word, Markdown ou texte — max 10 Mo.
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.md,.txt,text/plain,text/markdown,application/pdf"
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-foreground-muted file:mr-4 file:rounded-lg file:border-0 file:bg-surface-raised file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-sunken"
-                />
-                {file && (
-                  <p className="mt-1 text-xs text-success">✓ {file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
-                )}
-                {fileError && <p className="mt-1 text-xs text-danger">{fileError}</p>}
-              </div>
-
-              {error && <ErrorBanner message={error} />}
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="submit"
-                  disabled={submitting || (!brief.trim() && !file)}
-                  className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-                >
-                  {submitting ? <Spinner label="Envoi…" /> : phase === "failed" ? "Réessayer" : "Générer le backlog"}
-                </button>
-                <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                  Passer cette étape →
-                </button>
-              </div>
-            </form>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={submitting}
+                className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+              >
+                {submitting ? <Spinner label="Envoi…" /> : phase === "failed" ? "Réessayer" : "Générer le backlog"}
+              </button>
+              <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
+                Passer cette étape →
+              </button>
+            </div>
           </>
         )}
 
@@ -249,7 +177,7 @@ export default function ProjectBacklogStep({
               </svg>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Alexis analyse ton cahier des charges et génère des tickets fins…
+                  Alexis analyse le contexte et génère des tickets fins…
                 </p>
                 <p className="mt-0.5 text-xs text-foreground-muted">
                   Tu pourras relire et modifier chaque ticket avant de valider. ({elapsedSec}s)

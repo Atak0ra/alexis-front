@@ -18,23 +18,25 @@ function renderStep(props: Partial<React.ComponentProps<typeof ProjectContextSte
   return render(<ProjectContextStep projectId="p1" _pollIntervalMs={0} {...props} />);
 }
 
-beforeEach(() => {
-  vi.restoreAllMocks();
-  pushMock.mockClear();
-  vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
-  vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "test-job-id" });
-  vi.spyOn(apiClient, "getRepoSummaryStatus").mockResolvedValue({
-    status: "done",
-    result: EMPTY_RESULT,
-  });
-});
-
 // The component checks GET /context/status on mount to resume an in-flight
 // job across a refresh. This is "nothing to resume" — chain it before a
 // test's own mockResolvedValue(...) (which governs the *polling* phase,
 // after submit) so the resume check doesn't short-circuit straight to a
 // terminal phase before the form ever renders.
 const NOTHING_TO_RESUME: apiClient.ProjectContextStatus = { status: null, error: null, phase: null };
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+  pushMock.mockClear();
+  vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+  // Par défaut : rien à reprendre → le composant passe directement à detectRepo
+  vi.spyOn(apiClient, "getProjectContextStatus").mockResolvedValue(NOTHING_TO_RESUME);
+  vi.spyOn(apiClient, "enqueueRepoSummary").mockResolvedValue({ job_id: "test-job-id" });
+  vi.spyOn(apiClient, "getRepoSummaryStatus").mockResolvedValue({
+    status: "done",
+    result: EMPTY_RESULT,
+  });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -43,7 +45,7 @@ afterEach(() => {
 /** Wait for the detecting phase to resolve and the form to appear */
 async function waitForForm() {
   await waitFor(() =>
-    expect(screen.getByLabelText("Décris ton projet en quelques phrases")).toBeInTheDocument(),
+    expect(screen.getByLabelText("Description du projet")).toBeInTheDocument(),
     { timeout: 3000 }
   );
 }
@@ -52,7 +54,7 @@ async function waitForForm() {
 async function submitBrief(brief = "Mon projet FastAPI.") {
   vi.spyOn(apiClient, "createProjectContext").mockResolvedValue(undefined);
   await waitForForm();
-  fireEvent.change(screen.getByLabelText("Décris ton projet en quelques phrases"), {
+  fireEvent.change(screen.getByLabelText("Description du projet"), {
     target: { value: brief },
   });
   await act(async () => {
@@ -72,7 +74,7 @@ describe("ProjectContextStep", () => {
   it("shows the form with textarea and Générer button (empty repo)", async () => {
     renderStep();
     await waitForForm();
-    expect(screen.getByLabelText("Décris ton projet en quelques phrases")).toBeInTheDocument();
+    expect(screen.getByLabelText("Description du projet")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Générer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /passer cette étape/i })).toBeInTheDocument();
   });
@@ -152,7 +154,7 @@ describe("ProjectContextStep", () => {
     );
     const draftTextarea = screen.getByLabelText(/Contenu de/) as HTMLTextAreaElement;
     expect(draftTextarea.value).toBe(DRAFT_CONTENT);
-    expect(screen.getByRole("button", { name: "Valider et committer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Valider" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Régénérer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /passer cette étape/i })).toBeInTheDocument();
   });
@@ -186,7 +188,7 @@ describe("ProjectContextStep", () => {
     fireEvent.click(screen.getByRole("button", { name: "Régénérer" }));
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Décris ton projet en quelques phrases")).toBeInTheDocument()
+      expect(screen.getByLabelText("Description du projet")).toBeInTheDocument()
     );
   });
 
@@ -274,8 +276,8 @@ describe("ProjectContextStep", () => {
 
     await waitFor(() => expect(screen.getByText("Contexte enregistré ✓")).toBeInTheDocument(), { timeout: 3000 });
 
-    expect(screen.getByRole("button", { name: "Fermer" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(screen.getByRole("button", { name: "Continuer →" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Continuer →" }));
     expect(onDone).toHaveBeenCalledOnce();
     expect(pushMock).not.toHaveBeenCalled();
   });
@@ -371,7 +373,7 @@ describe("ProjectContextStep", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
 
-    const ta = screen.getByLabelText("Décris ton projet en quelques phrases") as HTMLTextAreaElement;
+    const ta = screen.getByLabelText("Description du projet") as HTMLTextAreaElement;
     expect(ta.value).toBe("Mon projet.");
   });
 
@@ -394,7 +396,7 @@ describe("ProjectContextStep", () => {
         expect(screen.getByText("Génération en cours…")).toBeInTheDocument(),
         { timeout: 3000 }
       );
-      expect(screen.queryByLabelText("Décris ton projet en quelques phrases")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Description du projet")).not.toBeInTheDocument();
       expect(enqueueSpy).not.toHaveBeenCalled();
     });
 
@@ -505,7 +507,7 @@ describe("ProjectContextStep", () => {
       fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
       fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
       fireEvent.change(screen.getByLabelText("Stack"), { target: { value: "python_django" } });
-      fireEvent.change(screen.getByLabelText("Décris ton projet en quelques phrases"), {
+      fireEvent.change(screen.getByLabelText("Description du projet"), {
         target: { value: "Mon projet FastAPI." },
       });
 
@@ -526,7 +528,7 @@ describe("ProjectContextStep", () => {
       renderStep();
       await waitForForm();
 
-      fireEvent.change(screen.getByLabelText("Décris ton projet en quelques phrases"), {
+      fireEvent.change(screen.getByLabelText("Description du projet"), {
         target: { value: "Mon projet FastAPI." },
       });
       await act(async () => {

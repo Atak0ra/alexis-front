@@ -10,6 +10,7 @@ import {
   commitProjectContext,
   enqueueRepoSummary,
   getRepoSummaryStatus,
+  uploadProjectReference,
   AlexisApiError,
   type RepoSummaryResult,
   type ContextGenerationPhase,
@@ -26,10 +27,15 @@ interface Props {
   onSkip?: () => void;
   /** Intervalle de polling en ms. Défaut : 2000. Passer 0 dans les tests. */
   _pollIntervalMs?: number;
-  /** Rendu compact (pas de plein-écran ni "Étape 4 sur 4") pour un usage
+  /** Rendu compact (pas de plein-écran ni numérotation d'étape) pour un usage
    * intégré dans une autre page (settings, modal projet) plutôt que
    * l'assistant de création autonome. */
   embedded?: boolean;
+  /**
+   * Numérotation de l'étape affichée dans le wizard (ex: "4 sur 5").
+   * Ignoré si embedded=true. Défaut : "4 sur 4".
+   */
+  stepLabel?: string;
 }
 
 type Phase = "detecting" | "form" | "polling" | "review" | "done" | "failed";
@@ -39,6 +45,15 @@ const GENERATION_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] =
   { key: "running_agent", label: "Exécution de l'agent" },
   { key: "reading_result", label: "Lecture du résultat" },
 ];
+
+const ALLOWED_TYPES = [
+  "text/plain",
+  "text/markdown",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
 
 function PhaseChecklist({
   steps,
@@ -83,10 +98,19 @@ function PhaseChecklist({
   );
 }
 
-export default function ProjectContextStep({ projectId, onDone, onSkip, _pollIntervalMs = 2000, embedded = false }: Props) {
+export default function ProjectContextStep({
+  projectId,
+  onDone,
+  onSkip,
+  _pollIntervalMs = 2000,
+  embedded = false,
+  stepLabel = "4 sur 4",
+}: Props) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
   const [advancedBrief, setAdvancedBrief] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("detecting");
   const [repoSummary, setRepoSummary] = useState<RepoSummaryResult | null>(null);
   const [draftContent, setDraftContent] = useState("");
@@ -104,9 +128,6 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
   }, [phase]);
 
   // ── Reprendre un job en cours, ou détecter le repo si rien à reprendre ─────
-  // Résiste à un refresh en plein milieu : sans ça, rafraîchir pendant
-  // "detecting"/"polling" perdait tout l'état local et renvoyait l'utilisateur
-  // au formulaire vide, donnant l'impression que ça boucle indéfiniment.
   useEffect(() => {
     let cancelled = false;
 
@@ -142,10 +163,6 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       }
     }
 
-    // ── Charger le contenu déjà committé pour édition (bouton "Modifier" alors
-    // qu'un .alexis/project.md existe déjà) — lecture synchrone depuis la DB
-    // (Project.context_content, migration 0023) : réponse instantanée, plus de
-    // polling ni de boucle de retry.
     async function loadExistingContent(apiKey: string) {
       try {
         const { status: contentStatus, content } = await getProjectContextContent(apiKey, projectId);
@@ -158,7 +175,6 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
           }
         }
       } catch {
-        // 404 = pas de contexte en DB → formulaire de génération
         if (!cancelled) await detectRepo(apiKey);
       }
     }
@@ -238,7 +254,6 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
         }
         if (status === "draft_ready") {
           clearInterval(intervalRef.current!);
-          // Récupérer le draft pour prévisualisation
           try {
             const { content } = await getProjectContextDraft(apiKey, projectId);
             setDraftContent(content);
@@ -277,6 +292,26 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       setSubmitting(false);
     }
   }
+
+  // ── Valider le fichier sélectionné ────────────────────────────────────────
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null);
+    const f = e.target.files?.[0] ?? null;
+    if (!f) { setFile(null); return; }
+    if (f.size > MAX_FILE_SIZE) {
+      setFileError("Fichier trop volumineux (max 10 Mo).");
+      setFile(null);
+      return;
+    }
+    if (!ALLOWED_TYPES.includes(f.type) && !f.name.match(/\.(pdf|docx?|md|txt)$/i)) {
+      setFileError("Format non supporté. Utilisez PDF, Word, Markdown ou texte.");
+      setFile(null);
+      return;
+    }
+    setFile(f);
+  }
+
+  // ── Soumettre le brief → lancer la génération ─────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -286,9 +321,23 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       if (!apiKey) throw new Error("Session absente");
       setGenPhase(null);
       setElapsedSec(0);
+
+      // Upload du cahier des charges si fourni — disponible comme référence projet
+      // pour la génération du contexte ET du backlog ultérieur.
+      let fileMention = "";
+      if (file) {
+        try {
+          await uploadProjectReference(apiKey, projectId, file);
+          fileMention = `\n\n[Cahier des charges joint : ${file.name}]`;
+        } catch {
+          // Upload échoué — on continue avec le brief texte seul
+        }
+      }
+
       const finalBrief = advancedBrief
-        ? [advancedBrief, brief.trim()].filter(Boolean).join("\n\n")
-        : brief;
+        ? [advancedBrief, brief.trim() + fileMention].filter(Boolean).join("\n\n")
+        : (brief.trim() + fileMention).trim();
+
       await createProjectContext(apiKey, projectId, finalBrief);
       setPhase("polling");
       startPolling();
@@ -299,7 +348,6 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
     }
   }
 
-  // ── Soumettre le brief → lancer la génération ─────────────────────────────
   function handleRegenerate() {
     setDraftContent("");
     setError(null);
@@ -315,7 +363,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
   const hasCode = repoSummary?.has_code ?? false;
   const langBadges = repoSummary?.languages ?? [];
   const formTitle = hasCode ? "Contexte du projet" : "Décris ton nouveau projet";
-  const textareaLabel = hasCode ? "Contexte supplémentaire (optionnel)" : "Décris ton projet en quelques phrases";
+  const textareaLabel = hasCode ? "Contexte supplémentaire (optionnel)" : "Description du projet";
   const submitLabel = hasCode ? "Générer depuis le code" : "Générer";
 
   const formSubtitle = hasCode ? (
@@ -325,13 +373,14 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       {langBadges.length > 0 && <> ({langBadges.join(", ")})</>}{" "}
       dans votre repo. Il va lire votre code et générer{" "}
       <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>{" "}
-      automatiquement. Ajoutez un contexte supplémentaire si besoin.
+      automatiquement. Ajoutez un contexte supplémentaire ou un cahier des charges si besoin.
     </>
   ) : (
     <>
-      Votre repo est vide ou tout nouveau. Décrivez votre projet en quelques phrases (stack
-      souhaitée, objectif, contraintes) et Alexis génère{" "}
-      <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>.
+      Votre repo est vide ou tout nouveau. Décrivez votre projet (stack souhaitée, objectif,
+      contraintes) et joignez votre cahier des charges si vous en avez un. Alexis génère{" "}
+      <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>{" "}
+      et prépare le backlog de départ.
     </>
   );
 
@@ -346,7 +395,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
       <div className="w-full max-w-lg">
         {!embedded && (
           <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-brand">
-            Étape 4 sur 4
+            Étape {stepLabel}
           </p>
         )}
 
@@ -382,9 +431,13 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <ContextAdvancedOptions onChange={setAdvancedBrief} />
 
+              {/* Description texte */}
               <div>
                 <label htmlFor="brief" className="mb-1.5 block text-sm font-medium text-foreground">
                   {textareaLabel}
+                  {!hasCode && (
+                    <span className="ml-1 text-danger text-xs" aria-hidden="true">*</span>
+                  )}
                 </label>
                 {!hasCode && (
                   <p className="mb-2 text-xs text-foreground-subtle">
@@ -393,10 +446,11 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                 )}
                 <textarea
                   id="brief"
+                  aria-label={textareaLabel}
                   value={brief}
                   onChange={(e) => setBrief(e.target.value)}
                   rows={6}
-                  required={!hasCode}
+                  required={!hasCode && !file}
                   placeholder={
                     hasCode
                       ? "Ex : Ne pas modifier les migrations existantes. Tests obligatoires avant chaque PR."
@@ -406,12 +460,33 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                 />
               </div>
 
+              {/* Upload cahier des charges */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Cahier des charges{" "}
+                  <span className="font-normal text-foreground-subtle">(optionnel)</span>
+                </label>
+                <p className="mb-2 text-xs text-foreground-subtle">
+                  PDF, Word, Markdown ou texte — max 10 Mo. Alexis l&apos;utilisera pour générer le contexte et le backlog.
+                </p>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.md,.txt,text/plain,text/markdown,application/pdf"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-foreground-muted file:mr-4 file:rounded-lg file:border-0 file:bg-surface-raised file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-sunken"
+                />
+                {file && (
+                  <p className="mt-1 text-xs text-success">✓ {file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
+                )}
+                {fileError && <p className="mt-1 text-xs text-danger">{fileError}</p>}
+              </div>
+
               {error && <ErrorBanner message={error} />}
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="submit"
-                  disabled={submitting || (!hasCode && !brief.trim())}
+                  disabled={submitting || (!hasCode && !brief.trim() && !file)}
                   className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
                 >
                   {submitting ? <Spinner label="Envoi…" /> : phase === "failed" ? "Réessayer" : submitLabel}
@@ -525,7 +600,7 @@ export default function ProjectContextStep({ projectId, onDone, onSkip, _pollInt
                 onClick={() => { if (onDone) onDone(); else router.push("/dashboard"); }}
                 className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors"
               >
-                {onDone ? "Fermer" : "Aller au tableau de bord"}
+                {onDone ? "Continuer →" : "Aller au tableau de bord"}
               </button>
               <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
                 Passer cette étape →

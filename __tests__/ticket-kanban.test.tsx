@@ -49,7 +49,7 @@ describe("TicketKanban", () => {
   it("renders the 7 primary columns", () => {
     render(<TicketKanban issues={[]} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
 
-    for (const label of ["Backlog", "Todo", "Spec", "Plan", "Dev", "To Merge", "Done"]) {
+    for (const label of ["À planifier", "À faire", "Cadrage", "Conception", "Développement", "Finalisation", "Terminé"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
@@ -238,7 +238,7 @@ describe("TicketKanban", () => {
       />
     );
 
-    const prLink = screen.getByRole("link", { name: /voir la pr/i });
+    const prLink = screen.getByRole("link", { name: /voir les modifications/i });
     expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/9");
     expect(screen.getByText("$0.3900")).toBeInTheDocument();
   });
@@ -257,7 +257,7 @@ describe("TicketKanban", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("link", { name: /voir la pr/i }));
+    fireEvent.click(screen.getByRole("link", { name: /voir les modifications/i }));
     expect(push).not.toHaveBeenCalled();
   });
 });

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearApiKey, getApiKey, getKeyId } from "@/lib/session";
-import { getMe, listProjects, revokeApiKey, type ProjectOut } from "@/lib/api-client";
+import { getApiKey } from "@/lib/session";
+import { getMe, listProjects, type ProjectOut } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import NewProjectCTA from "@/components/new-project-cta";
-import { Modal, ModalFooter } from "@/components/ui/modal";
 
 function NavItem({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
@@ -29,6 +28,7 @@ function SidebarNav({
   const match = pathname.match(/^\/dashboard\/([^/]+)/);
   const activeProjectId = match ? match[1] : null;
   const activeProject = projects?.find((p) => p.id === activeProjectId) ?? null;
+  const activeProjects = projects?.filter((p) => p.is_active) ?? null;
 
   if (activeProjectId && activeProject) {
     const base = `/dashboard/${activeProject.id}`;
@@ -67,11 +67,11 @@ function SidebarNav({
         Mon compte
       </NavItem>
 
-      {projects && projects.length > 0 && (
+      {activeProjects && activeProjects.length > 0 && (
         <div className="mt-5">
           <p className="px-2.5 pb-1 text-xs font-semibold uppercase tracking-wide text-foreground-subtle">Projets</p>
           <div className="space-y-0.5">
-            {projects.map((p) => (
+            {activeProjects.map((p) => (
               <Link
                 key={p.id}
                 href={`/dashboard/${p.id}`}
@@ -101,41 +101,22 @@ function SidebarNav({
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [projects, setProjects] = useState<ProjectOut[] | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [confirmLogout, setConfirmLogout] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
     listProjects(apiKey).then(setProjects).catch(() => setProjects([]));
     getMe(apiKey)
-      .then((me) => { setEmail(me.email); setEmailVerified(me.email_verified); })
-      .catch((err) => console.error("[app-sidebar] getMe failed", err));
-  }, []);
+      .then((me) => { setEmailVerified(me.email_verified); })
+      .catch(() => {/* fail-open */});
+  }, [pathname]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
-
-  async function handleLogout() {
-    setLoggingOut(true);
-    const apiKey = getApiKey();
-    const keyId = getKeyId();
-    if (apiKey && keyId) {
-      try {
-        await revokeApiKey(apiKey, keyId);
-      } catch {
-        // Échec silencieux — on déconnecte quand même localement
-      }
-    }
-    clearApiKey();
-    router.push("/");
-  }
 
   return (
     <>
@@ -169,16 +150,6 @@ export function AppSidebar() {
           <div className="fixed inset-0 bg-black/30" onClick={() => setMobileOpen(false)} />
           <div className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface-raised py-5">
             <SidebarNav pathname={pathname} projects={projects} emailVerified={emailVerified} />
-            <div className="border-t border-border px-3 pt-4">
-              {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}
-              <button
-                type="button"
-                onClick={() => setConfirmLogout(true)}
-                className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-              >
-                Se déconnecter
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -193,56 +164,7 @@ export function AppSidebar() {
         </Link>
 
         <SidebarNav pathname={pathname} projects={projects} emailVerified={emailVerified} />
-
-        <div className="border-t border-border px-3 py-4">
-          {email && <p className="truncate px-2.5 pb-2 text-xs text-foreground-subtle">{email}</p>}
-          <button
-            type="button"
-            onClick={() => setConfirmLogout(true)}
-            className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-          >
-            Se déconnecter
-          </button>
-        </div>
       </aside>
-
-      {/* Modale de confirmation de déconnexion */}
-      <Modal
-        open={confirmLogout}
-        onClose={() => { if (!loggingOut) setConfirmLogout(false); }}
-        title="Se déconnecter"
-        titleId="logout-modal-title"
-        maxWidth="max-w-sm"
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </span>
-          <p className="text-sm text-foreground-muted">
-            Tu devras ressaisir tes identifiants pour revenir.
-          </p>
-        </div>
-        <ModalFooter className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setConfirmLogout(false)}
-            disabled={loggingOut}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground disabled:opacity-50"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover disabled:opacity-50"
-          >
-            {loggingOut ? "Déconnexion…" : "Se déconnecter"}
-          </button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 }

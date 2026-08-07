@@ -26,7 +26,8 @@ import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import AssetUploadGrid from "@/components/asset-upload-grid";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useNotificationsContext } from "@/lib/notifications-context";
-import { Plus } from "lucide-react";
+import { Bug, MessageCircle, Plus, Stethoscope, Sparkles, Wrench } from "lucide-react";
+import AuditPanel from "@/components/audit-panel";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,17 @@ function KpiStrip({ stats }: { stats: ProjectStats }) {
   );
 }
 
+// ─── Types de demande ─────────────────────────────────────────────────────────
+
+export const ISSUE_TYPES = [
+  { value: "feature",     label: "Évolution",   Icon: Sparkles },
+  { value: "bug",         label: "Bug",          Icon: Bug },
+  { value: "improvement", label: "Amélioration", Icon: Wrench },
+  { value: "question",    label: "Question",     Icon: MessageCircle },
+] as const;
+
+export type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
+
 // ─── Modal nouveau ticket ─────────────────────────────────────────────────────
 
 function NewIssueModal({
@@ -65,12 +77,13 @@ function NewIssueModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (title: string, description: string, files: File[]) => void;
+  onSubmit: (title: string, description: string, files: File[], issueType: IssueTypeValue) => void;
   submitting: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [issueType, setIssueType] = useState<IssueTypeValue>("feature");
   const titleId = useId();
   const descId = useId();
   const MAX_STAGED_FILES = 5;
@@ -81,6 +94,7 @@ function NewIssueModal({
       setTitle("");
       setDescription("");
       setStagedFiles([]);
+      setIssueType("feature");
     }
   }, [open]);
 
@@ -102,8 +116,30 @@ function NewIssueModal({
   }, [stagedPreviewUrls]);
 
   return (
-    <Modal open={open} onClose={onClose} title="Nouveau ticket" titleId="new-issue-title">
+    <Modal open={open} onClose={onClose} title="Nouvelle demande" titleId="new-issue-title">
       <div className="space-y-4">
+        {/* Sélecteur de type */}
+        <div>
+          <p className="mb-2 text-sm font-medium text-foreground">Type de demande</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Type de demande">
+            {ISSUE_TYPES.map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setIssueType(value)}
+                aria-pressed={issueType === value}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                  issueType === value
+                    ? "border-brand bg-brand text-white"
+                    : "border-border bg-surface text-foreground-muted hover:border-brand/40 hover:text-brand"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <label htmlFor={titleId} className="block text-sm font-medium text-foreground mb-1.5">
             Titre <span className="text-danger" aria-hidden="true">*</span>
@@ -165,7 +201,7 @@ function NewIssueModal({
         <button
           type="button"
           disabled={!title.trim() || submitting}
-          onClick={() => onSubmit(title.trim(), description.trim(), stagedFiles)}
+          onClick={() => onSubmit(title.trim(), description.trim(), stagedFiles, issueType)}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 disabled:opacity-50 transition-colors"
         >
           {submitting ? "Création…" : "Créer"}
@@ -232,6 +268,7 @@ export default function ProjectDetailPage() {
   const [showNewIssue, setShowNewIssue] = useState(false);
   const [creatingIssue, setCreatingIssue] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [showAudit, setShowAudit] = useState(false);
 
   const apiKey = getApiKey() ?? "";
 
@@ -293,16 +330,19 @@ export default function ProjectDetailPage() {
   const ticketsByIdentifier: Record<string, TicketSummary> = {};
   for (const t of tickets) {
     ticketsByIdentifier[t.id] = {
-      pr_url: t.pr_url, pr_title: t.pr_title,
+      pr_url: t.pr_url,
+      pr_title: t.pr_title,
       cost_usd: t.cost_usd,
+      error_message: t.error_message,
+      error_hint: t.error_hint,
     };
   }
 
-  async function handleCreateIssue(title: string, description: string, files: File[]) {
+  async function handleCreateIssue(title: string, description: string, files: File[], issueType: IssueTypeValue) {
     setCreatingIssue(true);
     setCreateError(null);
     try {
-      const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog" });
+      const issue = await createIssue(apiKey, projectId, { title, description, state: "Backlog", labels: [issueType] });
       // Le ticket est créé côté backend à ce stade : on le rend visible et on
       // ferme la modale immédiatement, avant de tenter les uploads. Un échec
       // d'upload d'un fichier joint ne doit ni annuler la création ni bloquer
@@ -335,6 +375,7 @@ export default function ProjectDetailPage() {
     try {
       await deleteProject(apiKey, projectId);
       router.push("/dashboard");
+      router.refresh();
     } catch {
       setDeactivating(false);
       setShowConfirmDeactivate(false);
@@ -425,6 +466,21 @@ export default function ProjectDetailPage() {
                   {project.agent_choice}
                 </span>
               )}
+              <div className="group relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAudit(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted hover:border-brand/40 hover:text-brand transition-colors"
+                >
+                  <Stethoscope className="h-4 w-4" aria-hidden="true" />
+                  Diagnostic
+                  <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-border bg-surface text-[10px] font-bold text-foreground-subtle" aria-hidden="true">?</span>
+                </button>
+                {/* Tooltip */}
+                <div role="tooltip" className="pointer-events-none absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-surface-raised px-3 py-2.5 text-xs text-foreground-muted shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
+                  Analyse votre projet sur la sécurité, la conformité RGPD et l&apos;accessibilité, puis génère des tickets prêts à traiter.
+                </div>
+              </div>
               {project.is_active && (
                 <button
                   type="button"
@@ -456,13 +512,20 @@ export default function ProjectDetailPage() {
                     Chargement…
                   </div>
                 )}
+                <a
+                  href={`/projects/new/backlog?projectId=${project.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-hover"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  Générer un backlog
+                </a>
                 <button
                   type="button"
                   onClick={() => setShowNewIssue(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-brand-hover"
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  Demander une modification
+                  Nouvelle demande
                 </button>
               </div>
             </div>
@@ -502,6 +565,17 @@ export default function ProjectDetailPage() {
         onConfirm={handleDeactivate}
         deactivating={deactivating}
       />
+
+      {/* ── Modal Diagnostic (audit) ── */}
+      <Modal
+        open={showAudit}
+        onClose={() => setShowAudit(false)}
+        title="Diagnostic"
+        titleId="audit-modal-title"
+        maxWidth="max-w-2xl"
+      >
+        <AuditPanel apiKey={apiKey} projectId={projectId} />
+      </Modal>
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { Bug, MessageCircle, Sparkles, Wrench, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
 import {
   getProject,
@@ -20,6 +22,27 @@ import { isLocalMode, getDemoIssueAssetDataUrl } from "@/lib/demo-data";
 import { useNotificationsContext } from "@/lib/notifications-context";
 import IssueTimeline from "@/components/issue-timeline";
 import AssetUploadGrid from "@/components/asset-upload-grid";
+
+// ─── Tag de type de demande ───────────────────────────────────────────────────
+
+interface IssueTypeConfig { label: string; Icon: LucideIcon; className: string }
+const ISSUE_TYPE_MAP: Record<string, IssueTypeConfig> = {
+  feature:     { label: "Évolution",   Icon: Sparkles,      className: "bg-brand/10 text-brand" },
+  bug:         { label: "Bug",          Icon: Bug,           className: "bg-danger/10 text-danger" },
+  improvement: { label: "Amélioration", Icon: Wrench,        className: "bg-warning/15 text-warning" },
+  question:    { label: "Question",     Icon: MessageCircle, className: "bg-surface-sunken text-foreground-muted" },
+};
+function IssueTypeTag({ labels }: { labels: string[] }) {
+  const key = labels.find((l) => l in ISSUE_TYPE_MAP);
+  if (!key) return null;
+  const { label, Icon, className } = ISSUE_TYPE_MAP[key];
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold", className)}>
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
 
 export default function IssueDetailPage() {
   const params = useParams<{ id: string; issueId: string }>();
@@ -174,7 +197,10 @@ export default function IssueDetailPage() {
       ) : (
         <>
           <h1 className="mt-4 text-2xl font-bold text-foreground">{issue.title}</h1>
-          <p className="mt-1 font-mono text-xs text-foreground-subtle">{issue.identifier}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="font-mono text-xs text-foreground-subtle">{issue.identifier}</p>
+            <IssueTypeTag labels={issue.labels} />
+          </div>
 
           <div className="mt-6">
             <AssetUploadGrid

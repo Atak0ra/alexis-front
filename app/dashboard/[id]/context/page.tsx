@@ -22,10 +22,11 @@ interface Section {
   body: string;
 }
 
-/** Découpe .alexis/project.md par titres ## — chaque section devient sa
- * propre carte plutôt qu'un seul flux markdown continu. Tout ce qui précède
- * le premier ## (le # Contexte projet du template) est ignoré : redondant
- * avec le H1 de la page. */
+/** Découpe .alexis/project.md par titres ## — chaque section garde son propre
+ * en-tête (icône + titre) au sein d'un même document qui se lit comme du
+ * texte continu, pas des cartes séparées. Tout ce qui précède le premier ##
+ * (le # Contexte projet du template) est ignoré : redondant avec le H1 de
+ * la page. */
 function splitSections(content: string): Section[] {
   const lines = content.split("\n");
   const sections: Section[] = [];
@@ -68,11 +69,11 @@ const DEFAULT_ICON = (
   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
 );
 
-function SectionCard({ section }: { section: Section }) {
+function SectionBlock({ section, first }: { section: Section; first: boolean }) {
   const icon = SECTION_ICONS[section.title.toLowerCase()] ?? DEFAULT_ICON;
   return (
-    <div className="rounded-xl border border-border bg-surface-raised p-5 sm:p-6">
-      <div className="mb-4 flex items-center gap-2.5">
+    <div className={first ? "" : "mt-8 border-t border-border pt-8"}>
+      <div className="mb-3 flex items-center gap-2.5">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10">
           <svg className="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             {icon}
@@ -266,13 +267,11 @@ export default function ProjectContextPage() {
 
             <div className="mt-8 border-t border-border" />
 
-            {/* Sections — une carte par ## du document, pas un flux markdown
-                continu : à cette largeur de page, un seul long paragraphe
-                central aurait perdu toute la place gagnée par le container
-                plein largeur. */}
-            <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-4">
-              {splitSections(content ?? "").map((section) => (
-                <SectionCard key={section.title} section={section} />
+            {/* Document continu — chaque ## garde un en-tête icône + titre,
+                mais tout se lit comme un seul texte, pas des cartes séparées. */}
+            <div className="mt-8 max-w-3xl">
+              {splitSections(content ?? "").map((section, i) => (
+                <SectionBlock key={section.title} section={section} first={i === 0} />
               ))}
             </div>
           </>

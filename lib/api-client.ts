@@ -488,7 +488,12 @@ export interface TicketOut {
   updated_at: string;
   pr_url: string | null;
   pr_title: string | null;
+  /** Titre court humanisé (ex: "Incident technique temporaire") */
   error_message: string | null;
+  /** Phrase d'explication client-friendly */
+  error_hint: string | null;
+  /** Stdout brut — pour le repliable "Détails techniques" */
+  error_detail: string | null;
 }
 
 export function listTickets(apiKey: string, projectId: string): Promise<TicketOut[]> {
@@ -846,6 +851,117 @@ export function commitProjectContext(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ content }),
+  });
+}
+
+// ─── Audit (Alexis Check) ─────────────────────────────────────────────────────
+
+export type AuditCategory = "security" | "rgpd" | "a11y";
+export type AuditStatus = "in_progress" | "ready" | "failed" | null;
+
+export interface AuditFinding {
+  category: AuditCategory;
+  title: string;
+  explanation: string;
+  risk: string;
+  ticket_titles: string[];
+  no_code: boolean;
+}
+
+export interface AuditStatusOut {
+  status: AuditStatus;
+  error?: string | null;
+}
+
+export interface AuditReport {
+  findings: AuditFinding[];
+}
+
+export interface AuditQuota {
+  used: number;
+  limit: number | null;
+}
+
+const DEMO_AUDIT_FINDINGS: AuditFinding[] = [
+  {
+    category: "security",
+    title: "Clés API exposées dans le code source",
+    explanation: "Des clés d'API sont stockées en dur dans le code, ce qui les expose en cas de fuite du dépôt.",
+    risk: "Accès non autorisé aux services tiers.",
+    ticket_titles: ["Déplacer les clés API dans des variables d'environnement"],
+    no_code: false,
+  },
+  {
+    category: "rgpd",
+    title: "Absence de politique de rétention des données",
+    explanation: "Les données utilisateurs ne sont pas supprimées automatiquement après une période d'inactivité.",
+    risk: "Non-conformité RGPD, risque de sanction CNIL.",
+    ticket_titles: ["Implémenter une politique de rétention des données"],
+    no_code: true,
+  },
+  {
+    category: "a11y",
+    title: "Images sans attribut alt",
+    explanation: "Plusieurs images du projet n'ont pas d'attribut alt, rendant le contenu inaccessible aux lecteurs d'écran.",
+    risk: "Exclusion des utilisateurs malvoyants.",
+    ticket_titles: ["Ajouter des attributs alt sur toutes les images"],
+    no_code: false,
+  },
+];
+
+export function createAudit(
+  apiKey: string,
+  projectId: string,
+  categories: AuditCategory[]
+): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}/audit`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ categories }),
+  });
+}
+
+export function getAuditStatus(
+  apiKey: string,
+  projectId: string
+): Promise<AuditStatusOut> {
+  if (isLocalMode()) return Promise.resolve({ status: null });
+  return request(`/projects/${projectId}/audit/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getAuditReport(
+  apiKey: string,
+  projectId: string
+): Promise<AuditReport> {
+  if (isLocalMode()) return Promise.resolve({ findings: DEMO_AUDIT_FINDINGS });
+  return request(`/projects/${projectId}/audit/report`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function getAuditQuota(
+  apiKey: string,
+  projectId: string
+): Promise<AuditQuota> {
+  if (isLocalMode()) return Promise.resolve({ used: 0, limit: 3 });
+  return request(`/projects/${projectId}/audit/quota`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function auditToTickets(
+  apiKey: string,
+  projectId: string,
+  findings: AuditFinding[]
+): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/projects/${projectId}/audit/to-tickets`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ findings }),
   });
 }
 

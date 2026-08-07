@@ -74,6 +74,9 @@ beforeEach(() => {
     resolved: 1, in_progress: 1, failed: 0,
     total_cost_usd: 2.5,
   });
+  // Audit — évite les appels réseau dans les tests non-audit
+  vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 0, limit: 3 });
+  vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: null });
 });
 
 describe("ProjectDetailPage — context banner", () => {
@@ -108,7 +111,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     render(<ProjectDetailPage />);
 
-    const prLink = await screen.findByRole("link", { name: /voir la pr/i });
+    const prLink = await screen.findByRole("link", { name: /voir les modifications/i });
     expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/7");
   });
 
@@ -123,7 +126,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     render(<ProjectDetailPage />);
 
-    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    const newTicketButton = await screen.findByRole("button", { name: /nouvelle demande/i });
     fireEvent.click(newTicketButton);
 
     fireEvent.change(screen.getByPlaceholderText(/corriger le bug/i), {
@@ -134,6 +137,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     await waitFor(() => expect(createSpy).toHaveBeenCalled());
     const payload = createSpy.mock.calls[0][2];
     expect(payload.state).toBe("Backlog");
+    expect(payload.labels).toEqual(["feature"]);
   });
 
   it("uploads staged mockup files after the ticket is created", async () => {
@@ -150,7 +154,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     render(<ProjectDetailPage />);
 
-    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    const newTicketButton = await screen.findByRole("button", { name: /nouvelle demande/i });
     fireEvent.click(newTicketButton);
 
     const file = new File(["data"], "mockup.png", { type: "image/png" });
@@ -175,7 +179,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     render(<ProjectDetailPage />);
 
     await waitFor(() => expect(screen.getByText("Corriger la pagination")).toBeInTheDocument());
-    expect(screen.queryByRole("link", { name: /voir la pr/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /voir les modifications/i })).not.toBeInTheDocument();
   });
 
   it("keeps the created ticket visible and closes the modal even when a staged upload fails", async () => {
@@ -192,7 +196,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     render(<ProjectDetailPage />);
 
-    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    const newTicketButton = await screen.findByRole("button", { name: /nouvelle demande/i });
     fireEvent.click(newTicketButton);
 
     const file = new File(["data"], "mockup.png", { type: "image/png" });
@@ -207,7 +211,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     // The ticket must show up in the visible list...
     await waitFor(() => expect(screen.getByText("New ticket")).toBeInTheDocument());
     // ...and the modal must close, even though the asset upload rejected.
-    await waitFor(() => expect(screen.queryByRole("heading", { name: /nouveau ticket/i })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: /nouvelle demande/i })).not.toBeInTheDocument());
     // No error banner should be shown for an upload-only failure.
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -226,7 +230,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
 
     render(<ProjectDetailPage />);
 
-    const newTicketButton = await screen.findByRole("button", { name: /demander une modification/i });
+    const newTicketButton = await screen.findByRole("button", { name: /nouvelle demande/i });
     fireEvent.click(newTicketButton);
 
     const fileInput = screen.getByLabelText(/ajouter un fichier/i);

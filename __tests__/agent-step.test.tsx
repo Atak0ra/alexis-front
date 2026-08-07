@@ -101,7 +101,9 @@ describe("AgentPage (step 2)", () => {
     fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
@@ -138,7 +140,9 @@ describe("AgentPage (step 2)", () => {
     // Ne pas toucher au champ clé API — le laisser vide
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
@@ -173,7 +177,9 @@ describe("AgentPage (step 2)", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /revue de code/i }));
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
@@ -209,7 +215,9 @@ describe("AgentPage (step 2)", () => {
     fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-proj-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
@@ -245,7 +253,7 @@ describe("AgentPage (step 2)", () => {
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() =>
-      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}&new=true`)
     );
   });
 
@@ -275,7 +283,9 @@ describe("AgentPage (step 2)", () => {
     fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
@@ -368,7 +378,9 @@ describe("AgentPage (step 2)", () => {
     fireEvent.change(screen.getByLabelText(/Clé API agent/i), { target: { value: "sk-ant-xxx" } });
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
+    );
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({ agent_choice: "claude", agent_api_key: "sk-ant-xxx" })

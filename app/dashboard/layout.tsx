@@ -6,6 +6,7 @@ import { getApiKey } from "@/lib/session";
 import { getMe, resendVerification } from "@/lib/api-client";
 import { AppSidebar } from "@/components/app-sidebar";
 import { NotificationBell } from "@/components/notification-bell";
+import { UserMenu } from "@/components/user-menu";
 import { NotificationsProvider, useNotificationsContext } from "@/lib/notifications-context";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -55,6 +56,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <NotificationsProvider apiKey={apiKey}>
       <DashboardShell
+        apiKey={apiKey}
         emailVerified={emailVerified}
         resendState={resendState}
         onResend={handleResend}
@@ -71,11 +73,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
  */
 function DashboardShell({
   children,
+  apiKey,
   emailVerified,
   resendState,
   onResend,
 }: {
   children: ReactNode;
+  apiKey: string | null;
   emailVerified: boolean | null;
   resendState: "idle" | "sending" | "sent" | "error";
   onResend: () => void;
@@ -119,8 +123,8 @@ function DashboardShell({
           </div>
         )}
 
-        {/* Barre supérieure avec la cloche */}
-        <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:px-6">
+        {/* Barre supérieure avec la cloche et le menu profil */}
+        <div className="flex items-center justify-end gap-1 border-b border-border px-4 py-2 lg:px-6">
           <NotificationBell
             notifications={notifications}
             unreadCount={unreadCount}
@@ -128,6 +132,7 @@ function DashboardShell({
             markRead={markRead}
             markAllRead={markAllRead}
           />
+          <UserMenu apiKey={apiKey} />
         </div>
 
         <main className="min-w-0 flex-1">{children}</main>

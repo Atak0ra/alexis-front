@@ -5,11 +5,8 @@
  *
  * - Affiche les 50 dernières notifications (les plus récentes en premier),
  *   regroupées par période (Aujourd'hui / Cette semaine / Plus ancien).
- * - Un liseré coloré par sévérité encode aussi l'état lu/non-lu (pleine
- *   opacité si non lu, estompé sinon) : un seul élément pour deux signaux.
  * - Cliquer sur une notif la marque comme lue.
- * - Cliquer sur l'identifiant de l'issue navigue vers l'issue (sans marquer
- *   comme lu implicitement autre chose que cette notif).
+ * - Cliquer sur l'identifiant de l'issue navigue vers l'issue.
  * - Bouton "Tout marquer comme lu" en haut à droite.
  * - Navigation clavier : ↑/↓ déplacent le focus entre les lignes, Entrée/
  *   Espace marque comme lu. Échap est géré par le parent (NotificationBell).
@@ -31,11 +28,11 @@ interface NotificationPanelProps {
 
 const SEVERITY_STYLES: Record<
   Notification["severity"],
-  { rail: string; chipBg: string; chipFg: string; Icon: typeof Info }
+  { Icon: typeof Info; iconCls: string }
 > = {
-  success: { rail: "bg-success", chipBg: "bg-success-bg", chipFg: "text-success", Icon: CheckCircle2 },
-  error: { rail: "bg-danger", chipBg: "bg-danger-bg", chipFg: "text-danger", Icon: XCircle },
-  info: { rail: "bg-brand", chipBg: "bg-brand-light", chipFg: "text-brand", Icon: Info },
+  success: { Icon: CheckCircle2, iconCls: "text-success" },
+  error:   { Icon: XCircle,      iconCls: "text-danger" },
+  info:    { Icon: Info,         iconCls: "text-foreground-muted" },
 };
 
 function relativeTime(iso: string): string {
@@ -64,7 +61,7 @@ function NotificationRow({
   onKeyDown: (e: React.KeyboardEvent) => void;
 }) {
   const unread = n.read_at === null;
-  const { rail, chipBg, chipFg, Icon } = SEVERITY_STYLES[n.severity];
+  const { Icon, iconCls } = SEVERITY_STYLES[n.severity];
   const issueHref = n.project_id && n.issue_id ? `/dashboard/${n.project_id}/issues/${n.issue_id}` : null;
 
   return (
@@ -73,9 +70,7 @@ function NotificationRow({
       role="button"
       tabIndex={focusable ? 0 : -1}
       aria-label={`${n.title}${unread ? " (non lu)" : ""}`}
-      onClick={() => {
-        if (unread) onMarkRead();
-      }}
+      onClick={() => { if (unread) onMarkRead(); }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -83,41 +78,41 @@ function NotificationRow({
         }
         onKeyDown(e);
       }}
-      className="group flex cursor-pointer items-stretch outline-none focus-visible:bg-surface-hover"
+      className="group flex cursor-pointer items-start gap-2.5 px-4 py-2.5 outline-none transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover"
     >
-      <span
-        aria-hidden="true"
-        className={["my-1.5 w-[3px] shrink-0 rounded-full transition-opacity", rail, unread ? "opacity-100" : "opacity-20"].join(" ")}
-      />
-      <div className="flex min-w-0 flex-1 items-start gap-2.5 py-2.5 pl-2.5 pr-4 transition-colors group-hover:bg-surface-hover">
-        <span
-          aria-hidden="true"
-          className={["mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md", chipBg, chipFg].join(" ")}
-        >
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className={["truncate text-sm", unread ? "font-semibold text-foreground" : "font-medium text-foreground-muted"].join(" ")}>
+      {/* Icône sobre — sans pastille de fond */}
+      <Icon className={["mt-0.5 h-4 w-4 shrink-0", iconCls].join(" ")} aria-hidden="true" />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className={["truncate text-sm leading-snug", unread ? "font-semibold text-foreground" : "font-medium text-foreground-muted"].join(" ")}>
             {n.title}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted">{n.body}</p>
-          <div className="mt-1 flex items-center gap-2">
-            {n.issue_identifier &&
-              (issueHref ? (
-                <Link
-                  href={issueHref}
-                  onClick={(e) => e.stopPropagation()}
-                  className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[10px] text-brand hover:underline"
-                >
-                  {n.issue_identifier}
-                </Link>
-              ) : (
-                <span className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[10px] text-foreground-muted">
-                  {n.issue_identifier}
-                </span>
-              ))}
-            <span className="text-[10px] text-foreground-muted">{relativeTime(n.created_at)}</span>
-          </div>
+          {/* Dot "non lu" */}
+          {unread && (
+            <span
+              aria-hidden="true"
+              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand"
+            />
+          )}
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted">{n.body}</p>
+        <div className="mt-1 flex items-center gap-2">
+          {n.issue_identifier &&
+            (issueHref ? (
+              <Link
+                href={issueHref}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[10px] text-brand hover:underline"
+              >
+                {n.issue_identifier}
+              </Link>
+            ) : (
+              <span className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[10px] text-foreground-muted">
+                {n.issue_identifier}
+              </span>
+            ))}
+          <span className="text-[10px] text-foreground-muted">{relativeTime(n.created_at)}</span>
         </div>
       </div>
     </div>
