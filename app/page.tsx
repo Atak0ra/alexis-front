@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import LandingNav from "@/components/landing-nav";
-import LandingPipelineRail from "@/components/landing-pipeline-rail";
+import LandingPipelineSteps from "@/components/landing-pipeline-steps";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -51,10 +51,10 @@ export default function RootPage() {
             Aucune carte bancaire requise · Démarrez en 5 minutes
           </p>
 
-          {/* Ticket ticker — un vrai identifiant + état, format des notifs produit */}
+          {/* Ticket ticker — un vrai identifiant + phase, vocabulaire public (cf. LandingPipelineSteps) */}
           <div className="mt-12 inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 font-mono text-xs text-foreground-muted">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-            KARA-142 · Spec Review
+            KARA-142 · Cadrage
           </div>
         </div>
       </section>
@@ -67,17 +67,17 @@ export default function RootPage() {
               Comment ça marche
             </p>
             <h2 className="mt-3 text-3xl font-bold text-foreground">
-              De l'idée au projet livré, en 7 étapes
+              De l'idée au projet livré, en 4 étapes
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-foreground-muted">
-              Chaque projet est découpé en tickets. Chaque ticket suit ce parcours,
-              du backlog à la livraison — et tu valides avant chaque étape qui
-              compte. Plusieurs projets, un seul tableau de bord.
+              Chaque projet est découpé en tickets. Chaque ticket suit ce parcours
+              — et vous validez avant chaque étape qui compte. Plusieurs projets,
+              un seul tableau de bord.
             </p>
           </div>
 
           <div className="mt-14">
-            <LandingPipelineRail />
+            <LandingPipelineSteps />
           </div>
         </div>
       </section>

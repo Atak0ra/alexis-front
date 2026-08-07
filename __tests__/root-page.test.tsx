@@ -18,7 +18,7 @@ describe("RootPage", () => {
 
   it("shows a static ticket ticker instead of the fake dashboard screenshot", () => {
     render(<RootPage />);
-    expect(screen.getByText("KARA-142 · Spec Review")).toBeInTheDocument();
+    expect(screen.getByText("KARA-142 · Cadrage")).toBeInTheDocument();
     // The fake browser-chrome preview (KPI row) is gone.
     expect(screen.queryByText("Résolus")).not.toBeInTheDocument();
   });
@@ -34,14 +34,24 @@ describe("RootPage", () => {
     }
   });
 
-  it("shows the pipeline section with all 7 real stages and the human-validation gate", () => {
+  it("shows the pipeline section with the 4 non-technical phases and the human-validation gate", () => {
     render(<RootPage />);
-    expect(screen.getByRole("heading", { name: /de l'idée au projet livré, en 7 étapes/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /de l'idée au projet livré, en 4 étapes/i })).toBeInTheDocument();
     expect(screen.getByText(/chaque projet est découpé en tickets/i)).toBeInTheDocument();
-    for (const label of ["Backlog", "Todo", "Spec", "Plan", "Dev", "To Merge", "Done"]) {
-      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    for (const label of ["Ton idée", "Cadrage", "Réalisation", "Livraison"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(screen.getAllByText("Vous validez avant la suite")).toHaveLength(4);
+    // No raw internal Kanban jargon (Spec/Plan/Dev/To Merge) on the public page.
+    for (const jargon of ["Spec", "Plan", "Dev", "To Merge", "Backlog", "Todo"]) {
+      expect(screen.queryByText(jargon)).not.toBeInTheDocument();
+    }
+    expect(screen.getAllByText("Vous validez avant la suite")).toHaveLength(3);
+  });
+
+  it("stays in the vous register throughout, no informal tu", () => {
+    render(<RootPage />);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\btu\b|\bton\b|\bta\b|\btes\b/i);
   });
 
   it("removes the old generic value-props grid", () => {
