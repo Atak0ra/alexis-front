@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import LandingPipelineRail, { PIPELINE_STAGES } from "@/components/landing-pipeline-rail";
 
 describe("LandingPipelineRail — static structure", () => {
@@ -33,5 +33,51 @@ describe("LandingPipelineRail — static structure", () => {
     expect(screen.getByTestId("stage-block-backlog")).toBeInTheDocument();
     expect(screen.getByTestId("stage-block-dev")).toBeInTheDocument();
     expect(screen.getByTestId("stage-block-done")).toBeInTheDocument();
+  });
+});
+
+class MockIntersectionObserver {
+  static instances: MockIntersectionObserver[] = [];
+  callback: IntersectionObserverCallback;
+  observe = () => {};
+  unobserve = () => {};
+  disconnect = () => {};
+  takeRecords = () => [];
+  root = null;
+  rootMargin = "";
+  thresholds: ReadonlyArray<number> = [];
+
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+    MockIntersectionObserver.instances.push(this);
+  }
+}
+
+describe("LandingPipelineRail — scroll-spy", () => {
+  beforeEach(() => {
+    MockIntersectionObserver.instances = [];
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver as unknown as typeof IntersectionObserver);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("highlights the rail node matching the stage block currently intersecting", () => {
+    render(<LandingPipelineRail />);
+
+    const devBlock = screen.getByTestId("stage-block-dev");
+    const observerInstance = MockIntersectionObserver.instances.at(-1)!;
+
+    act(() => {
+      observerInstance.callback(
+        [{ isIntersecting: true, target: devBlock } as IntersectionObserverEntry],
+        observerInstance as unknown as IntersectionObserver
+      );
+    });
+
+    expect(screen.getByTestId("rail-node-dev").className).toContain("border-brand");
+    expect(screen.getByTestId("rail-node-spec").className).toContain("border-success");
+    expect(screen.getByTestId("rail-node-done").className).toContain("border-border");
   });
 });

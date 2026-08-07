@@ -11,6 +11,7 @@
  * horizontal statique au-dessus de chaque bloc, pas de sticky.
  */
 
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface PipelineStage {
@@ -72,10 +73,29 @@ export default function LandingPipelineRail({
 }: {
   stages?: PipelineStage[];
 }) {
-  // Static for now — Task 2 wires this to real scroll position via
-  // IntersectionObserver. Backlog (index 0) is the sensible default: it's
-  // what's in view when the page loads scrolled to the top of this section.
-  const activeIndex = 0;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const blockRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const idx = blockRefs.current.findIndex((el) => el === entry.target);
+          if (idx !== -1) setActiveIndex(idx);
+        }
+      },
+      { rootMargin: "-40% 0px -55% 0px", threshold: 0 }
+    );
+
+    blockRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [stages]);
 
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-[240px_1fr]">
@@ -113,7 +133,13 @@ export default function LandingPipelineRail({
       {/* Content blocks */}
       <div className="flex flex-col gap-16">
         {stages.map((stage, i) => (
-          <div key={stage.key} data-testid={`stage-block-${stage.key}`}>
+          <div
+            key={stage.key}
+            data-testid={`stage-block-${stage.key}`}
+            ref={(el) => {
+              blockRefs.current[i] = el;
+            }}
+          >
             {/* Stepper — mobile only */}
             <div className="mb-3 flex flex-wrap gap-x-1.5 gap-y-1 lg:hidden" aria-hidden="true">
               {stages.map((s, j) => (
