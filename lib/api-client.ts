@@ -1012,6 +1012,17 @@ export function adminLogin(email: string, password: string): Promise<AdminApiKey
   return request("/admin/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
+export interface AdminProfile {
+  id: string;
+  email: string;
+}
+
+export function adminGetMe(adminApiKey: string): Promise<AdminProfile> {
+  return request("/admin/auth/me", {
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
 export interface AdminClientListItem {
   id: string;
   email: string;

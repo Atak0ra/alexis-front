@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearAdminApiKey, getAdminApiKey } from "@/lib/session";
-import { Modal, ModalFooter } from "@/components/ui/modal";
+import { getAdminApiKey } from "@/lib/session";
+import { AdminUserMenu } from "@/components/admin-user-menu";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Cockpit" },
@@ -18,11 +18,9 @@ const NAV_ITEMS = [
 function AdminNav({
   pathname,
   onNavigate,
-  onLogout,
 }: {
   pathname: string;
   onNavigate?: () => void;
-  onLogout: () => void;
 }) {
   return (
     <>
@@ -57,19 +55,6 @@ function AdminNav({
           );
         })}
       </nav>
-
-      <div className="mt-auto border-t border-border pt-4">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:border-danger/30 hover:bg-danger-bg hover:text-danger"
-        >
-          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Se déconnecter
-        </button>
-      </div>
     </>
   );
 }
@@ -79,7 +64,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     if (pathname === "/admin/login") {
@@ -108,11 +92,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.removeEventListener("keydown", handleKey);
   }, [drawerOpen]);
 
-  function handleLogout() {
-    clearAdminApiKey();
-    router.push("/admin/login");
-  }
-
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
@@ -125,7 +104,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-surface">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-surface-raised px-4 py-6">
-        <AdminNav pathname={pathname} onLogout={() => setConfirmLogout(true)} />
+        <AdminNav pathname={pathname} />
       </aside>
 
       {/* ── Mobile drawer overlay ── */}
@@ -156,14 +135,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <AdminNav
-          pathname={pathname}
-          onNavigate={() => setDrawerOpen(false)}
-          onLogout={() => {
-            setDrawerOpen(false);
-            setConfirmLogout(true);
-          }}
-        />
+        <AdminNav pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
       </aside>
 
       {/* ── Main content ── */}
@@ -182,46 +154,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </svg>
           </button>
           <span className="font-display text-sm font-bold text-foreground">Admin</span>
+          <div className="ml-auto">
+            <AdminUserMenu />
+          </div>
         </header>
+
+        {/* Desktop topbar — parité avec la barre du haut côté client (cloche +
+            menu profil) : ici juste le menu profil, pas de notifications admin. */}
+        <div className="hidden items-center justify-end border-b border-border px-4 py-2 lg:flex lg:px-6">
+          <AdminUserMenu />
+        </div>
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
-
-      {/* Modale de confirmation de déconnexion */}
-      <Modal
-        open={confirmLogout}
-        onClose={() => setConfirmLogout(false)}
-        title="Se déconnecter"
-        titleId="admin-logout-modal-title"
-        maxWidth="max-w-sm"
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </span>
-          <p className="text-sm text-foreground-muted">
-            Tu devras ressaisir tes identifiants pour revenir sur le cockpit.
-          </p>
-        </div>
-        <ModalFooter className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setConfirmLogout(false)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
-          >
-            Se déconnecter
-          </button>
-        </ModalFooter>
-      </Modal>
     </div>
   );
 }
