@@ -89,6 +89,54 @@ describe("AdminManagedSecretsPage", () => {
     expect(valueSpy).not.toHaveBeenCalled();
   });
 
+  it("includes audit model in the /models payload when filled", async () => {
+    const modelsSpy = vi.spyOn(apiClient, "adminUpdateManagedSecretModels").mockResolvedValue(ANTHROPIC_SECRET);
+    vi.spyOn(apiClient, "adminSetManagedSecretPlanIds").mockResolvedValue(ANTHROPIC_SECRET);
+
+    render(<AdminManagedSecretsPage />);
+    await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /modifier/i }));
+
+    // Remplir le champ audit
+    const auditInput = screen.getByPlaceholderText(/laisser vide pour utiliser le modèle spec/i);
+    fireEvent.change(auditInput, { target: { value: "claude-opus-4-5" } });
+    fireEvent.click(screen.getByRole("button", { name: /enregistrer/i }));
+
+    await waitFor(() =>
+      expect(modelsSpy).toHaveBeenCalledWith("alx_admin_xxx", "anthropic", expect.objectContaining({
+        audit: "claude-opus-4-5",
+      }))
+    );
+  });
+
+  it("omits audit field from /models payload when left empty", async () => {
+    const modelsSpy = vi.spyOn(apiClient, "adminUpdateManagedSecretModels").mockResolvedValue(ANTHROPIC_SECRET);
+    vi.spyOn(apiClient, "adminSetManagedSecretPlanIds").mockResolvedValue(ANTHROPIC_SECRET);
+
+    render(<AdminManagedSecretsPage />);
+    await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /modifier/i }));
+    // Ne pas toucher au champ audit (vide par défaut)
+    fireEvent.click(screen.getByRole("button", { name: /enregistrer/i }));
+
+    await waitFor(() =>
+      expect(modelsSpy).toHaveBeenCalledWith("alx_admin_xxx", "anthropic", expect.not.objectContaining({
+        audit: expect.any(String),
+      }))
+    );
+  });
+
+  it("renders the audit model input with the correct placeholder", async () => {
+    render(<AdminManagedSecretsPage />);
+    await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /modifier/i }));
+
+    expect(screen.getByPlaceholderText(/laisser vide pour utiliser le modèle spec/i)).toBeInTheDocument();
+  });
+
   it("clears a managed key from within the modal", async () => {
     const updateSpy = vi.spyOn(apiClient, "adminUpdateManagedSecret").mockResolvedValue({ ...ANTHROPIC_SECRET, has_value: false });
 

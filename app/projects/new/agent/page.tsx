@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getMe, AlexisApiError } from "@/lib/api-client";
+import { getMe } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
 import { submitNewProject } from "@/lib/submit-new-project";

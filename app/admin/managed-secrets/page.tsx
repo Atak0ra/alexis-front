@@ -30,8 +30,8 @@ const LABELS: Record<string, { name: string; description: string }> = {
   cohere:      { name: "Cohere",          description: "aider — cohere/command-r-plus…" },
 };
 
-type EmptyModels = { spec: string; plan: string; dev: string };
-const EMPTY_MODELS: EmptyModels = { spec: "", plan: "", dev: "" };
+type EmptyModels = { spec: string; plan: string; dev: string; audit: string };
+const EMPTY_MODELS: EmptyModels = { spec: "", plan: "", dev: "", audit: "" };
 
 export default function AdminManagedSecretsPage() {
   const [secrets, setSecrets] = useState<ManagedSecretOut[]>([]);
@@ -99,6 +99,7 @@ export default function AdminManagedSecretsPage() {
           spec: modalModels.spec.trim(),
           plan: modalModels.plan.trim(),
           dev: modalModels.dev.trim(),
+          ...(modalModels.audit.trim() ? { audit: modalModels.audit.trim() } : {}),
         });
       }
       // 3. Plans liés — toujours envoyé, remplace la liste complète (idempotent).
@@ -290,8 +291,23 @@ export default function AdminManagedSecretsPage() {
                   </div>
                 ))}
               </div>
+              {/* Modèle audit — optionnel, fallback sur spec si vide */}
+              <div className="mt-3">
+                <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-foreground-subtle">
+                  audit{" "}
+                  <span className="normal-case font-normal text-foreground-subtle/70">(optionnel — Alexis Check)</span>
+                </label>
+                <input
+                  type="text"
+                  value={modalModels.audit}
+                  onChange={(e) => setModalModels((prev) => ({ ...prev, audit: e.target.value }))}
+                  placeholder="Laisser vide pour utiliser le modèle spec"
+                  className={adminInputClass}
+                />
+              </div>
               <p className="mt-1 text-xs text-foreground-subtle">
-                Les 3 étapes doivent être renseignées pour pouvoir activer ce provider.
+                Les 3 étapes (spec / plan / dev) doivent être renseignées pour pouvoir activer ce provider.
+                Le modèle audit est utilisé pour les diagnostics Alexis Check ; si vide, le modèle spec est utilisé.
               </p>
             </div>
 

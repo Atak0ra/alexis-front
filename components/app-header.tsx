@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clearApiKey, getApiKey, getKeyId } from "@/lib/session";
 import { revokeApiKey } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 
 interface AppHeaderProps {
   projectName?: string;

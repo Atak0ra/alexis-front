@@ -16,12 +16,32 @@ const FAKE_PROFILE: apiClient.ClientProfile = {
   github_username: null,
   forced_agent_choice: null,
   plan: null,
+  role: "owner",
+  first_name: null,
+  last_name: null,
+};
+
+const FAKE_MEMBERS: apiClient.MembersListOut = {
+  members: [
+    {
+      id: "client-1",
+      email: "a@b.com",
+      first_name: null,
+      last_name: null,
+      role: "owner",
+      created_at: new Date().toISOString(),
+    },
+  ],
+  used: 1,
+  limit: 1,
 };
 
 beforeEach(() => {
   vi.restoreAllMocks();
   pushMock.mockClear();
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
+  // La page appelle listMembers pour la section Équipe — on le mock par défaut
+  vi.spyOn(apiClient, "listMembers").mockResolvedValue(FAKE_MEMBERS);
 });
 
 describe("AccountSettingsPage", () => {

@@ -11,9 +11,11 @@ import {
   Info,
   Inbox,
   ListTodo,
+  Lock,
   MessageCircle,
   Ruler,
   Sparkles,
+  Tag,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -44,6 +46,36 @@ function IssueTypeTag({ labels }: { labels: string[] }) {
       <Icon className="h-3 w-3" aria-hidden="true" />
       {label}
     </span>
+  );
+}
+
+// ─── Badges catégories audit (Sécurité / RGPD / Accessibilité / À affiner) ───
+
+const AUDIT_LABEL_MAP: Record<string, { className: string; Icon: LucideIcon }> = {
+  "Sécurité":      { className: "bg-danger/10 text-danger",   Icon: Lock },
+  "RGPD":          { className: "bg-warning/15 text-warning", Icon: FileText },
+  "Accessibilité": { className: "bg-brand/10 text-brand",     Icon: Sparkles },
+  "À affiner":     { className: "bg-surface-sunken text-foreground-muted border border-border", Icon: Tag },
+};
+
+function AuditLabelTags({ labels }: { labels: string[] }) {
+  const auditLabels = labels.filter((l) => l in AUDIT_LABEL_MAP);
+  if (auditLabels.length === 0) return null;
+  return (
+    <>
+      {auditLabels.map((l) => {
+        const { className, Icon } = AUDIT_LABEL_MAP[l];
+        return (
+          <span
+            key={l}
+            className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold", className)}
+          >
+            <Icon className="h-3 w-3" aria-hidden="true" />
+            {l}
+          </span>
+        );
+      })}
+    </>
   );
 }
 
@@ -333,6 +365,11 @@ export default function TicketKanban({
                     </select>
                   </div>
                   <p className="text-sm font-medium leading-snug text-foreground">{issue.title}</p>
+
+                  {/* Badges audit (Sécurité / RGPD / Accessibilité / À affiner) */}
+                  <div className="flex flex-wrap gap-1">
+                    <AuditLabelTags labels={issue.labels} />
+                  </div>
 
                   {isSubstate && (
                     <div className="flex items-center gap-1.5">

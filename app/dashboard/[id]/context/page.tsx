@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getProject, getProjectContext, getProjectContextContent, AlexisApiError, friendlyError, type ProjectOut } from "@/lib/api-client";
+import { getProject, getProjectContext, getProjectContextContent, friendlyError, type ProjectOut } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import ProjectContextStep from "@/components/project-context-step";
 import MarkdownLite from "@/components/markdown-lite";

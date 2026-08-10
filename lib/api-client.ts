@@ -237,6 +237,10 @@ export interface ClientProfile {
   forced_agent_choice: string | null;
   /** Plan courant du client — null si aucun plan assigné (fail-open). */
   plan: PlanPublicOut | null;
+  /** "owner" = propriétaire du compte, "member" = membre invité. */
+  role: "owner" | "member";
+  first_name: string | null;
+  last_name: string | null;
 }
 
 export function getMe(apiKey: string): Promise<ClientProfile> {
@@ -244,6 +248,7 @@ export function getMe(apiKey: string): Promise<ClientProfile> {
     return Promise.resolve({
       id: "demo-client", email: DEMO_CREDENTIALS.email, email_verified: true,
       github_username: null, forced_agent_choice: null, plan: null,
+      role: "owner", first_name: null, last_name: null,
     });
   }
   return request("/auth/me", {
@@ -256,9 +261,74 @@ export function verifyEmail(token: string): Promise<ClientProfile> {
     return Promise.resolve({
       id: "demo-client", email: DEMO_CREDENTIALS.email, email_verified: true,
       github_username: null, forced_agent_choice: null, plan: null,
+      role: "owner", first_name: null, last_name: null,
     });
   }
   return request("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) });
+}
+
+// ─── Membres (multi-utilisateur) ─────────────────────────────────────────────
+
+export interface MemberOut {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: "owner" | "member";
+  created_at: string;
+}
+
+export interface MembersListOut {
+  members: MemberOut[];
+  used: number;
+  limit: number | null; // null = illimité
+}
+
+export interface MemberInvitePayload {
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+export function listMembers(apiKey: string): Promise<MembersListOut> {
+  if (isLocalMode()) {
+    return Promise.resolve({ members: [], used: 1, limit: 1 });
+  }
+  return request("/members", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function inviteMember(apiKey: string, payload: MemberInvitePayload): Promise<MemberOut> {
+  if (isLocalMode()) {
+    return Promise.reject(new AlexisApiError(403, "Non disponible en mode démo"));
+  }
+  return request("/members", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function removeMember(apiKey: string, memberId: string): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request(`/members/${memberId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+export function changePassword(
+  apiKey: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  if (isLocalMode()) return Promise.resolve();
+  return request("/auth/change-password", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
 }
 
 export function revokeApiKey(apiKey: string, keyId: string): Promise<void> {
@@ -1066,13 +1136,20 @@ export function adminDeleteClient(adminApiKey: string, clientId: string): Promis
 export interface PlanOut {
   id: string;
   name: string;
+  display_name: string | null;
+  description: string | null;
+  features: string[] | null;
   monthly_price_usd: number;
   forced_agent_choice: string | null;
   spec_max_budget_usd: number | null;
   plan_max_budget_usd: number | null;
   dev_max_budget_usd: number | null;
   monthly_max_budget_usd: number | null;
+  requires_own_key: boolean;
+  max_members: number | null;
   max_projects: number | null;
+  is_public: boolean;
+  sort_order: number;
 }
 
 export interface PlanPayload {
@@ -1083,7 +1160,14 @@ export interface PlanPayload {
   plan_max_budget_usd?: number | null;
   dev_max_budget_usd?: number | null;
   monthly_max_budget_usd?: number | null;
+  display_name?: string | null;
+  description?: string | null;
+  features?: string[] | null;
+  requires_own_key?: boolean;
+  max_members?: number | null;
   max_projects?: number | null;
+  is_public?: boolean;
+  sort_order?: number;
 }
 
 export function adminListPlans(adminApiKey: string): Promise<PlanOut[]> {
@@ -1127,8 +1211,9 @@ export interface ManagedSecretOut {
   updated_at: string;
   /** Plans liés à cette clé (M2M, migration 0022). Liste d'UUIDs. */
   plan_ids: string[];
-  /** Modèles LLM par step (spec/plan/dev) portés par cette clé gérée. */
-  models: { spec: string; plan: string; dev: string } | null;
+  /** Modèles LLM par step (spec/plan/dev/audit) portés par cette clé gérée.
+   *  Le champ "audit" est optionnel — si absent/vide, le worker retombe sur "spec". */
+  models: { spec: string; plan: string; dev: string; audit?: string } | null;
 }
 
 export function adminListManagedSecrets(adminApiKey: string): Promise<ManagedSecretOut[]> {

@@ -261,3 +261,46 @@ describe("TicketKanban", () => {
     expect(push).not.toHaveBeenCalled();
   });
 });
+
+describe("TicketKanban — badges audit", () => {
+  it("affiche le badge Sécurité sur une carte avec le label 'Sécurité'", () => {
+    const issues = [makeIssue({ id: "i1", title: "Clés exposées", state: "Backlog", labels: ["Sécurité", "À affiner"] })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.getByText("Sécurité")).toBeInTheDocument();
+    expect(screen.getByText("À affiner")).toBeInTheDocument();
+  });
+
+  it("affiche le badge RGPD sur une carte avec le label 'RGPD'", () => {
+    const issues = [makeIssue({ id: "i1", title: "Rétention données", state: "Backlog", labels: ["RGPD"] })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.getByText("RGPD")).toBeInTheDocument();
+  });
+
+  it("affiche le badge Accessibilité sur une carte avec le label 'Accessibilité'", () => {
+    const issues = [makeIssue({ id: "i1", title: "Contraste insuffisant", state: "Backlog", labels: ["Accessibilité"] })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.getByText("Accessibilité")).toBeInTheDocument();
+  });
+
+  it("n'affiche pas de badge audit si les labels ne contiennent pas de catégorie audit", () => {
+    const issues = [makeIssue({ id: "i1", title: "Feature normale", state: "Backlog", labels: ["feature"] })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.queryByText("Sécurité")).not.toBeInTheDocument();
+    expect(screen.queryByText("RGPD")).not.toBeInTheDocument();
+    expect(screen.queryByText("Accessibilité")).not.toBeInTheDocument();
+    expect(screen.queryByText("À affiner")).not.toBeInTheDocument();
+  });
+
+  it("peut afficher simultanément un badge type (feature) et un badge audit (Sécurité)", () => {
+    const issues = [makeIssue({ id: "i1", title: "Ticket mixte", state: "Backlog", labels: ["feature", "Sécurité", "À affiner"] })];
+    render(<TicketKanban issues={issues} states={DEFAULT_STATES} projectId="p1" onMoveIssue={vi.fn()} />);
+
+    expect(screen.getByText("Évolution")).toBeInTheDocument();
+    expect(screen.getByText("Sécurité")).toBeInTheDocument();
+    expect(screen.getByText("À affiner")).toBeInTheDocument();
+  });
+});

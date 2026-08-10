@@ -574,7 +574,20 @@ export default function ProjectDetailPage() {
         titleId="audit-modal-title"
         maxWidth="max-w-2xl"
       >
-        <AuditPanel apiKey={apiKey} projectId={projectId} />
+        <AuditPanel
+          apiKey={apiKey}
+          projectId={projectId}
+          onTicketsCreated={() => {
+            setShowAudit(false);
+            // Rafraîchir issues + tickets pour afficher les nouvelles cartes dans le Kanban
+            listIssues(apiKey, projectId)
+              .then(setIssues)
+              .catch(() => {});
+            listTickets(apiKey, projectId)
+              .then(setTickets)
+              .catch(() => {});
+          }}
+        />
       </Modal>
     </div>
   );

@@ -48,6 +48,7 @@ describe("AuditPanel — état initial", () => {
 
     await screen.findByRole("button", { name: /lancer l'audit/i });
 
+    // Les catégories sont maintenant des cartes (CategoryCard) avec aria-pressed
     const secBtn = screen.getByRole("button", { name: /sécurité/i });
     const rgpdBtn = screen.getByRole("button", { name: /rgpd/i });
     const a11yBtn = screen.getByRole("button", { name: /accessibilité/i });
@@ -55,6 +56,16 @@ describe("AuditPanel — état initial", () => {
     expect(secBtn).toHaveAttribute("aria-pressed", "true");
     expect(rgpdBtn).toHaveAttribute("aria-pressed", "true");
     expect(a11yBtn).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("chaque carte de catégorie affiche une description", async () => {
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await screen.findByRole("button", { name: /lancer l'audit/i });
+
+    expect(screen.getByText(/injections, secrets exposés/i)).toBeInTheDocument();
+    expect(screen.getByText(/consentement, rétention/i)).toBeInTheDocument();
+    expect(screen.getByText(/contrastes, labels aria/i)).toBeInTheDocument();
   });
 
   it("désélectionner une catégorie la retire (aria-pressed=false)", async () => {
@@ -65,6 +76,24 @@ describe("AuditPanel — état initial", () => {
     const rgpdBtn = screen.getByRole("button", { name: /rgpd/i });
     fireEvent.click(rgpdBtn);
     expect(rgpdBtn).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("les cartes de catégorie sont masquées quand l'audit est en cours", async () => {
+    vi.spyOn(apiClient, "createAudit").mockResolvedValue(undefined);
+    vi.spyOn(apiClient, "getAuditStatus")
+      .mockResolvedValueOnce({ status: null })
+      .mockResolvedValue({ status: "in_progress" });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" pollIntervalMs={50} />);
+
+    const btn = await screen.findByRole("button", { name: /lancer l'audit/i });
+    fireEvent.click(btn);
+
+    await waitFor(() =>
+      expect(screen.getByText(/audit en cours/i)).toBeInTheDocument()
+    );
+    // Les cartes de catégorie ne doivent plus être visibles
+    expect(screen.queryByRole("button", { name: /sécurité/i })).not.toBeInTheDocument();
   });
 });
 
@@ -251,5 +280,170 @@ describe("AuditPanel — quota épuisé", () => {
 
     const btn = screen.getByRole("button", { name: /lancer l'audit/i });
     expect(btn).not.toBeDisabled();
+  });
+
+  it("affiche le bandeau quota épuisé dans le rapport et désactive le bouton relancer", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 3, limit: 3 });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    // Bandeau quota épuisé visible
+    expect(screen.getByText(/quota mensuel atteint \(3\/3\)/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/reviens le mois prochain ou passe à un plan supérieur/i)
+    ).toBeInTheDocument();
+
+    // Bouton "Relancer un audit" désactivé
+    const relancerBtn = screen.getByRole("button", { name: /relancer un audit/i });
+    expect(relancerBtn).toBeDisabled();
+  });
+
+  it("le bouton créer les tickets reste actif même quand le quota est épuisé", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 3, limit: 3 });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    // Le bouton "Créer les tickets" doit être actif (findings pré-sélectionnés)
+    const createBtn = screen.getByRole("button", { name: /créer.*ticket/i });
+    expect(createBtn).not.toBeDisabled();
+  });
+});
+
+describe("AuditPanel — bandeau récap rapport", () => {
+  it("affiche le bandeau succès avec le nombre de points et le quota restant", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 1, limit: 3 });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    // Bandeau succès
+    expect(screen.getByText(/ton dernier audit est prêt/i)).toBeInTheDocument();
+    // Quota restant : 3 - 1 = 2
+    expect(screen.getByText(/2 restant/i)).toBeInTheDocument();
+  });
+
+  it("affiche 'quota illimité' dans le bandeau si la limite est null", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 5, limit: null });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    expect(screen.getByText(/quota illimité/i)).toBeInTheDocument();
+  });
+
+  it("le bouton 'Relancer un audit' est actif quand le quota n'est pas épuisé", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 1, limit: 3 });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    const relancerBtn = screen.getByRole("button", { name: /relancer un audit/i });
+    expect(relancerBtn).not.toBeDisabled();
+  });
+
+  it("cliquer sur 'Relancer un audit' remet l'état à zéro (retour à la sélection)", async () => {
+    vi.spyOn(apiClient, "getAuditQuota").mockResolvedValue({ used: 1, limit: 3 });
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /relancer un audit/i }));
+
+    // Retour à l'écran de sélection
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /lancer l'audit/i })).toBeInTheDocument()
+    );
+    expect(screen.queryByText("Clés API exposées")).not.toBeInTheDocument();
+  });
+});
+
+describe("AuditPanel — callback onTicketsCreated", () => {
+  it("affiche le bouton 'Voir le backlog' après création réussie et appelle onTicketsCreated au clic", async () => {
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+    vi.spyOn(apiClient, "auditToTickets").mockResolvedValue(undefined);
+
+    const onTicketsCreated = vi.fn();
+    render(
+      <AuditPanel
+        apiKey="alx_xxx"
+        projectId="proj-1"
+        pollIntervalMs={50}
+        onTicketsCreated={onTicketsCreated}
+      />
+    );
+
+    // Attendre l'affichage du rapport
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    // Cliquer sur "Créer les tickets"
+    fireEvent.click(screen.getByRole("button", { name: /créer.*ticket/i }));
+
+    // Attendre le message de succès
+    await waitFor(() =>
+      expect(screen.getByText(/tickets créés avec succès/i)).toBeInTheDocument()
+    );
+
+    // Le bouton "Voir le backlog" doit apparaître
+    const backlogBtn = screen.getByRole("button", { name: /voir le backlog/i });
+    expect(backlogBtn).toBeInTheDocument();
+
+    // Cliquer dessus doit appeler onTicketsCreated
+    fireEvent.click(backlogBtn);
+    expect(onTicketsCreated).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'affiche pas le bouton 'Voir le backlog' si onTicketsCreated n'est pas fourni", async () => {
+    vi.spyOn(apiClient, "getAuditStatus").mockResolvedValue({ status: "ready" });
+    vi.spyOn(apiClient, "getAuditReport").mockResolvedValue({ findings: FAKE_FINDINGS });
+    vi.spyOn(apiClient, "auditToTickets").mockResolvedValue(undefined);
+
+    render(<AuditPanel apiKey="alx_xxx" projectId="proj-1" pollIntervalMs={50} />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Clés API exposées")).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /créer.*ticket/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/tickets créés avec succès/i)).toBeInTheDocument()
+    );
+
+    expect(screen.queryByRole("button", { name: /voir le backlog/i })).not.toBeInTheDocument();
   });
 });

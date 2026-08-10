@@ -12,11 +12,19 @@ const EMPTY_FORM: PlanPayload = {
   name: "", monthly_price_usd: 0, forced_agent_choice: null,
   spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null,
   max_projects: null,
+  display_name: null, description: null, features: null,
+  requires_own_key: false, max_members: 1, is_public: true, sort_order: 0,
 };
 
 function toNullableNumber(raw: string): number | null {
   const trimmed = raw.trim();
   return trimmed === "" ? null : Number(trimmed);
+}
+
+function cleanFeatures(lines: string[] | null | undefined): string[] | null {
+  if (!lines) return null;
+  const cleaned = lines.map((line) => line.trim()).filter(Boolean);
+  return cleaned.length > 0 ? cleaned : null;
 }
 
 const BUDGET_FIELDS = [
@@ -52,6 +60,9 @@ export default function AdminPlansPage() {
       spec_max_budget_usd: plan.spec_max_budget_usd, plan_max_budget_usd: plan.plan_max_budget_usd,
       dev_max_budget_usd: plan.dev_max_budget_usd, monthly_max_budget_usd: plan.monthly_max_budget_usd,
       max_projects: plan.max_projects,
+      display_name: plan.display_name, description: plan.description, features: plan.features,
+      requires_own_key: plan.requires_own_key, max_members: plan.max_members,
+      is_public: plan.is_public, sort_order: plan.sort_order,
     });
   }
 
@@ -64,11 +75,12 @@ export default function AdminPlansPage() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
     setError(null);
+    const payload = { ...form, features: cleanFeatures(form.features) };
     try {
       if (editingId === "new") {
-        await adminCreatePlan(apiKey, form);
+        await adminCreatePlan(apiKey, payload);
       } else if (editingId) {
-        await adminUpdatePlan(apiKey, editingId, form);
+        await adminUpdatePlan(apiKey, editingId, payload);
       }
       setEditingId(null);
       load();
@@ -115,6 +127,7 @@ export default function AdminPlansPage() {
           <thead>
             <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
               <th className="px-5 py-3 font-medium">Nom</th>
+              <th className="px-5 py-3 font-medium">Nom public</th>
               <th className="px-5 py-3 font-medium">Prix / mois</th>
               <th className="px-5 py-3 font-medium">Agent forcé</th>
               <th className="px-5 py-3 font-medium">Plafond mensuel</th>
@@ -126,6 +139,12 @@ export default function AdminPlansPage() {
             {plans.map((plan) => (
               <tr key={plan.id} className="border-b border-border last:border-0">
                 <td className="px-5 py-3.5 font-medium text-foreground">{plan.name}</td>
+                <td className="px-5 py-3.5 text-foreground-muted">
+                  {plan.display_name ?? "—"}
+                  {!plan.is_public && (
+                    <span className="ml-1.5 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-foreground-subtle">masqué</span>
+                  )}
+                </td>
                 <td className="px-5 py-3.5 text-foreground-muted">${plan.monthly_price_usd}</td>
                 <td className="px-5 py-3.5 text-foreground-muted">{plan.forced_agent_choice ?? "—"}</td>
                  <td className="px-5 py-3.5 font-mono text-foreground-muted">
@@ -248,6 +267,86 @@ export default function AdminPlansPage() {
                 />
               </div>
             ))}
+
+            <hr className="border-border" />
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Vitrine publique (/pricing)</p>
+
+            <div>
+              <label htmlFor="plan-display-name" className="mb-1.5 block text-sm font-medium text-foreground">
+                Nom public <span className="text-foreground-subtle font-normal">(affiché sur la page tarifs)</span>
+              </label>
+              <input
+                id="plan-display-name"
+                value={form.display_name ?? ""}
+                onChange={(e) => setForm({ ...form, display_name: e.target.value || null })}
+                className={adminInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="plan-description" className="mb-1.5 block text-sm font-medium text-foreground">Description</label>
+              <textarea
+                id="plan-description"
+                rows={2}
+                value={form.description ?? ""}
+                onChange={(e) => setForm({ ...form, description: e.target.value || null })}
+                className={adminInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="plan-features" className="mb-1.5 block text-sm font-medium text-foreground">
+                Fonctionnalités <span className="text-foreground-subtle font-normal">(une par ligne)</span>
+              </label>
+              <textarea
+                id="plan-features"
+                rows={4}
+                value={(form.features ?? []).join("\n")}
+                onChange={(e) => setForm({ ...form, features: e.target.value.split("\n") })}
+                className={adminInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="plan-max-members" className="mb-1.5 block text-sm font-medium text-foreground">
+                Membres max <span className="text-foreground-subtle font-normal">(vide = illimité)</span>
+              </label>
+              <input
+                id="plan-max-members"
+                type="number"
+                min="1"
+                step="1"
+                value={form.max_members ?? ""}
+                onChange={(e) => setForm({ ...form, max_members: toNullableNumber(e.target.value) })}
+                className={adminInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="plan-sort-order" className="mb-1.5 block text-sm font-medium text-foreground">Ordre d&apos;affichage</label>
+              <input
+                id="plan-sort-order"
+                type="number"
+                step="1"
+                value={form.sort_order ?? 0}
+                onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
+                className={adminInputClass}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={form.requires_own_key ?? false}
+                onChange={(e) => setForm({ ...form, requires_own_key: e.target.checked })}
+                className="h-4 w-4 rounded border-border"
+              />
+              Nécessite sa propre clé API (BYOK)
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={form.is_public ?? true}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+                className="h-4 w-4 rounded border-border"
+              />
+              Visible sur la page tarifs
+            </label>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
