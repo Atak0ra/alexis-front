@@ -9,14 +9,15 @@ import { getApiKey } from "@/lib/session";
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
 function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: boolean }) {
-  const isFree = plan.monthly_price_usd === 0;
+  const isFree = plan.name === "free";
   const isByok = plan.name === "byok";
+  const isPayAsYouGo = plan.name === "solo" || plan.name === "entreprise";
   const isEntreprise = plan.name === "entreprise";
 
   const priceLabel = isFree
     ? "Gratuit"
-    : isEntreprise
-    ? `À partir de $${plan.monthly_price_usd} / mois`
+    : isPayAsYouGo
+    ? "Payez à l'usage"
     : `$${plan.monthly_price_usd} / mois`;
 
   const ctaLabel = isByok
@@ -59,7 +60,7 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
       {/* Price */}
       <div className="mt-6">
         <span className="text-3xl font-bold text-foreground">{priceLabel}</span>
-        {!isFree && !isEntreprise && (
+        {!isFree && !isPayAsYouGo && (
           <span className="ml-1 text-sm text-foreground-subtle">HT</span>
         )}
       </div>
@@ -98,10 +99,10 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
         </p>
       )}
 
-      {/* Entreprise note */}
-      {isEntreprise && (
+      {/* Pay-as-you-go note (solo + entreprise) */}
+      {isPayAsYouGo && (
         <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-xs text-foreground-muted">
-          Tarif sur devis selon le nombre de membres et les besoins. Contactez-nous pour un devis personnalisé.
+          Wallet prépayé : vous rechargez un solde et chaque run le débite au coût réel mesuré. Aucun abonnement fixe.
         </p>
       )}
 
@@ -210,20 +211,28 @@ export default function PricingPage() {
               <dd className="mt-1 text-sm text-foreground-muted">
                 BYOK (Bring Your Own Key) vous permet d&apos;utiliser Alexis avec votre propre clé
                 d&apos;inférence (OpenAI, Anthropic, Groq…). Vous payez votre consommation IA directement
-                chez votre provider. L&apos;abonnement Alexis à 29 €/mois couvre l&apos;infra, le tracker
+                chez votre provider. L&apos;abonnement Alexis à 29 $/mois couvre l&apos;infra, le tracker
                 natif et l&apos;hébergement de vos repos. Idéal si vous avez déjà un abonnement ou des crédits.
               </dd>
             </div>
             <div>
-              <dt className="font-semibold text-foreground">Qu&apos;est-ce qui est inclus dans le plan Solo Preneur ?</dt>
+              <dt className="font-semibold text-foreground">Comment fonctionne le plan Solo Preneur ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
-                À 199 €/mois, Alexis fournit la clé d&apos;inférence — vous n&apos;avez rien à configurer.
-                Un budget d&apos;inférence de 100 €/mois est inclus. Au-delà, les runs sont mis en pause
-                jusqu&apos;au mois suivant. Contactez-nous à{" "}
+                Claude (Anthropic) fourni par Alexis — vous n&apos;avez rien à configurer. Vous rechargez
+                un solde (wallet) et chaque run débite le coût réel mesuré, marge de la plateforme
+                comprise. Aucun abonnement fixe. Contactez-nous à{" "}
                 <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
                   contact@alexis.dev
                 </a>{" "}
-                pour activer votre plan.
+                pour activer votre wallet.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Quelle différence entre Solo Preneur et Entreprise ?</dt>
+              <dd className="mt-1 text-sm text-foreground-muted">
+                Le nombre de membres : Solo Preneur est limité à 1 membre, Entreprise n&apos;a pas de
+                limite. Les deux fonctionnent en pay-as-you-go — vous ne payez que votre usage réel,
+                sans abonnement fixe.
               </dd>
             </div>
             <div>
