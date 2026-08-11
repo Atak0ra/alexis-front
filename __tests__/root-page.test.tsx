@@ -59,4 +59,18 @@ describe("RootPage", () => {
     expect(screen.queryByText("Zéro configuration manuelle")).not.toBeInTheDocument();
     expect(screen.queryByText("Ticket → code testé → livré")).not.toBeInTheDocument();
   });
+
+  it("shows the billing section explaining pay-as-you-go pricing", () => {
+    render(<RootPage />);
+    expect(
+      screen.getByRole("heading", { name: /vous ne payez que ce que vous utilisez/i })
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/essai gratuit/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/payez à l'usage/i)).toBeInTheDocument();
+    expect(screen.getByText("BYOK")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /voir le détail des tarifs/i })).toHaveAttribute(
+      "href",
+      "/pricing"
+    );
+  });
 });

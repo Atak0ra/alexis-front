@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import LandingNav from "@/components/landing-nav";
 import LandingPipelineSteps from "@/components/landing-pipeline-steps";
+import LandingBillingSection from "@/components/landing-billing-section";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,9 @@ export default function RootPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Facturation ── */}
+      <LandingBillingSection />
 
       {/* ── CTA banner ── */}
       <section className="border-t border-border bg-foreground">
