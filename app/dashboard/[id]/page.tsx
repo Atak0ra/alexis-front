@@ -335,6 +335,7 @@ export default function ProjectDetailPage() {
       cost_usd: t.cost_usd,
       error_message: t.error_message,
       error_hint: t.error_hint,
+      chat_active: t.chat_active ?? false,
     };
   }
 

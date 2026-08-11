@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { FolderPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
-import { listProjects, getProjectStats, getMe, type ProjectOut, type ProjectStats } from "@/lib/api-client";
+import { listProjects, getProjectStats, getMe, getWallet, type ProjectOut, type ProjectStats, type WalletOut } from "@/lib/api-client";
 import NewProjectCTA from "@/components/new-project-cta";
 
 type StatsState = ProjectStats | "unavailable" | null;
@@ -161,13 +161,20 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectOut[] | null>(null);
   const [stats, setStats] = useState<Record<string, StatsState>>({});
   const [emailVerified, setEmailVerified] = useState(true);
+  const [wallet, setWallet] = useState<WalletOut | null>(null);
 
   useEffect(() => {
     const apiKey = getApiKey();
     if (!apiKey) return;
 
     getMe(apiKey)
-      .then((me) => { setEmailVerified(me.email_verified); })
+      .then((me) => {
+        setEmailVerified(me.email_verified);
+        // BYOK (clé perso) ou pas de plan du tout = jamais de wallet à afficher.
+        if (me.plan && !me.plan.requires_own_key) {
+          getWallet(apiKey).then(setWallet).catch(() => {/* fail-open */});
+        }
+      })
       .catch(() => {/* fail-open */});
 
     listProjects(apiKey).then((result) => {
@@ -208,6 +215,29 @@ export default function DashboardPage() {
           Nouveau projet
         </NewProjectCTA>
       </div>
+
+      {/* Solde wallet — uniquement pour les plans à clé gérée (pas BYOK) */}
+      {wallet && (
+        <Link
+          href="/dashboard/account"
+          className={cn(
+            "mt-6 flex items-center justify-between rounded-xl border px-5 py-3.5 transition-colors",
+            wallet.balance_usd < 10
+              ? "border-danger-border bg-danger-bg hover:bg-danger-bg/80"
+              : "border-border bg-surface-raised hover:bg-surface-sunken"
+          )}
+        >
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Solde wallet</p>
+            <p className={cn("mt-0.5 font-mono text-lg font-semibold", wallet.balance_usd < 10 ? "text-danger" : "text-foreground")}>
+              ${wallet.balance_usd.toFixed(2)}
+            </p>
+          </div>
+          <span className="text-sm font-medium text-brand">
+            {wallet.balance_usd < 10 ? "Solde bas — recharger →" : "Voir le détail →"}
+          </span>
+        </Link>
+      )}
 
       {/* KPIs — only show when we have data */}
       {allStats.length > 0 && (

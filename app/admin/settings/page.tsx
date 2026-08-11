@@ -20,6 +20,7 @@ export default function AdminSettingsPage() {
         <h2 className="mb-4 text-base font-semibold text-foreground">Autres réglages</h2>
         <div className="flex flex-wrap gap-3">
           <a href="/admin/plans" className={adminGhostButtonClass}>Plans &amp; budgets</a>
+          <a href="/admin/pricing" className={adminGhostButtonClass}>Pricing (coût &amp; marge wallet)</a>
           <a href="/admin/managed-secrets" className={adminGhostButtonClass}>Clés API gérées (providers &amp; modèles)</a>
         </div>
       </AdminCard>

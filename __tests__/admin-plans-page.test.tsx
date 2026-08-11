@@ -11,8 +11,8 @@ vi.mock("next/navigation", () => ({
 
 const SEEDED_PLAN: apiClient.PlanOut = {
   id: "plan-standard", name: "standard", monthly_price_usd: 150, forced_agent_choice: null,
-  spec_max_budget_usd: 2, plan_max_budget_usd: 2, dev_max_budget_usd: 6, monthly_max_budget_usd: 75,
-};
+  monthly_max_budget_usd: 75, requires_own_key: true,
+} as apiClient.PlanOut;
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -24,7 +24,7 @@ describe("AdminPlansPage", () => {
   it("renders the plans table", async () => {
     render(<AdminPlansPage />);
     await waitFor(() => expect(screen.getByText("standard")).toBeInTheDocument());
-    expect(screen.getByText("$150")).toBeInTheDocument();
+    expect(screen.getByText("$150 / mois (BYOK)")).toBeInTheDocument();
     expect(screen.getByText("$75.00")).toBeInTheDocument();
   });
 

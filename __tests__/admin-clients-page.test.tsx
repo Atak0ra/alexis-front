@@ -19,7 +19,7 @@ beforeEach(() => {
 describe("AdminClientsPage", () => {
   it("renders the client list with plan, project count and spend", async () => {
     vi.spyOn(apiClient, "adminListClients").mockResolvedValue([
-      { id: "client-1", email: "a@b.com", plan_name: "standard", project_count: 2, monthly_spend_usd: 12.5 },
+      { id: "client-1", email: "a@b.com", plan_name: "standard", project_count: 2, monthly_spend_usd: 12.5, wallet_balance_usd: 30 },
     ]);
 
     render(<AdminClientsPage />);
@@ -42,7 +42,7 @@ describe("AdminClientDetailPage", () => {
   it("renders client detail with per-project costs", async () => {
     vi.spyOn(apiClient, "adminGetClient").mockResolvedValue({
       id: "client-1", email: "a@b.com", github_username: null, plan_name: "standard",
-      monthly_spend_usd: 12.5,
+      monthly_spend_usd: 12.5, wallet_balance_usd: 30,
       projects: [{ id: "p1", name: "kara", agent_choice: "claude", is_active: true, total_cost_usd: 3.2 }],
     });
 

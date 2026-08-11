@@ -45,6 +45,7 @@ export default function AdminClientsPage() {
                 <th className="px-5 py-3 font-medium">Plan</th>
                 <th className="px-5 py-3 font-medium">Projets</th>
                 <th className="px-5 py-3 text-right font-medium">Dépense (mois)</th>
+                <th className="px-5 py-3 text-right font-medium">Solde wallet</th>
               </tr>
             </thead>
             <tbody>
@@ -58,11 +59,18 @@ export default function AdminClientsPage() {
                   <td className="px-5 py-3.5 text-foreground-muted">{c.plan_name ?? "—"}</td>
                   <td className="px-5 py-3.5 text-foreground-muted">{c.project_count}</td>
                   <td className="px-5 py-3.5 text-right font-mono text-foreground">${c.monthly_spend_usd.toFixed(2)}</td>
+                  <td
+                    className={`px-5 py-3.5 text-right font-mono ${
+                      c.wallet_balance_usd < 10 ? "text-danger" : "text-foreground"
+                    }`}
+                  >
+                    ${c.wallet_balance_usd.toFixed(2)}
+                  </td>
                 </tr>
               ))}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-sm text-foreground-subtle">
+                  <td colSpan={5} className="px-5 py-6 text-center text-sm text-foreground-subtle">
                     Aucun client pour le moment.
                   </td>
                 </tr>

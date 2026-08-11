@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { adminGetClient, adminDeleteClient, AdminClientDetail, AlexisApiError } from "@/lib/api-client";
+import {
+  adminGetClient,
+  adminDeleteClient,
+  adminTopupWallet,
+  AdminClientDetail,
+  AlexisApiError,
+} from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
 import { AdminCard } from "../../_components/chrome";
 
@@ -16,6 +22,11 @@ export default function AdminClientDetailPage() {
   // État de la suppression
   const [deleteState, setDeleteState] = useState<"idle" | "confirm" | "deleting" | "error">("idle");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Recharge manuelle du wallet
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupState, setTopupState] = useState<"idle" | "saving" | "error">("idle");
+  const [topupError, setTopupError] = useState<string | null>(null);
 
   useEffect(() => {
     const apiKey = getAdminApiKey();
@@ -38,6 +49,28 @@ export default function AdminClientDetailPage() {
     } catch (err) {
       setDeleteError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
       setDeleteState("error");
+    }
+  }
+
+  async function handleTopup() {
+    const apiKey = getAdminApiKey();
+    if (!apiKey || !client) return;
+    const amount = Number(topupAmount);
+    if (!amount || amount <= 0) {
+      setTopupError("Le montant doit être un nombre positif.");
+      setTopupState("error");
+      return;
+    }
+    setTopupState("saving");
+    setTopupError(null);
+    try {
+      const wallet = await adminTopupWallet(apiKey, client.id, amount);
+      setClient({ ...client, wallet_balance_usd: wallet.balance_usd });
+      setTopupAmount("");
+      setTopupState("idle");
+    } catch (err) {
+      setTopupError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+      setTopupState("error");
     }
   }
 
@@ -101,7 +134,7 @@ export default function AdminClientDetailPage() {
         <p className="mt-2 text-sm text-danger">{deleteError}</p>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
         <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Plan</p>
           <p className="mt-1.5 text-lg font-semibold text-foreground">{client.plan_name ?? "illimité"}</p>
@@ -111,10 +144,45 @@ export default function AdminClientDetailPage() {
           <p className="mt-1.5 font-mono text-lg font-semibold text-brand">${client.monthly_spend_usd.toFixed(2)}</p>
         </AdminCard>
         <AdminCard className="p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">Solde wallet</p>
+          <p
+            className={`mt-1.5 font-mono text-lg font-semibold ${
+              client.wallet_balance_usd < 10 ? "text-danger" : "text-foreground"
+            }`}
+          >
+            ${client.wallet_balance_usd.toFixed(2)}
+          </p>
+        </AdminCard>
+        <AdminCard className="p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-subtle">GitHub</p>
           <p className="mt-1.5 text-lg font-semibold text-foreground">{client.github_username ?? "—"}</p>
         </AdminCard>
       </div>
+
+      {/* Recharge manuelle du wallet — en attendant Stripe/CinetPay self-service */}
+      <AdminCard className="mt-4 p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-foreground-subtle">Recharger le wallet</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Montant en $"
+            value={topupAmount}
+            onChange={(e) => { setTopupAmount(e.target.value); setTopupError(null); }}
+            className="w-40 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-foreground-subtle focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+          <button
+            type="button"
+            onClick={handleTopup}
+            disabled={topupState === "saving"}
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          >
+            {topupState === "saving" ? "Crédit en cours…" : "Créditer"}
+          </button>
+          {topupError && <p className="text-sm text-danger">{topupError}</p>}
+        </div>
+      </AdminCard>
 
       <h2 className="mt-10 text-lg font-semibold text-foreground">Projets</h2>
       <AdminCard className="mt-3 overflow-hidden">

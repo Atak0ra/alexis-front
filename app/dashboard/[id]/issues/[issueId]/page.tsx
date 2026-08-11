@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Bug, MessageCircle, Sparkles, Wrench, type LucideIcon } from "lucide-react";
+import { Bug, MessageCircle, Sparkles, Stethoscope, Wrench, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
 import {
@@ -197,9 +197,21 @@ export default function IssueDetailPage() {
       ) : (
         <>
           <h1 className="mt-4 text-2xl font-bold text-foreground">{issue.title}</h1>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <p className="font-mono text-xs text-foreground-subtle">{issue.identifier}</p>
             <IssueTypeTag labels={issue.labels} />
+            {issue.origin === "ai_backlog" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                Généré par Alexis
+              </span>
+            )}
+            {issue.origin === "ai_audit" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-semibold text-warning">
+                <Stethoscope className="h-3.5 w-3.5" aria-hidden="true" />
+                Alexis Check
+              </span>
+            )}
           </div>
 
           <div className="mt-6">

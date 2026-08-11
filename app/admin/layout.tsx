@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin/runs", label: "Runs" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/plans", label: "Plans" },
+  { href: "/admin/pricing", label: "Pricing" },
   { href: "/admin/managed-secrets", label: "Clés gérées" },
   { href: "/admin/settings", label: "Réglages" },
 ];

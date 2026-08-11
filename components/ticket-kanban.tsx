@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Ruler,
   Sparkles,
+  Stethoscope,
   Tag,
   Wrench,
   type LucideIcon,
@@ -136,6 +137,8 @@ export interface TicketSummary {
   error_message: string | null;
   /** Phrase d'explication client-friendly */
   error_hint: string | null;
+  /** True si Alexis est en train de répondre à un message de raffinement sur ce ticket. */
+  chat_active?: boolean;
 }
 
 interface Column {
@@ -366,6 +369,20 @@ export default function TicketKanban({
                   </div>
                   <p className="text-sm font-medium leading-snug text-foreground">{issue.title}</p>
 
+                  {/* Badge d'origine — visible uniquement pour les tickets générés par l'IA */}
+                  {issue.origin === "ai_backlog" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                      <Sparkles className="h-3 w-3" aria-hidden="true" />
+                      Généré par Alexis
+                    </span>
+                  )}
+                  {issue.origin === "ai_audit" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">
+                      <Stethoscope className="h-3 w-3" aria-hidden="true" />
+                      Alexis Check
+                    </span>
+                  )}
+
                   {/* Badges audit (Sécurité / RGPD / Accessibilité / À affiner) */}
                   <div className="flex flex-wrap gap-1">
                     <AuditLabelTags labels={issue.labels} />
@@ -419,6 +436,18 @@ export default function TicketKanban({
                       {justRetried === issue.id && (
                         <span className="text-[11px] font-medium text-success">Relancé ✓</span>
                       )}
+                    </div>
+                  )}
+
+                  {/* Bulle animée — Alexis est en train de répondre à ce ticket */}
+                  {ticket?.chat_active && (
+                    <div
+                      className="flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand"
+                      aria-label="Alexis répond en ce moment"
+                      title="Alexis répond en ce moment"
+                    >
+                      <MessageCircle className="h-3 w-3 animate-pulse" aria-hidden="true" />
+                      En discussion…
                     </div>
                   )}
 

@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.spyOn(session, "getAdminApiKey").mockReturnValue("alx_admin_xxx");
   vi.spyOn(apiClient, "adminListManagedSecrets").mockResolvedValue([ANTHROPIC_SECRET, GROQ_SECRET]);
   vi.spyOn(apiClient, "adminListPlans").mockResolvedValue([
-    { id: "plan-standard", name: "standard", monthly_price_usd: 150, forced_agent_choice: null, spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null },
+    { id: "plan-standard", name: "standard", monthly_price_usd: 150, forced_agent_choice: null, monthly_max_budget_usd: null } as apiClient.PlanOut,
   ]);
 });
 

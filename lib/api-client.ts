@@ -153,6 +153,12 @@ export interface Issue {
   description: string;
   state: string;
   labels: string[];
+  /** Origine du ticket — immuable.
+   * "human"      : créé manuellement par le client
+   * "ai_backlog" : généré par l'IA lors du commit du backlog
+   * "ai_audit"   : généré par l'IA à partir d'un diagnostic Alexis Check
+   */
+  origin: "human" | "ai_backlog" | "ai_audit";
   created_at: string;
   updated_at: string;
   comments: IssueComment[];
@@ -265,6 +271,48 @@ export function verifyEmail(token: string): Promise<ClientProfile> {
     });
   }
   return request("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) });
+}
+
+// ─── Wallet (solde prépayé, plans à clé gérée uniquement) ────────────────────
+// Le solde est exprimé en $ réels (prix Alexis = coût fournisseur × marge),
+// jamais en "tokens" — voir orchestrator/domain/wallet_service.py.
+
+export interface WalletOut {
+  balance_usd: number;
+  updated_at: string;
+}
+
+export interface WalletTransactionOut {
+  id: string;
+  type: "topup" | "debit";
+  billed_usd: number;
+  model: string | null;
+  step: string | null;
+  issue_identifier: string | null;
+  created_at: string;
+}
+
+export interface WalletTransactionsOut {
+  items: WalletTransactionOut[];
+  total: number;
+}
+
+export function getWallet(apiKey: string): Promise<WalletOut> {
+  if (isLocalMode()) {
+    return Promise.resolve({ balance_usd: 42.5, updated_at: new Date().toISOString() });
+  }
+  return request("/wallet", { headers: { Authorization: `Bearer ${apiKey}` } });
+}
+
+export function getWalletTransactions(
+  apiKey: string,
+  limit = 20,
+  offset = 0
+): Promise<WalletTransactionsOut> {
+  if (isLocalMode()) return Promise.resolve({ items: [], total: 0 });
+  return request(`/wallet/transactions?limit=${limit}&offset=${offset}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
 }
 
 // ─── Membres (multi-utilisateur) ─────────────────────────────────────────────
@@ -564,6 +612,8 @@ export interface TicketOut {
   error_hint: string | null;
   /** Stdout brut — pour le repliable "Détails techniques" */
   error_detail: string | null;
+  /** True si Alexis est en train de répondre à un message de raffinement sur ce ticket. */
+  chat_active?: boolean;
 }
 
 export function listTickets(apiKey: string, projectId: string): Promise<TicketOut[]> {
@@ -611,6 +661,7 @@ export function createIssue(
       description: payload.description ?? "",
       state: payload.state ?? "Backlog",
       labels: payload.labels ?? [],
+      origin: "human",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       comments: [],
@@ -1099,6 +1150,7 @@ export interface AdminClientListItem {
   plan_name: string | null;
   project_count: number;
   monthly_spend_usd: number;
+  wallet_balance_usd: number;
 }
 
 export function adminListClients(adminApiKey: string): Promise<AdminClientListItem[]> {
@@ -1119,6 +1171,7 @@ export interface AdminClientDetail {
   github_username: string | null;
   plan_name: string | null;
   monthly_spend_usd: number;
+  wallet_balance_usd: number;
   projects: AdminProjectSummary[];
 }
 
@@ -1141,13 +1194,11 @@ export interface PlanOut {
   features: string[] | null;
   monthly_price_usd: number;
   forced_agent_choice: string | null;
-  spec_max_budget_usd: number | null;
-  plan_max_budget_usd: number | null;
-  dev_max_budget_usd: number | null;
+  /** Plafond mensuel en prix Alexis (coût × marge) — null/0 = illimité. Utilisé par le plan Découverte. */
   monthly_max_budget_usd: number | null;
+  /** true = plan BYOK (abonnement plat, jamais de wallet). false = plan à clé gérée (wallet prépayé, pas de prix fixe). */
   requires_own_key: boolean;
   max_members: number | null;
-  max_projects: number | null;
   is_public: boolean;
   sort_order: number;
 }
@@ -1156,16 +1207,12 @@ export interface PlanPayload {
   name: string;
   monthly_price_usd: number;
   forced_agent_choice?: string | null;
-  spec_max_budget_usd?: number | null;
-  plan_max_budget_usd?: number | null;
-  dev_max_budget_usd?: number | null;
   monthly_max_budget_usd?: number | null;
   display_name?: string | null;
   description?: string | null;
   features?: string[] | null;
   requires_own_key?: boolean;
   max_members?: number | null;
-  max_projects?: number | null;
   is_public?: boolean;
   sort_order?: number;
 }
@@ -1198,6 +1245,38 @@ export function adminDeletePlan(adminApiKey: string, planId: string): Promise<vo
   return request(`/admin/plans/${planId}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
+// ─── Pricing wallet (marge appliquée au débit) ────────────────────────────────
+// billed_usd = provider_cost_usd × margin_multiplier.
+
+export interface MarginSettingOut {
+  margin_multiplier: number;
+}
+
+export function adminGetMargin(adminApiKey: string): Promise<MarginSettingOut> {
+  return request("/admin/pricing/margin", { headers: { Authorization: `Bearer ${adminApiKey}` } });
+}
+
+export function adminUpdateMargin(adminApiKey: string, marginMultiplier: number): Promise<MarginSettingOut> {
+  return request("/admin/pricing/margin", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ margin_multiplier: marginMultiplier }),
+  });
+}
+
+/** Crédite manuellement le wallet d'un client (recharge admin). */
+export function adminTopupWallet(
+  adminApiKey: string,
+  clientId: string,
+  amountUsd: number
+): Promise<WalletOut> {
+  return request("/admin/pricing/topup", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+    body: JSON.stringify({ client_id: clientId, amount_usd: amountUsd }),
   });
 }
 

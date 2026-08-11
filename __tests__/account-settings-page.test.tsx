@@ -42,6 +42,9 @@ beforeEach(() => {
   vi.spyOn(session, "getApiKey").mockReturnValue("alx_xxx");
   // La page appelle listMembers pour la section Équipe — on le mock par défaut
   vi.spyOn(apiClient, "listMembers").mockResolvedValue(FAKE_MEMBERS);
+  // La page appelle aussi le wallet — on le mock par défaut (plan géré simulé)
+  vi.spyOn(apiClient, "getWallet").mockResolvedValue({ balance_usd: 25, updated_at: new Date().toISOString() });
+  vi.spyOn(apiClient, "getWalletTransactions").mockResolvedValue({ items: [], total: 0 });
 });
 
 describe("AccountSettingsPage", () => {

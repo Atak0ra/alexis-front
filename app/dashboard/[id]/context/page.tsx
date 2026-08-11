@@ -72,14 +72,12 @@ const DEFAULT_ICON = (
 function SectionBlock({ section, first }: { section: Section; first: boolean }) {
   const icon = SECTION_ICONS[section.title.toLowerCase()] ?? DEFAULT_ICON;
   return (
-    <div className={first ? "" : "mt-8 border-t border-border pt-8"}>
-      <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10">
-          <svg className="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            {icon}
-          </svg>
-        </div>
-        <p className="font-mono text-xs font-semibold uppercase tracking-widest text-foreground-subtle">
+    <div className={first ? "" : "mt-6 border-t border-border pt-6"}>
+      <div className="mb-2.5 flex items-center gap-2">
+        <svg className="h-3.5 w-3.5 shrink-0 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          {icon}
+        </svg>
+        <p className="text-xs font-semibold text-foreground-muted">
           {section.title}
         </p>
       </div>
@@ -99,17 +97,17 @@ function BudgetGauge({ content }: { content: string }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="h-1.5 w-32 overflow-hidden rounded-full bg-surface-sunken sm:w-40">
+      <div className="h-1 w-28 overflow-hidden rounded-full bg-surface-sunken sm:w-36">
         <div
           className={`h-full rounded-full transition-[width] duration-700 ease-out ${
-            overBudget ? "bg-danger" : nearBudget ? "bg-warning" : "bg-brand"
+            overBudget ? "bg-warning" : nearBudget ? "bg-warning/60" : "bg-border-strong"
           }`}
           style={{ width: `${Math.round(ratio * 100)}%` }}
         />
       </div>
-      <p className="whitespace-nowrap font-mono text-xs text-foreground-subtle">
+      <p className="whitespace-nowrap text-xs text-foreground-subtle">
         {lines} / {LINE_CAP} lignes
-        <span className="hidden sm:inline"> · ~{tokens} / {TOKEN_CAP} tokens</span>
+        <span className="hidden sm:inline"> · ~{tokens} tokens</span>
       </p>
     </div>
   );
@@ -238,12 +236,10 @@ export default function ProjectContextPage() {
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <h1 className="font-display text-2xl font-bold text-foreground">Contexte du projet</h1>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-success-border bg-success-bg px-2.5 py-0.5 text-xs font-medium text-success">
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-foreground-muted">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                     Committé
                   </span>
                 </div>
@@ -252,24 +248,24 @@ export default function ProjectContextPage() {
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors"
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-sunken focus:outline-none focus:ring-2 focus:ring-brand/20"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-3.5 w-3.5 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Modifier
               </button>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-4">
               <BudgetGauge content={content ?? ""} />
             </div>
 
-            <div className="mt-8 border-t border-border" />
+            <div className="mt-6 border-t border-border" />
 
             {/* Document continu — chaque ## garde un en-tête icône + titre,
                 mais tout se lit comme un seul texte, pas des cartes séparées. */}
-            <div className="mt-8 max-w-3xl">
+            <div className="mt-6 max-w-3xl">
               {splitSections(content ?? "").map((section, i) => (
                 <SectionBlock key={section.title} section={section} first={i === 0} />
               ))}

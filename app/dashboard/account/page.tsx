@@ -9,12 +9,103 @@ import {
   listMembers,
   inviteMember,
   removeMember,
+  getWallet,
+  getWalletTransactions,
   friendlyError,
   type ClientProfile,
   type MembersListOut,
   type MemberOut,
+  type WalletOut,
+  type WalletTransactionOut,
 } from "@/lib/api-client";
 import { getApiKey, clearApiKey } from "@/lib/session";
+
+// ── Section Wallet ────────────────────────────────────────────────────────────
+
+function WalletSection({
+  apiKey,
+  profile,
+}: {
+  apiKey: string;
+  profile: ClientProfile;
+}) {
+  const [wallet, setWallet] = useState<WalletOut | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransactionOut[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  // BYOK (clé perso) ou pas de plan du tout = jamais de wallet — rien à afficher.
+  const hasWallet = !!profile.plan && !profile.plan.requires_own_key;
+
+  useEffect(() => {
+    if (!hasWallet) return;
+    getWallet(apiKey)
+      .then(setWallet)
+      .catch((err) => setLoadErr(friendlyError(err)));
+    getWalletTransactions(apiKey, 20, 0)
+      .then((res) => setTransactions(res.items))
+      .catch(() => {/* historique optionnel, pas bloquant */});
+  }, [apiKey, hasWallet]);
+
+  if (!hasWallet) return null;
+
+  return (
+    <section className="rounded-xl border border-border bg-surface-raised p-5" data-testid="wallet-section">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+        Wallet
+      </h3>
+
+      {loadErr && <p className="text-sm text-danger">{loadErr}</p>}
+
+      {wallet && (
+        <>
+          <p
+            className={`font-mono text-2xl font-bold ${wallet.balance_usd < 10 ? "text-danger" : "text-foreground"}`}
+            data-testid="wallet-balance"
+          >
+            ${wallet.balance_usd.toFixed(2)}
+          </p>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Solde prépayé en dollars réels — pas de tokens, débité au coût réel de chaque run.
+          </p>
+          {wallet.balance_usd < 10 && (
+            <p className="mt-2 text-sm font-medium text-danger">
+              Solde bas. Contactez-nous pour recharger votre compte.
+            </p>
+          )}
+        </>
+      )}
+
+      {transactions.length > 0 && (
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+            Historique récent
+          </p>
+          <ul className="space-y-2">
+            {transactions.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate text-foreground-muted">
+                    {t.type === "topup" ? "Recharge" : (t.issue_identifier ?? t.step ?? "Débit")}
+                  </p>
+                  {t.model && (
+                    <p className="truncate text-xs text-foreground-subtle">{t.model}</p>
+                  )}
+                </div>
+                <span className={`shrink-0 font-mono ${t.type === "topup" ? "text-success" : "text-foreground"}`}>
+                  {t.type === "topup" ? "+" : "-"}${t.billed_usd.toFixed(4)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {wallet && transactions.length === 0 && (
+        <p className="mt-4 text-sm text-foreground-subtle">Aucune transaction pour le moment.</p>
+      )}
+    </section>
+  );
+}
 
 // ── Section Équipe ────────────────────────────────────────────────────────────
 
@@ -411,6 +502,9 @@ export default function AccountSettingsPage() {
                 </>
               )}
             </section>
+
+            {/* Section Wallet — masquée pour les plans BYOK */}
+            <WalletSection apiKey={apiKey} profile={profile} />
 
             {/* Section Équipe */}
             <TeamSection apiKey={apiKey} profile={profile} />

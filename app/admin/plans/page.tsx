@@ -10,8 +10,7 @@ import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } f
 
 const EMPTY_FORM: PlanPayload = {
   name: "", monthly_price_usd: 0, forced_agent_choice: null,
-  spec_max_budget_usd: null, plan_max_budget_usd: null, dev_max_budget_usd: null, monthly_max_budget_usd: null,
-  max_projects: null,
+  monthly_max_budget_usd: null,
   display_name: null, description: null, features: null,
   requires_own_key: false, max_members: 1, is_public: true, sort_order: 0,
 };
@@ -28,9 +27,6 @@ function cleanFeatures(lines: string[] | null | undefined): string[] | null {
 }
 
 const BUDGET_FIELDS = [
-  ["plan-spec-budget", "Plafond spec ($)", "spec_max_budget_usd"],
-  ["plan-plan-budget", "Plafond plan ($)", "plan_max_budget_usd"],
-  ["plan-dev-budget", "Plafond dev ($)", "dev_max_budget_usd"],
   ["plan-monthly-budget", "Plafond mensuel ($)", "monthly_max_budget_usd"],
 ] as const;
 
@@ -57,9 +53,7 @@ export default function AdminPlansPage() {
     setEditingId(plan.id);
     setForm({
       name: plan.name, monthly_price_usd: plan.monthly_price_usd, forced_agent_choice: plan.forced_agent_choice,
-      spec_max_budget_usd: plan.spec_max_budget_usd, plan_max_budget_usd: plan.plan_max_budget_usd,
-      dev_max_budget_usd: plan.dev_max_budget_usd, monthly_max_budget_usd: plan.monthly_max_budget_usd,
-      max_projects: plan.max_projects,
+      monthly_max_budget_usd: plan.monthly_max_budget_usd,
       display_name: plan.display_name, description: plan.description, features: plan.features,
       requires_own_key: plan.requires_own_key, max_members: plan.max_members,
       is_public: plan.is_public, sort_order: plan.sort_order,
@@ -128,10 +122,9 @@ export default function AdminPlansPage() {
             <tr className="border-b border-border bg-surface-sunken text-foreground-muted">
               <th className="px-5 py-3 font-medium">Nom</th>
               <th className="px-5 py-3 font-medium">Nom public</th>
-              <th className="px-5 py-3 font-medium">Prix / mois</th>
+              <th className="px-5 py-3 font-medium">Facturation</th>
               <th className="px-5 py-3 font-medium">Agent forcé</th>
               <th className="px-5 py-3 font-medium">Plafond mensuel</th>
-              <th className="px-5 py-3 font-medium">Projets max</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -145,13 +138,14 @@ export default function AdminPlansPage() {
                     <span className="ml-1.5 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-foreground-subtle">masqué</span>
                   )}
                 </td>
-                <td className="px-5 py-3.5 text-foreground-muted">${plan.monthly_price_usd}</td>
+                <td className="px-5 py-3.5 text-foreground-muted">
+                  {plan.requires_own_key
+                    ? `$${plan.monthly_price_usd} / mois (BYOK)`
+                    : "Wallet prépayé (pas de prix fixe)"}
+                </td>
                 <td className="px-5 py-3.5 text-foreground-muted">{plan.forced_agent_choice ?? "—"}</td>
                  <td className="px-5 py-3.5 font-mono text-foreground-muted">
                    {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
-                 </td>
-                 <td className="px-5 py-3.5 text-foreground-muted">
-                   {plan.max_projects != null ? plan.max_projects : "illimité"}
                  </td>
                  <td className="px-5 py-3.5 text-right">
                   {confirmDeleteId === plan.id ? (
@@ -224,6 +218,11 @@ export default function AdminPlansPage() {
                 onChange={(e) => setForm({ ...form, monthly_price_usd: Number(e.target.value) })}
                 className={adminInputClass}
               />
+              <p className="mt-1 text-xs text-foreground-subtle">
+                Utilisé uniquement si « Nécessite sa propre clé API (BYOK) » est coché ci-dessous
+                (abonnement plat). Les plans à clé gérée facturent via le wallet prépayé
+                (coût réel × marge, réglable dans Pricing), pas de prix fixe.
+              </p>
             </div>
             <div>
               <label htmlFor="plan-forced-agent" className="mb-1.5 block text-sm font-medium text-foreground">Agent forcé</label>
@@ -237,20 +236,6 @@ export default function AdminPlansPage() {
                 <option value="aider">aider</option>
                 <option value="claude">claude</option>
               </select>
-            </div>
-            <div>
-              <label htmlFor="plan-max-projects" className="mb-1.5 block text-sm font-medium text-foreground">
-                Projets max <span className="text-foreground-subtle font-normal">(vide = illimité)</span>
-              </label>
-              <input
-                id="plan-max-projects"
-                type="number"
-                min="1"
-                step="1"
-                value={form.max_projects ?? ""}
-                onChange={(e) => setForm({ ...form, max_projects: toNullableNumber(e.target.value) })}
-                className={adminInputClass}
-              />
             </div>
             {BUDGET_FIELDS.map(([id, label, field]) => (
               <div key={id}>

@@ -78,6 +78,26 @@ export default function IssueStepPanel({
   const phase = reviewPhase(issue.state);
   const retryTargetState = getRetryTargetState(issue.state, states);
 
+  // Resync au montage : si un job était en cours avant la navigation, on
+  // récupère son statut réel pour éviter le faux « En cours… » figé.
+  useEffect(() => {
+    if (!inReview) return;
+    let cancelled = false;
+    getIssueChatStatus(apiKey, projectId, issue.id)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.status === "in_progress") {
+          setChatStatus("in_progress");
+        } else if (res.status === "failed") {
+          setChatStatus("failed");
+          setChatError(res.error ?? "Erreur inconnue");
+        }
+        // "done" ou null → on laisse chatStatus à null (champ actif)
+      })
+      .catch(() => { /* réseau indisponible — on laisse null, pas bloquant */ });
+    return () => { cancelled = true; };
+  }, [issue.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (chatStatus === "in_progress") {
       pollRef.current = setInterval(async () => {

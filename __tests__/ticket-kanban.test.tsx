@@ -262,6 +262,71 @@ describe("TicketKanban", () => {
   });
 });
 
+describe("TicketKanban — bulle chat_active", () => {
+  it("affiche la bulle 'En discussion…' quand chat_active est true", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "PROJ-1", title: "Ticket en discussion", state: "Dev" })];
+    render(
+      <TicketKanban
+        issues={issues}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        onMoveIssue={vi.fn()}
+        ticketsByIdentifier={{
+          "PROJ-1": {
+            pr_url: null,
+            pr_title: null,
+            cost_usd: 0,
+            error_message: null,
+            error_hint: null,
+            chat_active: true,
+          },
+        }}
+      />
+    );
+
+    expect(screen.getByText("En discussion…")).toBeInTheDocument();
+    expect(screen.getByLabelText("Alexis répond en ce moment")).toBeInTheDocument();
+  });
+
+  it("n'affiche pas la bulle quand chat_active est false", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "PROJ-1", title: "Ticket calme", state: "Dev" })];
+    render(
+      <TicketKanban
+        issues={issues}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        onMoveIssue={vi.fn()}
+        ticketsByIdentifier={{
+          "PROJ-1": {
+            pr_url: null,
+            pr_title: null,
+            cost_usd: 0,
+            error_message: null,
+            error_hint: null,
+            chat_active: false,
+          },
+        }}
+      />
+    );
+
+    expect(screen.queryByText("En discussion…")).not.toBeInTheDocument();
+  });
+
+  it("n'affiche pas la bulle quand ticketsByIdentifier est absent", () => {
+    const issues = [makeIssue({ id: "i1", identifier: "PROJ-1", title: "Ticket sans ticket data", state: "Dev" })];
+    render(
+      <TicketKanban
+        issues={issues}
+        states={DEFAULT_STATES}
+        projectId="p1"
+        onMoveIssue={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("En discussion…")).not.toBeInTheDocument();
+  });
+});
+
 describe("TicketKanban — badges audit", () => {
   it("affiche le badge Sécurité sur une carte avec le label 'Sécurité'", () => {
     const issues = [makeIssue({ id: "i1", title: "Clés exposées", state: "Backlog", labels: ["Sécurité", "À affiner"] })];
