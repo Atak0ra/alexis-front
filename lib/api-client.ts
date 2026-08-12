@@ -597,7 +597,7 @@ export async function downloadProject(apiKey: string, projectId: string, project
 // ─── Tickets (vue agrégée run/PR/coût, dérivée de TicketRun côté backend) ──────
 
 export interface TicketOut {
-  id: string; // identifier de l'issue (ex: KARA-42)
+  id: string; // identifier de l'issue (ex: PROJ-42)
   title: string;
   description: string;
   status: "resolved" | "in_progress" | "failed";
@@ -610,8 +610,6 @@ export interface TicketOut {
   error_message: string | null;
   /** Phrase d'explication client-friendly */
   error_hint: string | null;
-  /** Stdout brut — pour le repliable "Détails techniques" */
-  error_detail: string | null;
   /** True si Alexis est en train de répondre à un message de raffinement sur ce ticket. */
   chat_active?: boolean;
 }

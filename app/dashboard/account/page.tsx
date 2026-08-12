@@ -65,7 +65,7 @@ function WalletSection({
             ${wallet.balance_usd.toFixed(2)}
           </p>
           <p className="mt-1 text-sm text-foreground-muted">
-            Solde prépayé en dollars réels — pas de tokens, débité au coût réel de chaque run.
+            Solde prépayé en dollars réels. Débité au coût réel de chaque run.
           </p>
           {wallet.balance_usd < 10 && (
             <p className="mt-2 text-sm font-medium text-danger">

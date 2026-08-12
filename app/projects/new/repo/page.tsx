@@ -149,7 +149,7 @@ export default function RepoPage() {
       </h1>
       <p className="mt-1 text-sm text-foreground-muted">
         {hosted
-          ? "Alexis crée un dépôt privé pour toi. Avec un compte GitHub, tu peux y être ajouté en collaborateur — sinon, tu récupères ton code en ZIP à tout moment."
+          ? "Alexis crée un dépôt privé pour toi. Avec un compte GitHub, tu peux y être ajouté en collaborateur. Sinon, tu récupères ton code en ZIP à tout moment."
           : "Connectez votre dépôt Git et vérifiez l'accès de votre token."}
       </p>
 
@@ -268,7 +268,7 @@ export default function RepoPage() {
               placeholder="octocat"
             />
             <p className="mt-1 text-xs text-foreground-subtle">
-              Laisse vide si tu n&apos;as pas de compte GitHub — tu pourras toujours télécharger ton code en ZIP
+              Laisse vide si tu n&apos;as pas de compte GitHub. Tu pourras toujours télécharger ton code en ZIP
               depuis les paramètres du projet.
             </p>
           </div>

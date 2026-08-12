@@ -14,13 +14,13 @@ vi.mock("next/navigation", () => ({
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
-  name: "Kara",
-  repo_url: "https://github.com/acme/kara.git",
+  name: "Proj Demo",
+  repo_url: "https://github.com/acme/proj-demo.git",
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
   has_agent_api_key: true,
-  issue_prefix: "KARA",
+  issue_prefix: "PROJ",
   forge_provider: "github",
   has_forge_token: true,
   states: {},
@@ -119,6 +119,6 @@ describe("ProjectContextPage (/dashboard/[id]/context)", () => {
 
     render(<ProjectContextPage />);
 
-    await waitFor(() => expect(screen.getAllByText("Kara").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("Proj Demo").length).toBeGreaterThan(0));
   });
 });

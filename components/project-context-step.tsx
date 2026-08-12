@@ -467,7 +467,7 @@ export default function ProjectContextStep({
                   <span className="font-normal text-foreground-subtle">(optionnel)</span>
                 </label>
                 <p className="mb-2 text-xs text-foreground-subtle">
-                  PDF, Word, Markdown ou texte — max 10 Mo. Alexis l&apos;utilisera pour générer le contexte et le backlog.
+                  PDF, Word, Markdown ou texte (max 10 Mo). Alexis l&apos;utilisera pour générer le contexte et le backlog.
                 </p>
                 <input
                   type="file"

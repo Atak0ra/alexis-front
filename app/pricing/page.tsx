@@ -88,7 +88,7 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
       {/* Free note */}
       {isFree && (
         <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-xs text-foreground-muted">
-          Plan de découverte — modèle mutualisé, moins rapide et moins performant qu&apos;un plan avec votre propre clé.
+          Plan de découverte. Modèle mutualisé, moins rapide et moins performant qu&apos;un plan avec votre propre clé.
         </p>
       )}
 
@@ -218,7 +218,7 @@ export default function PricingPage() {
             <div>
               <dt className="font-semibold text-foreground">Comment fonctionne le plan Solo Preneur ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
-                Claude (Anthropic) fourni par Alexis — vous n&apos;avez rien à configurer. Vous rechargez
+                Claude (Anthropic) fourni par Alexis. Vous n&apos;avez rien à configurer. Vous rechargez
                 un solde (wallet) et chaque run débite le coût réel mesuré, marge de la plateforme
                 comprise. Aucun abonnement fixe. Contactez-nous à{" "}
                 <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
@@ -231,7 +231,7 @@ export default function PricingPage() {
               <dt className="font-semibold text-foreground">Quelle différence entre Solo Preneur et Entreprise ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
                 Le nombre de membres : Solo Preneur est limité à 1 membre, Entreprise n&apos;a pas de
-                limite. Les deux fonctionnent en pay-as-you-go — vous ne payez que votre usage réel,
+                limite. Les deux fonctionnent en pay-as-you-go : vous ne payez que votre usage réel,
                 sans abonnement fixe.
               </dd>
             </div>

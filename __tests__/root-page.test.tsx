@@ -18,7 +18,7 @@ describe("RootPage", () => {
 
   it("shows a static ticket ticker instead of the fake dashboard screenshot", () => {
     render(<RootPage />);
-    expect(screen.getByText("KARA-142 · Cadrage")).toBeInTheDocument();
+    expect(screen.getByText("PROJ-142 · Cadrage")).toBeInTheDocument();
     // The fake browser-chrome preview (KPI row) is gone.
     expect(screen.queryByText("Résolus")).not.toBeInTheDocument();
   });

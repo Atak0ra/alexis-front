@@ -27,7 +27,7 @@ export default function AgentTemplateHint() {
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-foreground-muted">
               Alexis lit aussi CLAUDE.md/CONVENTIONS.md/AGENT.md à la racine de votre
-              projet, s&apos;il existe — à chaque run. Gardez-le concis.
+              projet, s&apos;il existe, à chaque run. Gardez-le concis.
             </p>
             <button
               type="button"

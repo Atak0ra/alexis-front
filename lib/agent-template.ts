@@ -12,16 +12,16 @@ export const AGENT_TEMPLATE = `# Template CLAUDE.md / CONVENTIONS.md / AGENT.md
 
 | Élément | Format | Exemple |
 |---|---|---|
-| Branche | feat/{identifier}/{slug} | feat/KARA-42/user-auth |
-| Commit | Conventional Commits avec scope | feat(KARA-42): add user auth |
-| PR base | develop (jamais main) | — |
+| Branche | feat/{identifier}/{slug} | feat/PROJ-42/user-auth |
+| Commit | Conventional Commits avec scope | feat(PROJ-42): add user auth |
+| PR base | develop (jamais main) | |
 
 Alexis retrouve la branche feature par le pattern feat/{identifier}/*
 pour merger. Si la branche ne suit pas ce pattern, le merge échoue.
 
 ## Ce qu'Alexis ne fait jamais
 
-- Ne crée pas de PR quand la revue de code est désactivée pour ce projet —
+- Ne crée pas de PR quand la revue de code est désactivée pour ce projet,
   le code part directement sur develop.
 - Ne touche jamais votre tracker de tickets en dehors du workflow normal.
 - Ne fait jamais de git push --force (--force-with-lease réservé à

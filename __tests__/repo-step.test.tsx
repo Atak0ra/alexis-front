@@ -45,7 +45,7 @@ describe("RepoPage (step 1)", () => {
 
     renderRepoPage();
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/kara" } });
+    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/proj-demo" } });
     fireEvent.change(screen.getByPlaceholderText(/ghp_/), { target: { value: "ghp_xxx" } });
     fireEvent.click(screen.getByRole("button", { name: "Tester" }));
 
@@ -88,7 +88,7 @@ describe("RepoPage (step 1)", () => {
       </Provider>
     );
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/kara" } });
+    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/proj-demo" } });
     fireEvent.change(screen.getByPlaceholderText(/ghp_/), { target: { value: "ghp_xxx" } });
     fireEvent.click(screen.getByRole("button", { name: "Tester" }));
     await screen.findByText(/Connecté ✓/);
@@ -110,7 +110,7 @@ describe("RepoPage (step 1)", () => {
 
     renderRepoPage();
     fireEvent.change(screen.getByLabelText("Nom du projet"), { target: { value: "kara" } });
-    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/kara" } });
+    fireEvent.change(screen.getByLabelText("URL du dépôt"), { target: { value: "https://github.com/acme/proj-demo" } });
     fireEvent.change(screen.getByPlaceholderText(/ghp_/), { target: { value: "ghp_xxx" } });
     fireEvent.click(screen.getByRole("button", { name: "Tester" }));
     await screen.findByText(/Connecté ✓/);

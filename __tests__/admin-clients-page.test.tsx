@@ -43,13 +43,13 @@ describe("AdminClientDetailPage", () => {
     vi.spyOn(apiClient, "adminGetClient").mockResolvedValue({
       id: "client-1", email: "a@b.com", github_username: null, plan_name: "standard",
       monthly_spend_usd: 12.5, wallet_balance_usd: 30,
-      projects: [{ id: "p1", name: "kara", agent_choice: "claude", is_active: true, total_cost_usd: 3.2 }],
+      projects: [{ id: "p1", name: "proj-demo", agent_choice: "claude", is_active: true, total_cost_usd: 3.2 }],
     });
 
     render(<AdminClientDetailPage />);
 
     await waitFor(() => expect(screen.getByText("a@b.com")).toBeInTheDocument());
-    expect(screen.getByText("kara")).toBeInTheDocument();
+    expect(screen.getByText("proj-demo")).toBeInTheDocument();
     expect(screen.getByText("$3.20")).toBeInTheDocument();
   });
 });

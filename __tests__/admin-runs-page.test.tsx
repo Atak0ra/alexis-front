@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 function makeRun(overrides: Partial<AdminRecentRun>): AdminRecentRun {
   return {
     id: "run-1",
-    identifier: "KARA-1",
+    identifier: "PROJ-1",
     step: "dev",
     status: "done",
     model: "claude-sonnet-4-5",
@@ -23,7 +23,7 @@ function makeRun(overrides: Partial<AdminRecentRun>): AdminRecentRun {
     created_at: "2026-07-20T10:00:00Z",
     client_email: "a@b.com",
     client_id: "client-1",
-    project_name: "Kara",
+    project_name: "Proj Demo",
     project_id: "project-1",
     ...overrides,
   };
@@ -38,7 +38,7 @@ beforeEach(() => {
   vi.spyOn(apiClient, "adminGetClient").mockResolvedValue({
     id: "client-1", email: "a@b.com", github_username: null, plan_name: "standard",
     monthly_spend_usd: 5,
-    projects: [{ id: "project-1", name: "Kara", agent_choice: "claude", is_active: true, total_cost_usd: 5 }],
+    projects: [{ id: "project-1", name: "Proj Demo", agent_choice: "claude", is_active: true, total_cost_usd: 5 }],
   });
 });
 
@@ -48,13 +48,13 @@ describe("AdminRunsPage", () => {
 
     render(<AdminRunsPage />);
 
-    await waitFor(() => expect(screen.getByText("KARA-1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("PROJ-1")).toBeInTheDocument());
     expect(screen.getAllByText("a@b.com").length).toBeGreaterThan(0);
   });
 
   it("shows the pagination summary and disables Précédent on the first page", async () => {
     vi.spyOn(apiClient, "adminGetRecentRuns").mockResolvedValue({
-      items: Array.from({ length: 25 }, (_, i) => makeRun({ id: `run-${i}`, identifier: `KARA-${i}` })),
+      items: Array.from({ length: 25 }, (_, i) => makeRun({ id: `run-${i}`, identifier: `PROJ-${i}` })),
       total: 60,
     });
 
@@ -89,7 +89,7 @@ describe("AdminRunsPage", () => {
 
     fireEvent.change(screen.getByDisplayValue("Tous clients"), { target: { value: "client-1" } });
 
-    await waitFor(() => expect(screen.getByText("Kara")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Proj Demo")).toBeInTheDocument());
   });
 
   it("re-fetches scoped to client and project when filters change", async () => {
@@ -99,9 +99,9 @@ describe("AdminRunsPage", () => {
     await waitFor(() => expect(screen.getByText("a@b.com")).toBeInTheDocument());
 
     fireEvent.change(screen.getByDisplayValue("Tous clients"), { target: { value: "client-1" } });
-    await waitFor(() => expect(screen.getByText("Kara")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Proj Demo")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByText("Kara").closest("select")!, { target: { value: "project-1" } });
+    fireEvent.change(screen.getByText("Proj Demo").closest("select")!, { target: { value: "project-1" } });
 
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith(
@@ -115,9 +115,9 @@ describe("AdminRunsPage", () => {
     vi.spyOn(apiClient, "adminGetRecentRuns").mockResolvedValue({ items: [makeRun({})], total: 1 });
 
     render(<AdminRunsPage />);
-    await waitFor(() => expect(screen.getByText("KARA-1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("PROJ-1")).toBeInTheDocument());
 
-    fireEvent.click(screen.getByText("KARA-1"));
+    fireEvent.click(screen.getByText("PROJ-1"));
 
     expect(await screen.findByText("Voir la fiche client →")).toBeInTheDocument();
   });

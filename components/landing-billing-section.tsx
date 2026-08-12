@@ -16,7 +16,7 @@ const BILLING_POINTS = [
 ];
 
 // ─── Section facturation (landing) ─────────────────────────────────────────────
-// Statique volontairement : pas de fetch /plans ici — les vrais montants et
+// Statique volontairement : pas de fetch /plans ici, les vrais montants et
 // plafonds sont admin-configurables et déjà détaillés sur /pricing. Un fetch
 // ici risquerait de désynchroniser deux sources de vérité.
 
@@ -51,7 +51,7 @@ export default function LandingBillingSection() {
 
         <div className="mt-10 text-center">
           <Link href="/pricing" className="text-sm font-semibold text-brand hover:underline">
-            Voir le détail des tarifs →
+            Voir le détail des tarifs
           </Link>
         </div>
       </div>

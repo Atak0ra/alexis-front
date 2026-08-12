@@ -55,7 +55,7 @@ export default function RootPage() {
           {/* Ticket ticker — un vrai identifiant + phase, vocabulaire public (cf. LandingPipelineSteps) */}
           <div className="mt-12 inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 font-mono text-xs text-foreground-muted">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-            KARA-142 · Cadrage
+            PROJ-142 · Cadrage
           </div>
         </div>
       </section>
@@ -72,7 +72,7 @@ export default function RootPage() {
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-foreground-muted">
               Chaque projet est découpé en tickets. Chaque ticket suit ce parcours
-              — et vous validez avant chaque étape qui compte. Plusieurs projets,
+              et vous validez avant chaque étape qui compte. Plusieurs projets,
               un seul tableau de bord.
             </p>
           </div>

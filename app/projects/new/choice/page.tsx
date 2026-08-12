@@ -48,7 +48,7 @@ export default function ChoicePage() {
         onClick={() => choose(true)}
         className="mt-4 text-sm text-foreground-muted underline-offset-2 hover:text-foreground hover:underline transition-colors"
       >
-        Passer — Alexis créera un dépôt hébergé
+        Passer : Alexis créera un dépôt hébergé
       </button>
     </>
   );

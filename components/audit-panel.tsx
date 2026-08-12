@@ -616,7 +616,7 @@ export default function AuditPanel({
                 />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-success">
-                    Ton dernier audit est prêt —{" "}
+                    Ton dernier audit est prêt :{" "}
                     {findings!.length} point{findings!.length > 1 ? "s" : ""} détecté
                     {findings!.length > 1 ? "s" : ""}
                   </p>

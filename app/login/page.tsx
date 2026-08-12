@@ -123,7 +123,7 @@ function LoginForm() {
         {isLocalMode() && (
           <div className="mt-6 rounded-xl border border-brand/20 bg-brand-light px-4 py-3">
             <p className="text-xs font-medium text-brand">
-              Mode démo — identifiants : <span className="font-mono">demo</span> / <span className="font-mono">passer</span>
+              Mode démo, identifiants : <span className="font-mono">demo</span> / <span className="font-mono">passer</span>
             </p>
           </div>
         )}

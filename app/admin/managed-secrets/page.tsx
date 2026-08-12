@@ -194,7 +194,7 @@ export default function AdminManagedSecretsPage() {
                       )}
                     </div>
                     <p className="mt-0.5 text-xs text-foreground-subtle">
-                      {label?.description ?? ""} — <code className="font-mono">{secret.env_var}</code>
+                      {label?.description ?? ""} : <code className="font-mono">{secret.env_var}</code>
                     </p>
                     {modelTags.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -295,7 +295,7 @@ export default function AdminManagedSecretsPage() {
               <div className="mt-3">
                 <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-foreground-subtle">
                   audit{" "}
-                  <span className="normal-case font-normal text-foreground-subtle/70">(optionnel — Alexis Check)</span>
+                  <span className="normal-case font-normal text-foreground-subtle/70">(optionnel, fallback Alexis Check)</span>
                 </label>
                 <input
                   type="text"

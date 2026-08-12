@@ -14,8 +14,8 @@ vi.mock("next/navigation", () => ({
 
 const FAKE_PROJECT = {
   id: "proj-1",
-  name: "kara",
-  repo_url: "https://github.com/acme/kara",
+  name: "proj-demo",
+  repo_url: "https://github.com/acme/proj-demo",
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
@@ -84,8 +84,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setIsByok(true);
       }
@@ -107,8 +107,8 @@ describe("AgentPage (step 2)", () => {
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
-        name: "kara",
-        repo_url: "https://github.com/acme/kara",
+        name: "proj-demo",
+        repo_url: "https://github.com/acme/proj-demo",
         agent_api_key: "sk-ant-xxx",
       })
     );
@@ -123,8 +123,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setIsByok(true);
       }
@@ -160,8 +160,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setIsByok(true);
       }
@@ -197,8 +197,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAiderAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setAgentChoice("aider");
         ctx.setIsByok(true);
@@ -235,8 +235,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setIsByok(true);
       }
@@ -266,7 +266,7 @@ describe("AgentPage (step 2)", () => {
     function FilledHostedAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
+        ctx.setName("proj-demo");
         ctx.setHosted(true);
         ctx.setGithubUsername("octocat");
         ctx.setIsByok(true);
@@ -289,7 +289,7 @@ describe("AgentPage (step 2)", () => {
     expect(apiClient.createProject).toHaveBeenCalledWith(
       "alx_xxx",
       expect.objectContaining({
-        name: "kara",
+        name: "proj-demo",
         repo_url: null,
         forge_token: null,
         forge_provider: "github",
@@ -309,8 +309,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setIsByok(true);
       }
@@ -359,8 +359,8 @@ describe("AgentPage (step 2)", () => {
     function FilledAgentPage() {
       const ctx = useNewProject();
       if (!ctx.name) {
-        ctx.setName("kara");
-        ctx.setRepoUrl("https://github.com/acme/kara");
+        ctx.setName("proj-demo");
+        ctx.setRepoUrl("https://github.com/acme/proj-demo");
         ctx.setForgeToken("ghp_xxx");
         ctx.setAgentChoice("claude");
         ctx.setIsByok(true);

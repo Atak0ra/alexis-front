@@ -21,11 +21,11 @@ function makeNotif(overrides: Partial<Notification> = {}): Notification {
     id: "notif-1",
     project_id: "proj-1",
     issue_id: "issue-1",
-    issue_identifier: "KARA-1",
+    issue_identifier: "PROJ-1",
     state: "spec_review",
     severity: "success",
     title: "Déploiement réussi",
-    body: "KARA-1 a été déployé en production.",
+    body: "PROJ-1 a été déployé en production.",
     read_at: null,
     created_at: new Date().toISOString(),
     ...overrides,
@@ -103,7 +103,7 @@ describe("NotificationPanel", () => {
       />
     );
 
-    const issueLink = screen.getByRole("link", { name: "KARA-1" });
+    const issueLink = screen.getByRole("link", { name: "PROJ-1" });
     expect(issueLink).toHaveAttribute("href", "/dashboard/proj-9/issues/issue-9");
 
     fireEvent.click(issueLink);

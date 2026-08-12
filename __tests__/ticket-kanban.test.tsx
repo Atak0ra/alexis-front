@@ -225,7 +225,7 @@ describe("TicketKanban", () => {
   });
 
   it("shows a PR link and cost badge when ticket data matches the issue", () => {
-    const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Avec PR", state: "Dev" })];
+    const issues = [makeIssue({ id: "i1", identifier: "PROJ-1", title: "Avec PR", state: "Dev" })];
     render(
       <TicketKanban
         issues={issues}
@@ -233,18 +233,18 @@ describe("TicketKanban", () => {
         projectId="p1"
         onMoveIssue={vi.fn()}
         ticketsByIdentifier={{
-          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_usd: 0.39 },
+          "PROJ-1": { pr_url: "https://github.com/acme/proj-demo/pull/9", pr_title: "PR", cost_usd: 0.39 },
         }}
       />
     );
 
     const prLink = screen.getByRole("link", { name: /voir les modifications/i });
-    expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/9");
+    expect(prLink).toHaveAttribute("href", "https://github.com/acme/proj-demo/pull/9");
     expect(screen.getByText("$0.3900")).toBeInTheDocument();
   });
 
   it("clicking the PR link does not navigate to the issue detail page", () => {
-    const issues = [makeIssue({ id: "i1", identifier: "KARA-1", title: "Avec PR", state: "Dev" })];
+    const issues = [makeIssue({ id: "i1", identifier: "PROJ-1", title: "Avec PR", state: "Dev" })];
     render(
       <TicketKanban
         issues={issues}
@@ -252,7 +252,7 @@ describe("TicketKanban", () => {
         projectId="p1"
         onMoveIssue={vi.fn()}
         ticketsByIdentifier={{
-          "KARA-1": { pr_url: "https://github.com/acme/kara/pull/9", pr_title: "PR", cost_usd: 0.39 },
+          "PROJ-1": { pr_url: "https://github.com/acme/proj-demo/pull/9", pr_title: "PR", cost_usd: 0.39 },
         }}
       />
     );

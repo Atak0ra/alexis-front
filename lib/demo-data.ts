@@ -10,13 +10,13 @@ export const DEMO_CREDENTIALS = { email: "demo", password: "passer" };
 let demoProjects: ProjectOut[] = [
   {
     id: "demo-project-1",
-    name: "kara",
-    repo_url: "https://github.com/acme/kara.git",
+    name: "proj-demo",
+    repo_url: "https://github.com/acme/proj-demo.git",
     is_hosted: false,
     agent_choice: "claude",
     agent_base_url: null,
     has_agent_api_key: true,
-    issue_prefix: "KARA",
+    issue_prefix: "PROJ",
     forge_provider: "github",
     has_forge_token: true,
     states: DEFAULT_STATES,
@@ -81,10 +81,9 @@ export function getDemoProjectStats(projectId: string): DemoProjectStats {
   const in_progress = 1 + (seed % 5);
   const failed = seed % 4;
   const total_cost_usd = Math.round(resolved * (2.1 + (seed % 7) * 0.4) * 100) / 100;
-  // Même taux par défaut que orchestrator/interface/currency.py (EUR: 0.92) —
-  // cohérent avec ce qu'un vrai backend renverrait, pour la démo locale.
-  const total_cost_display = Math.round(total_cost_usd * 0.92 * 100) / 100;
-  return { resolved, in_progress, failed, total_cost_usd, total_cost_display, display_currency: "EUR" };
+  // La devise affichée est USD (identique au backend) — pas de conversion.
+  const total_cost_display = total_cost_usd;
+  return { resolved, in_progress, failed, total_cost_usd, total_cost_display, display_currency: "USD" };
 }
 
 // ─── Demo issues (tracker natif — 14 états du workflow) ──────────────────────
@@ -92,8 +91,8 @@ export function getDemoProjectStats(projectId: string): DemoProjectStats {
 let demoIssues: Record<string, Issue[]> = {
   "demo-project-1": [
     {
-      id: "issue-kara-1",
-      identifier: "KARA-1",
+      id: "issue-proj-1",
+      identifier: "PROJ-1",
       number: 1,
       title: "Ajouter la pagination sur la liste des utilisateurs",
       description:
@@ -106,8 +105,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-2",
-      identifier: "KARA-2",
+      id: "issue-proj-2",
+      identifier: "PROJ-2",
       number: 2,
       title: "Corriger le bug de double soumission du formulaire de paiement",
       description:
@@ -120,8 +119,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-3",
-      identifier: "KARA-3",
+      id: "issue-proj-3",
+      identifier: "PROJ-3",
       number: 3,
       title: "Migrer les tests unitaires vers Vitest",
       description:
@@ -134,8 +133,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-4",
-      identifier: "KARA-4",
+      id: "issue-proj-4",
+      identifier: "PROJ-4",
       number: 4,
       title: "Implémenter le dark mode via CSS variables",
       description:
@@ -148,8 +147,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-5",
-      identifier: "KARA-5",
+      id: "issue-proj-5",
+      identifier: "PROJ-5",
       number: 5,
       title: "Optimiser les requêtes N+1 sur l'endpoint /projects",
       description:
@@ -162,8 +161,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-6",
-      identifier: "KARA-6",
+      id: "issue-proj-6",
+      identifier: "PROJ-6",
       number: 6,
       title: "Intégrer les webhooks GitHub pour les événements de PR",
       description:
@@ -176,8 +175,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-7",
-      identifier: "KARA-7",
+      id: "issue-proj-7",
+      identifier: "PROJ-7",
       number: 7,
       title: "Ajouter des notifications email pour les tickets en échec",
       description:
@@ -190,8 +189,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-8",
-      identifier: "KARA-8",
+      id: "issue-proj-8",
+      identifier: "PROJ-8",
       number: 8,
       title: "Refactoriser le module d'authentification OAuth",
       description:
@@ -203,7 +202,7 @@ let demoIssues: Record<string, Issue[]> = {
       updated_at: "2026-07-08T14:10:00Z",
       comments: [
         {
-          id: "comment-kara-8-1",
+          id: "comment-proj-8-1",
           body: "Échec de la compilation TypeScript : types incompatibles entre le module OAuth existant et la nouvelle interface. L'agent a tenté 3 approches différentes sans succès.",
           author: "alexis",
           created_at: "2026-07-08T14:10:00Z",
@@ -211,8 +210,8 @@ let demoIssues: Record<string, Issue[]> = {
       ],
     },
     {
-      id: "issue-kara-9",
-      identifier: "KARA-9",
+      id: "issue-proj-9",
+      identifier: "PROJ-9",
       number: 9,
       title: "Ajouter un système de rate limiting sur l'API publique",
       description:
@@ -225,8 +224,8 @@ let demoIssues: Record<string, Issue[]> = {
       comments: [],
     },
     {
-      id: "issue-kara-10",
-      identifier: "KARA-10",
+      id: "issue-proj-10",
+      identifier: "PROJ-10",
       number: 10,
       title: "Documenter l'API avec OpenAPI / Swagger",
       description:

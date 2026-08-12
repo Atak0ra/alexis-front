@@ -18,8 +18,8 @@ if (!URL.createObjectURL) {
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
-  name: "Kara",
-  repo_url: "https://github.com/acme/kara.git",
+  name: "Proj Demo",
+  repo_url: "https://github.com/acme/proj-demo.git",
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
@@ -37,7 +37,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
 
 const FAKE_ISSUE: apiClient.Issue = {
   id: "issue-1",
-  identifier: "KARA-1",
+  identifier: "PROJ-1",
   number: 1,
   title: "Corriger la pagination",
   description: "Le bouton suivant ne répond pas.",
@@ -61,7 +61,7 @@ describe("IssueDetailPage", () => {
     render(<IssueDetailPage />);
 
     await waitFor(() => expect(screen.getByText("Corriger la pagination")).toBeInTheDocument());
-    expect(screen.getByText("KARA-1")).toBeInTheDocument();
+    expect(screen.getByText("PROJ-1")).toBeInTheDocument();
     expect(screen.getByTestId("issue-step-requested")).toHaveAttribute("data-status", "current");
   });
 

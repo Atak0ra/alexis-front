@@ -41,7 +41,7 @@ export default function EmailVerificationModal({ onClose }: { onClose: () => voi
 
         {sent && (
           <p className="mt-4 rounded-lg border border-success-border bg-success-bg px-3 py-2 text-center text-xs font-medium text-success">
-            Email renvoyé — vérifie ta boîte mail (et tes spams).
+            Email renvoyé. Vérifie ta boîte mail (et tes spams).
           </p>
         )}
         {error && <p className="mt-4 text-center text-xs text-danger">{error}</p>}

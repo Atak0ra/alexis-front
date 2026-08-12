@@ -16,7 +16,7 @@ describe("validateForge", () => {
     const result = await apiClient.validateForge("alx_xxx", {
       forge_provider: "github",
       forge_token: "ghp_xxx",
-      repo_url: "https://github.com/acme/kara",
+      repo_url: "https://github.com/acme/proj-demo",
     });
 
     expect(result).toEqual({ valid: true, account: "octocat" });

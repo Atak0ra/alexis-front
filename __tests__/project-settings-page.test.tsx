@@ -24,8 +24,8 @@ if (!URL.createObjectURL) {
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-123",
-  name: "Kara",
-  repo_url: "https://github.com/acme/kara.git",
+  name: "Proj Demo",
+  repo_url: "https://github.com/acme/proj-demo.git",
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
@@ -43,7 +43,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
 
 const FAKE_HOSTED_PROJECT: apiClient.ProjectOut = {
   ...FAKE_PROJECT,
-  repo_url: "https://github.com/compeel-alexis/acme-kara-abc123.git",
+  repo_url: "https://github.com/compeel-alexis/acme-proj-abc123.git",
   is_hosted: true,
   has_forge_token: false,
 };
@@ -75,10 +75,10 @@ describe("ProjectSettingsPage", () => {
 
     // Après chargement, les champs sont préremplis
     await waitFor(() =>
-      expect(screen.getByLabelText("Nom du projet")).toHaveValue("Kara")
+      expect(screen.getByLabelText("Nom du projet")).toHaveValue("Proj Demo")
     );
     expect(screen.getByLabelText("URL du repo")).toHaveValue(
-      "https://github.com/acme/kara.git"
+      "https://github.com/acme/proj-demo.git"
     );
   });
 
@@ -126,7 +126,7 @@ describe("ProjectSettingsPage", () => {
 
     // Modifier le nom et remplir seulement la clé agent
     fireEvent.change(screen.getByLabelText("Nom du projet"), {
-      target: { value: "Kara v2" },
+      target: { value: "Proj Demo v2" },
     });
     fireEvent.change(screen.getByLabelText("Clé API agent"), {
       target: { value: "sk-ant-new-key" },
@@ -137,8 +137,8 @@ describe("ProjectSettingsPage", () => {
 
     await waitFor(() =>
       expect(updateSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", {
-        name: "Kara v2",
-        repo_url: "https://github.com/acme/kara.git",
+        name: "Proj Demo v2",
+        repo_url: "https://github.com/acme/proj-demo.git",
         agent_choice: "claude",
         agent_base_url: null,
         models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
@@ -167,8 +167,8 @@ describe("ProjectSettingsPage", () => {
 
     await waitFor(() =>
       expect(updateSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", {
-        name: "Kara",
-        repo_url: "https://github.com/acme/kara.git",
+        name: "Proj Demo",
+        repo_url: "https://github.com/acme/proj-demo.git",
         agent_choice: "claude",
         agent_base_url: null,
         models: { spec: "claude-opus-4-5", plan: "claude-opus-4-5", dev: "claude-sonnet-4-5" },
@@ -380,12 +380,12 @@ describe("ProjectSettingsPage", () => {
     render(<ProjectSettingsPage />);
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Nom du projet")).toHaveValue("Kara")
+      expect(screen.getByLabelText("Nom du projet")).toHaveValue("Proj Demo")
     );
     fireEvent.click(screen.getByRole("button", { name: /télécharger le code/i }));
 
     await waitFor(() =>
-      expect(downloadSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", "Kara")
+      expect(downloadSpy).toHaveBeenCalledWith("alx_xxx", "proj-123", "Proj Demo")
     );
   });
 

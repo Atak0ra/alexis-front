@@ -13,13 +13,13 @@ vi.mock("next/navigation", () => ({
 
 const FAKE_PROJECT: apiClient.ProjectOut = {
   id: "proj-1",
-  name: "Kara",
-  repo_url: "https://github.com/acme/kara.git",
+  name: "Proj Demo",
+  repo_url: "https://github.com/acme/proj-demo.git",
   is_hosted: false,
   agent_choice: "claude",
   agent_base_url: null,
   has_agent_api_key: true,
-  issue_prefix: "KARA",
+  issue_prefix: "PROJ",
   forge_provider: "github",
   has_forge_token: true,
   states: DEFAULT_STATES,
@@ -32,7 +32,7 @@ const FAKE_PROJECT: apiClient.ProjectOut = {
 
 const FAKE_ISSUE: apiClient.Issue = {
   id: "issue-1",
-  identifier: "KARA-1",
+  identifier: "PROJ-1",
   number: 1,
   title: "Corriger la pagination",
   description: "",
@@ -44,14 +44,14 @@ const FAKE_ISSUE: apiClient.Issue = {
 };
 
 const FAKE_TICKET: apiClient.TicketOut = {
-  id: "KARA-1",
+  id: "PROJ-1",
   title: "Corriger la pagination",
   description: "",
   status: "in_progress",
   agent: "claude",
   cost_usd: 2.5,
   updated_at: "2026-07-10T00:00:00Z",
-  pr_url: "https://github.com/acme/kara/pull/7",
+  pr_url: "https://github.com/acme/proj-demo/pull/7",
   pr_title: "Fix pagination",
   error_message: null,
 };
@@ -98,7 +98,7 @@ describe("ProjectDetailPage — context banner", () => {
 
     render(<ProjectDetailPage />);
 
-    await screen.findByText("Kara");
+    await screen.findByText("Proj Demo");
     expect(screen.queryByText(/pas encore de fichier de contexte/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Contexte du projet")).not.toBeInTheDocument();
   });
@@ -112,7 +112,7 @@ describe("ProjectDetailPage — ticket/PR wiring", () => {
     render(<ProjectDetailPage />);
 
     const prLink = await screen.findByRole("link", { name: /voir les modifications/i });
-    expect(prLink).toHaveAttribute("href", "https://github.com/acme/kara/pull/7");
+    expect(prLink).toHaveAttribute("href", "https://github.com/acme/proj-demo/pull/7");
   });
 
   it("creates a new ticket in Backlog — triage into a trigger state is manual, via the Kanban", async () => {
@@ -285,7 +285,7 @@ describe("ProjectDetailPage — reconciliation Kanban / notifications", () => {
       issue_identifier: issueInTodo.identifier,
       state: "spec", // clé interne du workflow, pas le libellé — résolu via project.states
       severity: "info",
-      title: "KARA-1 : Spec en cours",
+      title: "PROJ-1 : Spec en cours",
       body: "Alexis rédige la spec fonctionnelle.",
       read_at: null,
       created_at: new Date().toISOString(),

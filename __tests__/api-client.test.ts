@@ -64,22 +64,22 @@ describe("login", () => {
 
 describe("createProject", () => {
   it("posts the full payload with Bearer auth", async () => {
-    mockFetchOnce(201, { id: "p1", name: "kara" });
+    mockFetchOnce(201, { id: "p1", name: "proj-demo" });
     const payload = {
-      name: "kara",
+      name: "proj-demo",
       repo_url: "git@github.com:acme/kara.git",
       agent_choice: "claude",
       agent_api_key: null,
       agent_base_url: null,
       forge_provider: "github" as const,
       forge_token: "ghp_xxx",
-      issue_prefix: "KARA",
+      issue_prefix: "PROJ",
       states: { dev: "Dev" },
       trigger_states: ["Dev"],
       models: { dev: "claude-sonnet-4-5" },
     };
     const result = await createProject("alx_xxx", payload);
-    expect(result.name).toBe("kara");
+    expect(result.name).toBe("proj-demo");
     const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(options.headers.Authorization).toBe("Bearer alx_xxx");
     expect(JSON.parse(options.body)).toEqual(payload);
@@ -90,7 +90,7 @@ describe("createIssue", () => {
   it("posts to /projects/{id}/issues with Bearer auth", async () => {
     mockFetchOnce(201, {
       id: "issue-1",
-      identifier: "KARA-1",
+      identifier: "PROJ-1",
       number: 1,
       title: "Fix bug",
       description: "",
@@ -101,7 +101,7 @@ describe("createIssue", () => {
       comments: [],
     });
     const result = await createIssue("alx_xxx", "p1", { title: "Fix bug" });
-    expect(result.identifier).toBe("KARA-1");
+    expect(result.identifier).toBe("PROJ-1");
     const [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/projects/p1/issues");
     expect(options.method).toBe("POST");
@@ -114,7 +114,7 @@ describe("updateIssue", () => {
   it("patches state with Bearer auth", async () => {
     mockFetchOnce(200, {
       id: "issue-1",
-      identifier: "KARA-1",
+      identifier: "PROJ-1",
       number: 1,
       title: "Fix bug",
       description: "",
@@ -253,7 +253,7 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     });
     expect(result.title).toBe("Test issue");
     expect(result.state).toBe("Backlog");
-    expect(result.identifier).toMatch(/^KARA-\d+$/);
+    expect(result.identifier).toMatch(/^PROJ-\d+$/);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -284,11 +284,11 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
 
   it("uploadIssueAsset/listIssueAssets round-trip in demo mode", async () => {
     const file = new File(["fake-bytes"], "mockup.png", { type: "image/png" });
-    const created = await uploadIssueAsset("demo-key", "demo-project-1", "issue-kara-1", file);
+    const created = await uploadIssueAsset("demo-key", "demo-project-1", "issue-proj-1", file);
     expect(created.filename).toBe("mockup.png");
     expect(global.fetch).not.toHaveBeenCalled();
 
-    const listed = await listIssueAssets("demo-key", "demo-project-1", "issue-kara-1");
+    const listed = await listIssueAssets("demo-key", "demo-project-1", "issue-proj-1");
     expect(listed.some((a) => a.id === created.id)).toBe(true);
   });
 

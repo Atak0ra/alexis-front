@@ -385,7 +385,7 @@ export default function ProjectSettingsPage() {
               </h3>
               <div className="rounded-xl border border-border bg-surface-raised p-4 space-y-3">
                 <p className="text-sm text-foreground-muted">
-                  Récupère l&apos;état actuel du code de ce projet, à tout moment — pendant ou après
+                  Récupère l&apos;état actuel du code de ce projet, à tout moment, pendant ou après
                   l&apos;implémentation d&apos;un ticket.
                 </p>
                 {downloadError && <p className="text-sm text-danger">{downloadError}</p>}

@@ -16,13 +16,13 @@ vi.mock("next/navigation", () => ({
 const FAKE_PROJECTS: apiClient.ProjectOut[] = [
   {
     id: "proj-1",
-    name: "kara",
-    repo_url: "https://github.com/acme/kara.git",
+    name: "proj-demo",
+    repo_url: "https://github.com/acme/proj-demo.git",
     is_hosted: false,
     agent_choice: "claude",
     agent_base_url: null,
     has_agent_api_key: true,
-    issue_prefix: "KARA",
+    issue_prefix: "PROJ",
     forge_provider: "github",
     has_forge_token: true,
     states: DEFAULT_STATES,
@@ -74,7 +74,7 @@ describe("AppSidebar — global state (outside a project)", () => {
   it("shows Tableau de bord as active and lists projects", async () => {
     render(<AppSidebar />);
 
-    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("proj-demo").length).toBeGreaterThan(0));
     const dashboardLinks = screen.getAllByRole("link", { name: "Tableau de bord" });
     expect(dashboardLinks[0]).toHaveClass("bg-brand-light");
   });
@@ -105,7 +105,7 @@ describe("AppSidebar — project context state", () => {
     mockPathname = "/dashboard/proj-1";
     render(<AppSidebar />);
 
-    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("proj-demo").length).toBeGreaterThan(0));
     expect(screen.getAllByText(/Tous les projets/).length).toBeGreaterThan(0);
     const ticketsLinks = screen.getAllByRole("link", { name: "Tickets" });
     expect(ticketsLinks[0]).toHaveClass("bg-brand-light");
@@ -147,7 +147,7 @@ describe("AppSidebar — inactive projects", () => {
 
     render(<AppSidebar />);
 
-    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("proj-demo").length).toBeGreaterThan(0));
     expect(screen.queryByText("deleted-project")).not.toBeInTheDocument();
   });
 
@@ -156,8 +156,8 @@ describe("AppSidebar — inactive projects", () => {
 
     render(<AppSidebar />);
 
-    await waitFor(() => expect(screen.getAllByText("kara").length).toBeGreaterThan(0));
-    expect(screen.getAllByText("kara").length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getAllByText("proj-demo").length).toBeGreaterThan(0));
+    expect(screen.getAllByText("proj-demo").length).toBeGreaterThan(0);
   });
 });
 

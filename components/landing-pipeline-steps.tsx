@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * LandingPipelineSteps — grille horizontale numérotée (1→4), utilisée sur la
+ * LandingPipelineSteps — grille horizontale numérotée (1 à 4), utilisée sur la
  * landing publique pour montrer le trajet d'un ticket à travers Alexis.
  *
  * Volontairement distinct des colonnes internes du Kanban (Backlog/Todo/Spec/
@@ -24,7 +24,7 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: "idea",
     label: "Ton idée",
-    body: "Vous décrivez ce qu'il faut faire — branché sur votre dépôt GitHub/GitLab existant, ou un dépôt hébergé si vous n'en avez pas encore.",
+    body: "Vous décrivez ce qu'il faut faire, branché sur votre dépôt GitHub/GitLab existant ou un dépôt hébergé si vous n'en avez pas encore.",
     gate: false,
   },
   {
@@ -36,7 +36,7 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: "realisation",
     label: "Réalisation",
-    body: "Alexis écrit le code, exécute les tests, itère jusqu'à ce que tout passe. Coût affiché en fin de run — ex. 0,42 € ce ticket.",
+    body: "Alexis écrit le code, exécute les tests, itère jusqu'à ce que tout passe. Coût affiché en fin de run (ex. 0,42 $ ce ticket).",
     gate: true,
   },
   {

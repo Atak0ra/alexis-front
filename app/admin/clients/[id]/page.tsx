@@ -229,7 +229,7 @@ export default function AdminClientDetailPage() {
       <div className="mt-10 rounded-xl border border-danger-border bg-danger-bg px-5 py-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-danger">Zone danger</p>
         <p className="mt-1 text-sm text-foreground-muted">
-          La suppression est <span className="font-semibold text-foreground">définitive et irréversible</span> — tous les projets, tickets, runs et clés API de ce client seront effacés (droit à l&apos;oubli RGPD).
+          La suppression est <span className="font-semibold text-foreground">définitive et irréversible</span> : tous les projets, tickets, runs et clés API de ce client seront effacés (droit à l&apos;oubli RGPD).
         </p>
       </div>
     </div>

@@ -234,7 +234,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <span className="text-sm font-medium text-brand">
-            {wallet.balance_usd < 10 ? "Solde bas — recharger →" : "Voir le détail →"}
+            {wallet.balance_usd < 10 ? "Solde bas : recharger" : "Voir le détail"}
           </span>
         </Link>
       )}
