@@ -5,7 +5,7 @@ import LandingPipelineSteps, { PIPELINE_STAGES } from "@/components/landing-pipe
 describe("LandingPipelineSteps", () => {
   it("uses 4 non-technical, visitor-facing phase labels, in order", () => {
     expect(PIPELINE_STAGES.map((s) => s.label)).toEqual([
-      "Ton idée", "Cadrage", "Réalisation", "Livraison",
+      "Votre idée", "Alexis code", "Vérification automatique", "Livraison sur votre dépôt",
     ]);
   });
 
@@ -21,15 +21,16 @@ describe("LandingPipelineSteps", () => {
 
   it("renders the mechanism copy for each phase", () => {
     render(<LandingPipelineSteps />);
-    expect(screen.getByText(/vous décrivez ce qu'il faut faire/i)).toBeInTheDocument();
-    expect(screen.getByText(/une spécification fonctionnelle, puis un plan technique/i)).toBeInTheDocument();
-    expect(screen.getByText(/écrit le code, exécute les tests/i)).toBeInTheDocument();
-    expect(screen.getByText(/mise en ligne propre/i)).toBeInTheDocument();
+    expect(screen.getByText(/vous décrivez ce que vous voulez faire/i)).toBeInTheDocument();
+    expect(screen.getByText(/corrige lui-même si quelque chose échoue/i)).toBeInTheDocument();
+    expect(screen.getByText(/refuse de continuer tant que tout ne passe pas/i)).toBeInTheDocument();
+    expect(screen.getByText(/pas une sandbox, pas un export/i)).toBeInTheDocument();
   });
 
-  it("shows the human-validation gate on Cadrage, Réalisation, Livraison but not on Ton idée", () => {
+  it("shows the human-validation gate on Votre idée and Livraison but not on Alexis code / Vérification", () => {
     render(<LandingPipelineSteps />);
-    expect(screen.getAllByText("Vous validez avant la suite")).toHaveLength(3);
+    // gate=true sur "Votre idée" et "Livraison sur votre dépôt" → 2 badges
+    expect(screen.getAllByText("Vous validez avant la suite")).toHaveLength(2);
   });
 
   it("never uses the informal tu/ton register — page is vous throughout", () => {

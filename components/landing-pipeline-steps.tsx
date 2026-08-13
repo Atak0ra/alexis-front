@@ -4,11 +4,7 @@
  * LandingPipelineSteps — grille horizontale numérotée (1 à 4), utilisée sur la
  * landing publique pour montrer le trajet d'un ticket à travers Alexis.
  *
- * Volontairement distinct des colonnes internes du Kanban (Backlog/Todo/Spec/
- * Plan/Dev/To Merge/Done, cf. components/ticket-kanban.tsx) : ces labels sont
- * des repères opérationnels pour qui gère déjà des tickets dans l'app, pas de
- * la copie pour un visiteur non-technique découvrant le produit. Les 4 phases
- * ci-dessous regroupent les mêmes étapes réelles sous un vocabulaire public.
+ * Langage solopreneur : zéro jargon technique, résultats concrets.
  */
 
 import { cn } from "@/lib/utils";
@@ -23,26 +19,26 @@ export interface PipelineStage {
 export const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: "idea",
-    label: "Ton idée",
-    body: "Vous décrivez ce qu'il faut faire, branché sur votre dépôt GitHub/GitLab existant ou un dépôt hébergé si vous n'en avez pas encore.",
-    gate: false,
-  },
-  {
-    key: "cadrage",
-    label: "Cadrage",
-    body: "Alexis prépare le travail : une spécification fonctionnelle, puis un plan technique détaillé.",
+    label: "Votre idée",
+    body: "Vous décrivez ce que vous voulez faire, en quelques lignes. Alexis structure le travail en tâches précises et vous les soumet pour validation.",
     gate: true,
   },
   {
     key: "realisation",
-    label: "Réalisation",
-    body: "Alexis écrit le code, exécute les tests, itère jusqu'à ce que tout passe. Coût affiché en fin de run (ex. 0,42 $ ce ticket).",
-    gate: true,
+    label: "Alexis code",
+    body: "Alexis écrit le code, branche sur votre dépôt. Il vérifie que tout fonctionne, corrige lui-même si quelque chose échoue, et recommence jusqu'à ce que ce soit bon.",
+    gate: false,
+  },
+  {
+    key: "verification",
+    label: "Vérification automatique",
+    body: "Alexis ne vous livre jamais quelque chose de cassé. Il lance les vérifications, exécute les tests, et refuse de continuer tant que tout ne passe pas.",
+    gate: false,
   },
   {
     key: "livraison",
-    label: "Livraison",
-    body: "Mise en ligne propre, historique clair. Coût total et durée restent consultables depuis le tableau de bord.",
+    label: "Livraison sur votre dépôt",
+    body: "Votre fonctionnalité est prête sur votre propre compte GitHub ou GitLab. Pas une sandbox, pas un export — votre code, dans votre historique, que vous contrôlez.",
     gate: true,
   },
 ];
@@ -85,3 +81,4 @@ export default function LandingPipelineSteps({
     </div>
   );
 }
+
