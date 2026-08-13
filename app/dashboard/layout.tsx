@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getApiKey } from "@/lib/session";
 import { getMe, resendVerification } from "@/lib/api-client";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -11,9 +11,11 @@ import { NotificationsProvider, useNotificationsContext } from "@/lib/notificati
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [checked, setChecked] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   useEffect(() => {
@@ -24,11 +26,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
     setApiKey(key);
     setChecked(true);
-    // Récupère le profil pour savoir si l'email est vérifié
+    // Récupère le profil : email_verified + must_change_password
     getMe(key)
-      .then((profile) => setEmailVerified(profile.email_verified))
-      .catch(() => setEmailVerified(null)); // fail-open : on n'affiche pas le bandeau si /me échoue
-  }, [router]);
+      .then((profile) => {
+        setEmailVerified(profile.email_verified);
+        // Guard mot de passe temporaire : redirige vers la page compte
+        // si le membre n'a pas encore changé son mot de passe d'invitation.
+        // Exception : déjà sur /dashboard/account → on affiche le bandeau
+        // sans boucle de redirection.
+        if (profile.must_change_password && !pathname.startsWith("/dashboard/account")) {
+          router.replace("/dashboard/account?force=1");
+        } else {
+          setMustChangePassword(profile.must_change_password ?? false);
+        }
+      })
+      .catch(() => setEmailVerified(null));
+  }, [router, pathname]);
 
   async function handleResend() {
     const key = getApiKey();
@@ -58,6 +71,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <DashboardShell
         apiKey={apiKey}
         emailVerified={emailVerified}
+        mustChangePassword={mustChangePassword}
         resendState={resendState}
         onResend={handleResend}
       >
@@ -75,12 +89,14 @@ function DashboardShell({
   children,
   apiKey,
   emailVerified,
+  mustChangePassword,
   resendState,
   onResend,
 }: {
   children: ReactNode;
   apiKey: string | null;
   emailVerified: boolean | null;
+  mustChangePassword: boolean;
   resendState: "idle" | "sending" | "sent" | "error";
   onResend: () => void;
 }) {
@@ -114,12 +130,26 @@ function DashboardShell({
                     ? "Réessayer"
                     : "Renvoyer l'email"}
                 </button>
-                {/* aria-live region announces the send result to screen readers */}
                 <span aria-live="polite" aria-atomic="true" className="sr-only">
                   {resendState === "sent" ? "Email de vérification envoyé." : resendState === "error" ? "Erreur lors de l'envoi. Réessayez." : ""}
                 </span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Bandeau mot de passe temporaire — visible sur /dashboard/account
+            après redirection, rappel tant que must_change_password est True */}
+        {mustChangePassword && (
+          <div role="alert" className="border-b border-amber-200 bg-amber-50 px-4 py-2.5">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">Mot de passe temporaire.</span>{" "}
+              Tu utilises un mot de passe généré automatiquement lors de ton invitation. Change-le maintenant depuis{" "}
+              <a href="/dashboard/account" className="font-semibold underline underline-offset-2">
+                Paramètres du compte
+              </a>
+              .
+            </p>
           </div>
         )}
 
@@ -140,3 +170,4 @@ function DashboardShell({
     </div>
   );
 }
+

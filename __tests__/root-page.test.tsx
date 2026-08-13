@@ -18,7 +18,8 @@ describe("RootPage", () => {
 
   it("shows a static ticket ticker instead of the fake dashboard screenshot", () => {
     render(<RootPage />);
-    expect(screen.getByText("PROJ-142 · Cadrage")).toBeInTheDocument();
+    // PROJET- (avec T) est intentionnel — évite la confusion visuelle avec PROJ-42 / Kara-42.
+    expect(screen.getByText("PROJET-142 · Cadrage")).toBeInTheDocument();
     // The fake browser-chrome preview (KPI row) is gone.
     expect(screen.queryByText("Résolus")).not.toBeInTheDocument();
   });

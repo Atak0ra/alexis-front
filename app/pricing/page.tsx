@@ -3,16 +3,30 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { listPublicPlans, type PlanPublicOut } from "@/lib/api-client";
+import { listPublicPlans, selectPlan, type PlanPublicOut, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
-function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: boolean }) {
+function PlanCard({
+  plan,
+  highlighted,
+  loggedIn,
+  isCurrentPlan,
+  onSelect,
+}: {
+  plan: PlanPublicOut;
+  highlighted?: boolean;
+  loggedIn: boolean;
+  isCurrentPlan: boolean;
+  onSelect: (planId: string) => Promise<void>;
+}) {
   const isFree = plan.name === "free";
   const isByok = plan.name === "byok";
   const isPayAsYouGo = plan.name === "solo" || plan.name === "entreprise";
   const isEntreprise = plan.name === "entreprise";
+  const [selecting, setSelecting] = useState(false);
+  const [selectError, setSelectError] = useState<string | null>(null);
 
   const priceLabel = isFree
     ? "Gratuit"
@@ -20,15 +34,21 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
     ? "Payez à l'usage"
     : `$${plan.monthly_price_usd} / mois`;
 
-  const ctaLabel = isByok
-    ? "Commencer avec ma clé"
-    : isEntreprise
-    ? "Nous contacter"
-    : "Commencer";
-
-  const ctaHref = isEntreprise
-    ? "mailto:contact@alexis.dev?subject=Plan%20Entreprise"
-    : "/login?mode=signup";
+  async function handleSelect() {
+    setSelecting(true);
+    setSelectError(null);
+    try {
+      await onSelect(plan.id);
+    } catch (err) {
+      setSelectError(
+        err instanceof AlexisApiError
+          ? err.detail
+          : "Impossible de changer de plan. Réessayez."
+      );
+    } finally {
+      setSelecting(false);
+    }
+  }
 
   return (
     <div
@@ -107,20 +127,50 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
       )}
 
       {/* CTA */}
-      <div className="mt-8">
-        {isEntreprise ? (
+      <div className="mt-8 flex flex-col gap-2">
+        {isCurrentPlan ? (
+          <span className="block w-full rounded-lg border border-success/40 bg-success/5 px-4 py-2.5 text-center text-sm font-semibold text-success">
+            Plan actuel ✓
+          </span>
+        ) : loggedIn ? (
+          isEntreprise ? (
+            <a
+              href="mailto:contact@alexis.dev?subject=Plan%20Entreprise"
+              className={cn(
+                "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors",
+                "border border-brand text-brand hover:bg-brand hover:text-white"
+              )}
+            >
+              Nous contacter
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSelect}
+              disabled={selecting}
+              className={cn(
+                "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed",
+                highlighted
+                  ? "bg-brand text-white hover:bg-brand-hover shadow-sm"
+                  : "border border-border text-foreground hover:border-brand/40 hover:text-brand"
+              )}
+            >
+              {selecting ? "Activation…" : "Choisir ce plan"}
+            </button>
+          )
+        ) : isEntreprise ? (
           <a
-            href={ctaHref}
+            href="mailto:contact@alexis.dev?subject=Plan%20Entreprise"
             className={cn(
               "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors",
               "border border-brand text-brand hover:bg-brand hover:text-white"
             )}
           >
-            {ctaLabel}
+            Nous contacter
           </a>
         ) : (
           <Link
-            href={ctaHref}
+            href="/login?mode=signup"
             className={cn(
               "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors",
               highlighted
@@ -128,8 +178,11 @@ function PlanCard({ plan, highlighted }: { plan: PlanPublicOut; highlighted?: bo
                 : "border border-border text-foreground hover:border-brand/40 hover:text-brand"
             )}
           >
-            {ctaLabel}
+            Commencer
           </Link>
+        )}
+        {selectError && (
+          <p className="text-xs text-danger text-center">{selectError}</p>
         )}
       </div>
     </div>
@@ -160,13 +213,23 @@ export default function PricingPage() {
   const [plans, setPlans] = useState<PlanPublicOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoggedIn(!!getApiKey());
+    const apiKey = getApiKey();
+    setLoggedIn(!!apiKey);
     listPublicPlans()
       .then(setPlans)
       .catch(() => setError("Impossible de charger les plans. Réessayez plus tard."));
   }, []);
+
+  async function handleSelectPlan(planId: string) {
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    const profile = await selectPlan(apiKey, planId);
+    // Mettre à jour le plan actuel affiché sans recharger la page
+    setCurrentPlanId(profile.plan?.id ?? null);
+  }
 
   return (
     <div className="min-h-screen bg-surface px-6 py-16">
@@ -198,6 +261,9 @@ export default function PricingPage() {
                   key={plan.id}
                   plan={plan}
                   highlighted={plan.name === "solo"}
+                  loggedIn={!!loggedIn}
+                  isCurrentPlan={currentPlanId === plan.id}
+                  onSelect={handleSelectPlan}
                 />
               ))}
         </div>
@@ -210,7 +276,7 @@ export default function PricingPage() {
               <dt className="font-semibold text-foreground">Qu&apos;est-ce que le plan BYOK ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
                 BYOK (Bring Your Own Key) vous permet d&apos;utiliser Alexis avec votre propre clé
-                d&apos;inférence (OpenAI, Anthropic, Groq…). Vous payez votre consommation IA directement
+                d&apos;inférence (OpenAI, Groq, Mistral, DeepSeek…). Vous payez votre consommation IA directement
                 chez votre provider. L&apos;abonnement Alexis à 29 $/mois couvre l&apos;infra, le tracker
                 natif et l&apos;hébergement de vos repos. Idéal si vous avez déjà un abonnement ou des crédits.
               </dd>
@@ -218,7 +284,7 @@ export default function PricingPage() {
             <div>
               <dt className="font-semibold text-foreground">Comment fonctionne le plan Solo Preneur ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
-                Claude (Anthropic) fourni par Alexis. Vous n&apos;avez rien à configurer. Vous rechargez
+                La clé d&apos;inférence est fournie par Alexis — vous n&apos;avez rien à configurer. Vous rechargez
                 un solde (wallet) et chaque run débite le coût réel mesuré, marge de la plateforme
                 comprise. Aucun abonnement fixe. Contactez-nous à{" "}
                 <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">

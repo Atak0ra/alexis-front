@@ -55,7 +55,7 @@ export default function RootPage() {
           {/* Ticket ticker — un vrai identifiant + phase, vocabulaire public (cf. LandingPipelineSteps) */}
           <div className="mt-12 inline-flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-2 font-mono text-xs text-foreground-muted">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-            PROJ-142 · Cadrage
+            PROJET-142 · Cadrage
           </div>
         </div>
       </section>

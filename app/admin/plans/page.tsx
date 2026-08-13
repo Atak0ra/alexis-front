@@ -10,7 +10,8 @@ import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } f
 
 const EMPTY_FORM: PlanPayload = {
   name: "", monthly_price_usd: 0, forced_agent_choice: null,
-  monthly_max_budget_usd: null,
+  free_monthly_credit_usd: 0,
+  overdraft_limit_usd: 0,
   display_name: null, description: null, features: null,
   requires_own_key: false, max_members: 1, is_public: true, sort_order: 0,
 };
@@ -26,8 +27,9 @@ function cleanFeatures(lines: string[] | null | undefined): string[] | null {
   return cleaned.length > 0 ? cleaned : null;
 }
 
-const BUDGET_FIELDS = [
-  ["plan-monthly-budget", "Plafond mensuel ($)", "monthly_max_budget_usd"],
+const WALLET_FIELDS = [
+  ["plan-free-credit", "Crédit gratuit mensuel ($)", "free_monthly_credit_usd"],
+  ["plan-overdraft", "Découvert autorisé ($)", "overdraft_limit_usd"],
 ] as const;
 
 export default function AdminPlansPage() {
@@ -53,7 +55,8 @@ export default function AdminPlansPage() {
     setEditingId(plan.id);
     setForm({
       name: plan.name, monthly_price_usd: plan.monthly_price_usd, forced_agent_choice: plan.forced_agent_choice,
-      monthly_max_budget_usd: plan.monthly_max_budget_usd,
+      free_monthly_credit_usd: plan.free_monthly_credit_usd,
+      overdraft_limit_usd: plan.overdraft_limit_usd,
       display_name: plan.display_name, description: plan.description, features: plan.features,
       requires_own_key: plan.requires_own_key, max_members: plan.max_members,
       is_public: plan.is_public, sort_order: plan.sort_order,
@@ -144,8 +147,9 @@ export default function AdminPlansPage() {
                     : "Wallet prépayé (pas de prix fixe)"}
                 </td>
                 <td className="px-5 py-3.5 text-foreground-muted">{plan.forced_agent_choice ?? "—"}</td>
-                 <td className="px-5 py-3.5 font-mono text-foreground-muted">
-                   {plan.monthly_max_budget_usd != null ? `$${plan.monthly_max_budget_usd.toFixed(2)}` : "illimité"}
+                <td className="px-5 py-3.5 font-mono text-foreground-muted">
+                   {plan.free_monthly_credit_usd > 0 ? `+$${plan.free_monthly_credit_usd.toFixed(2)}` : "—"}
+                   {plan.overdraft_limit_usd > 0 && <span className="ml-1 text-foreground-subtle">/ -{plan.overdraft_limit_usd.toFixed(2)}</span>}
                  </td>
                  <td className="px-5 py-3.5 text-right">
                   {confirmDeleteId === plan.id ? (
@@ -237,17 +241,18 @@ export default function AdminPlansPage() {
                 <option value="claude">claude</option>
               </select>
             </div>
-            {BUDGET_FIELDS.map(([id, label, field]) => (
+            {WALLET_FIELDS.map(([id, label, field]) => (
               <div key={id}>
                 <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-foreground">
-                  {label} <span className="text-foreground-subtle font-normal">(vide = illimité)</span>
+                  {label}
                 </label>
                 <input
                   id={id}
                   type="number"
                   step="0.01"
-                  value={form[field] ?? ""}
-                  onChange={(e) => setForm({ ...form, [field]: toNullableNumber(e.target.value) })}
+                  min="0"
+                  value={form[field] ?? 0}
+                  onChange={(e) => setForm({ ...form, [field]: parseFloat(e.target.value) || 0 })}
                   className={adminInputClass}
                 />
               </div>

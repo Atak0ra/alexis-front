@@ -7,6 +7,7 @@ import * as session from "@/lib/session";
 const pushMock = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
+  useSearchParams: () => ({ get: () => null }),
 }));
 
 const FAKE_PROFILE: apiClient.ClientProfile = {

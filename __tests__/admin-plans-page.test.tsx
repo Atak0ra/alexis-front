@@ -11,8 +11,10 @@ vi.mock("next/navigation", () => ({
 
 const SEEDED_PLAN: apiClient.PlanOut = {
   id: "plan-standard", name: "standard", monthly_price_usd: 150, forced_agent_choice: null,
-  monthly_max_budget_usd: 75, requires_own_key: true,
-} as apiClient.PlanOut;
+  free_monthly_credit_usd: 5.0, overdraft_limit_usd: 20.0, requires_own_key: true,
+  display_name: null, description: null, features: null,
+  max_members: 1, is_public: true, sort_order: 0,
+};
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -25,7 +27,8 @@ describe("AdminPlansPage", () => {
     render(<AdminPlansPage />);
     await waitFor(() => expect(screen.getByText("standard")).toBeInTheDocument());
     expect(screen.getByText("$150 / mois (BYOK)")).toBeInTheDocument();
-    expect(screen.getByText("$75.00")).toBeInTheDocument();
+    // free_monthly_credit_usd > 0 → affiché comme +$5.00
+    expect(screen.getByText("+$5.00")).toBeInTheDocument();
   });
 
   it("creates a new plan from the form", async () => {
@@ -49,21 +52,22 @@ describe("AdminPlansPage", () => {
     );
   });
 
-  it("edits an existing plan and can clear a budget cap back to unlimited", async () => {
+  it("edits an existing plan and can update free credit", async () => {
     const updateSpy = vi.spyOn(apiClient, "adminUpdatePlan").mockResolvedValue(SEEDED_PLAN);
 
     render(<AdminPlansPage />);
     await waitFor(() => expect(screen.getByText("standard")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /modifier/i }));
-    const monthlyBudgetInput = screen.getByLabelText(/plafond mensuel/i);
-    fireEvent.change(monthlyBudgetInput, { target: { value: "" } });
+    // Modifier le crédit gratuit mensuel
+    const freeCreditInput = screen.getByLabelText(/crédit gratuit mensuel/i);
+    fireEvent.change(freeCreditInput, { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: /enregistrer/i }));
 
     await waitFor(() =>
       expect(updateSpy).toHaveBeenCalledWith(
         "alx_admin_xxx", "plan-standard",
-        expect.objectContaining({ monthly_max_budget_usd: null })
+        expect.objectContaining({ free_monthly_credit_usd: 10 })
       )
     );
   });

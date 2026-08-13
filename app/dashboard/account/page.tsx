@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   getMe,
@@ -11,6 +11,7 @@ import {
   removeMember,
   getWallet,
   getWalletTransactions,
+  topupCheckout,
   friendlyError,
   type ClientProfile,
   type MembersListOut,
@@ -22,6 +23,11 @@ import { getApiKey, clearApiKey } from "@/lib/session";
 
 // ── Section Wallet ────────────────────────────────────────────────────────────
 
+/** Montants rapides proposés en un clic. */
+const QUICK_AMOUNTS = [10, 25, 50, 100];
+const MIN_AMOUNT = 1;
+const MAX_AMOUNT = 500;
+
 function WalletSection({
   apiKey,
   profile,
@@ -29,24 +35,58 @@ function WalletSection({
   apiKey: string;
   profile: ClientProfile;
 }) {
+  const searchParams = useSearchParams();
   const [wallet, setWallet] = useState<WalletOut | null>(null);
   const [transactions, setTransactions] = useState<WalletTransactionOut[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [amount, setAmount] = useState<string>("");
+  const [topupState, setTopupState] = useState<"idle" | "loading" | "error">("idle");
+  const [topupErr, setTopupErr] = useState<string | null>(null);
+  const [topupSuccess, setTopupSuccess] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // BYOK (clé perso) ou pas de plan du tout = jamais de wallet — rien à afficher.
+  // BYOK ou pas de plan = jamais de wallet.
   const hasWallet = !!profile.plan && !profile.plan.requires_own_key;
+
+  function fetchWallet() {
+    getWallet(apiKey).then(setWallet).catch((err) => setLoadErr(friendlyError(err)));
+    getWalletTransactions(apiKey, 20, 0).then((res) => setTransactions(res.items)).catch(() => {});
+  }
 
   useEffect(() => {
     if (!hasWallet) return;
-    getWallet(apiKey)
-      .then(setWallet)
-      .catch((err) => setLoadErr(friendlyError(err)));
-    getWalletTransactions(apiKey, 20, 0)
-      .then((res) => setTransactions(res.items))
-      .catch(() => {/* historique optionnel, pas bloquant */});
+    fetchWallet();
+    if (searchParams.get("topup") === "success") {
+      setTopupSuccess(true);
+      refreshTimerRef.current = setTimeout(fetchWallet, 4000);
+    }
+    return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey, hasWallet]);
 
   if (!hasWallet) return null;
+
+  const amountNum = parseFloat(amount);
+  const amountValid = !isNaN(amountNum) && amountNum >= MIN_AMOUNT && amountNum <= MAX_AMOUNT;
+
+  async function handleTopup() {
+    if (!amountValid) return;
+    setTopupState("loading");
+    setTopupErr(null);
+    try {
+      const result = await topupCheckout(apiKey, amountNum);
+      if (result.payment_url && result.payment_url !== "#demo-payment") {
+        window.location.href = result.payment_url;
+      } else {
+        setTopupSuccess(true);
+        setTopupState("idle");
+        setAmount("");
+      }
+    } catch (err) {
+      setTopupState("error");
+      setTopupErr(friendlyError(err));
+    }
+  }
 
   return (
     <section className="rounded-xl border border-border bg-surface-raised p-5" data-testid="wallet-section">
@@ -54,12 +94,28 @@ function WalletSection({
         Wallet
       </h3>
 
+      {/* Bannière de confirmation retour PSP */}
+      {topupSuccess && (
+        <div role="status" className="mb-4 flex items-start gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2.5">
+          <svg className="mt-0.5 h-4 w-4 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-success">Paiement reçu</p>
+            <p className="text-xs text-foreground-muted mt-0.5">
+              Votre solde sera crédité dans quelques instants une fois la transaction validée.
+            </p>
+          </div>
+        </div>
+      )}
+
       {loadErr && <p className="text-sm text-danger">{loadErr}</p>}
 
       {wallet && (
         <>
+          {/* Solde */}
           <p
-            className={`font-mono text-2xl font-bold ${wallet.balance_usd < 10 ? "text-danger" : "text-foreground"}`}
+            className={`font-mono text-2xl font-bold ${wallet.balance_usd < 0 ? "text-danger" : "text-foreground"}`}
             data-testid="wallet-balance"
           >
             ${wallet.balance_usd.toFixed(2)}
@@ -67,13 +123,89 @@ function WalletSection({
           <p className="mt-1 text-sm text-foreground-muted">
             Solde prépayé en dollars réels. Débité au coût réel de chaque run.
           </p>
-          {wallet.balance_usd < 10 && (
-            <p className="mt-2 text-sm font-medium text-danger">
-              Solde bas. Contactez-nous pour recharger votre compte.
+          {/* Découvert : affiché uniquement si le plan en a un */}
+          {(profile.plan?.overdraft_limit_usd ?? 0) > 0 && (
+            <p className="mt-1 text-xs text-foreground-subtle">
+              Découvert autorisé :{" "}
+              <span className="font-mono font-semibold text-foreground-muted">
+                ${(profile.plan?.overdraft_limit_usd ?? 0).toFixed(2)}
+              </span>
+            </p>
+          )}
+          {/* Crédit gratuit mensuel : affiché si le plan en prévoit un */}
+          {(profile.plan?.free_monthly_credit_usd ?? 0) > 0 && (
+            <p className="mt-1 text-xs text-foreground-subtle">
+              Crédit offert chaque mois :{" "}
+              <span className="font-mono font-semibold text-success">
+                +${(profile.plan?.free_monthly_credit_usd ?? 0).toFixed(2)}
+              </span>
             </p>
           )}
         </>
       )}
+
+      {/* ── Bloc de recharge ─────────────────────────────────────────────── */}
+      <div className="mt-4 border-t border-border pt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+          Recharger
+        </p>
+        <div className="mb-2 flex flex-wrap gap-2">
+          {QUICK_AMOUNTS.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => setAmount(String(q))}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                amount === String(q)
+                  ? "border-brand bg-brand text-white"
+                  : "border-border bg-surface text-foreground-muted hover:border-brand/40 hover:text-brand"
+              }`}
+            >
+              ${q}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-foreground-muted">$</span>
+            <input
+              type="number"
+              min={MIN_AMOUNT}
+              max={MAX_AMOUNT}
+              step="1"
+              placeholder="Montant (1–500)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && amountValid && handleTopup()}
+              className="w-full rounded-lg border border-border bg-surface py-2 pl-7 pr-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/30 disabled:opacity-50"
+              disabled={topupState === "loading"}
+              aria-label="Montant de la recharge en dollars"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleTopup}
+            disabled={!amountValid || topupState === "loading"}
+            className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover disabled:opacity-40 disabled:pointer-events-none transition-colors"
+          >
+            {topupState === "loading" ? (
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Redirection…
+              </span>
+            ) : "Recharger"}
+          </button>
+        </div>
+        <p className="mt-1.5 text-xs text-foreground-subtle">
+          Paiement sécurisé via CinetPay — Mobile Money &amp; carte Visa/Mastercard.
+        </p>
+        {topupState === "error" && topupErr && (
+          <p className="mt-1.5 text-xs font-medium text-danger" role="alert">{topupErr}</p>
+        )}
+      </div>
 
       {transactions.length > 0 && (
         <div className="mt-4 border-t border-border pt-4">
@@ -85,7 +217,11 @@ function WalletSection({
               <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
                 <div className="min-w-0">
                   <p className="truncate text-foreground-muted">
-                    {t.type === "topup" ? "Recharge" : (t.issue_identifier ?? t.step ?? "Débit")}
+                    {t.type === "topup"
+                      ? "Recharge"
+                      : t.type === "plan_subscription"
+                      ? "Abonnement"
+                      : (t.issue_identifier ?? t.step ?? "Débit")}
                   </p>
                   {t.model && (
                     <p className="truncate text-xs text-foreground-subtle">{t.model}</p>

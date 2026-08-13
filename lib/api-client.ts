@@ -71,6 +71,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const resp = await fetch(`${API_URL}${path}`, {
     ...options,
+    // no-store : jamais de cache HTTP — chaque appel lit les données fraîches.
+    // Sans ça, le navigateur peut servir une ancienne réponse (ex : page /pricing
+    // qui ne reflète pas les modifs faites dans l'admin).
+    cache: "no-store",
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
@@ -226,6 +230,10 @@ export interface PlanPublicOut {
   monthly_price_usd: number;
   requires_own_key: boolean;
   max_members: number | null;
+  /** Crédit gratuit ajouté au wallet à chaque cycle mensuel (0 = aucun). */
+  free_monthly_credit_usd: number;
+  /** Découvert autorisé : le wallet peut descendre jusqu'à -overdraft_limit_usd (0 = pas de découvert). */
+  overdraft_limit_usd: number;
   is_public: boolean;
   sort_order: number;
 }
@@ -247,6 +255,8 @@ export interface ClientProfile {
   role: "owner" | "member";
   first_name: string | null;
   last_name: string | null;
+  /** True si le mot de passe doit être changé (membre invité, mot de passe temporaire). */
+  must_change_password?: boolean;
 }
 
 export function getMe(apiKey: string): Promise<ClientProfile> {
@@ -273,6 +283,53 @@ export function verifyEmail(token: string): Promise<ClientProfile> {
   return request("/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) });
 }
 
+/**
+ * Choisit un plan pour le compte de l'owner (sans paiement immédiat).
+ * Retourne le profil mis à jour avec le nouveau plan.
+ * Seul l'owner peut appeler cette fonction — les membres héritent du plan de leur owner.
+ */
+export function selectPlan(apiKey: string, planId: string): Promise<ClientProfile> {
+  if (isLocalMode()) {
+    return Promise.resolve({
+      id: "demo-client", email: DEMO_CREDENTIALS.email, email_verified: true,
+      github_username: null, forced_agent_choice: null, plan: null,
+      role: "owner", first_name: null, last_name: null,
+    });
+  }
+  return request("/auth/plan", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ plan_id: planId }),
+  });
+}
+
+// ── Wallet — recharge via PSP CinetPay ────────────────────────────────────────
+
+export interface TopupCheckoutOut {
+  payment_url: string;
+  transaction_id: string;
+}
+
+/**
+ * Initie une recharge wallet via CinetPay.
+ * Retourne l'URL de paiement vers laquelle rediriger l'utilisateur.
+ * Le wallet n'est crédité QUE par le webhook /webhooks/cinetpay (asynchrone).
+ */
+export function topupCheckout(apiKey: string, amountUsd: number): Promise<TopupCheckoutOut> {
+  if (isLocalMode()) {
+    // En mode démo, on simule une URL de paiement factice
+    return Promise.resolve({
+      payment_url: "#demo-payment",
+      transaction_id: `demo-${Date.now()}`,
+    });
+  }
+  return request("/wallet/topup/checkout", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ amount_usd: amountUsd }),
+  });
+}
+
 // ─── Wallet (solde prépayé, plans à clé gérée uniquement) ────────────────────
 // Le solde est exprimé en $ réels (prix Alexis = coût fournisseur × marge),
 // jamais en "tokens" — voir orchestrator/domain/wallet_service.py.
@@ -284,7 +341,7 @@ export interface WalletOut {
 
 export interface WalletTransactionOut {
   id: string;
-  type: "topup" | "debit";
+  type: "topup" | "debit" | "plan_subscription";
   billed_usd: number;
   model: string | null;
   step: string | null;
@@ -1192,9 +1249,10 @@ export interface PlanOut {
   features: string[] | null;
   monthly_price_usd: number;
   forced_agent_choice: string | null;
-  /** Plafond mensuel en prix Alexis (coût × marge) — null/0 = illimité. Utilisé par le plan Découverte. */
-  monthly_max_budget_usd: number | null;
-  /** true = plan BYOK (abonnement plat, jamais de wallet). false = plan à clé gérée (wallet prépayé, pas de prix fixe). */
+  /** Crédit gratuit ajouté au wallet à chaque cycle mensuel (0 = aucun). */
+  free_monthly_credit_usd: number;
+  /** Découvert autorisé : le wallet peut descendre jusqu'à -overdraft_limit_usd (0 = pas de découvert). */
+  overdraft_limit_usd: number;
   requires_own_key: boolean;
   max_members: number | null;
   is_public: boolean;
@@ -1205,7 +1263,8 @@ export interface PlanPayload {
   name: string;
   monthly_price_usd: number;
   forced_agent_choice?: string | null;
-  monthly_max_budget_usd?: number | null;
+  free_monthly_credit_usd?: number;
+  overdraft_limit_usd?: number;
   display_name?: string | null;
   description?: string | null;
   features?: string[] | null;
