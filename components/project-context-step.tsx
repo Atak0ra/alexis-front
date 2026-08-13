@@ -18,6 +18,7 @@ import {
 import { getApiKey } from "@/lib/session";
 import ContextAdvancedOptions from "@/components/context-advanced-options";
 import AgentTemplateHint from "@/components/agent-template-hint";
+import type { StackId, ArchitectureId } from "@/lib/context-advanced-options";
 
 interface Props {
   projectId: string;
@@ -108,7 +109,9 @@ export default function ProjectContextStep({
 }: Props) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
-  const [advancedBrief, setAdvancedBrief] = useState("");
+  // L'option avancée dans le contexte produit un texte additionnel pour le brief agent.
+  // Les champs stack/architecture du projet ont déjà été transmis à la création.
+  const [advancedBriefText, setAdvancedBriefText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("detecting");
@@ -334,8 +337,8 @@ export default function ProjectContextStep({
         }
       }
 
-      const finalBrief = advancedBrief
-        ? [advancedBrief, brief.trim() + fileMention].filter(Boolean).join("\n\n")
+      const finalBrief = advancedBriefText
+        ? [advancedBriefText, brief.trim() + fileMention].filter(Boolean).join("\n\n")
         : (brief.trim() + fileMention).trim();
 
       await createProjectContext(apiKey, projectId, finalBrief);
@@ -429,7 +432,17 @@ export default function ProjectContextStep({
             <AgentTemplateHint />
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <ContextAdvancedOptions onChange={setAdvancedBrief} />
+              {/* Option avancée — sélection de stack pour enrichir le contexte.
+                  Note : dans ce wizard, la stack/archi ont déjà été transmises à la
+                  création du projet. Ici on s'en sert seulement pour enrichir le brief. */}
+              <ContextAdvancedOptions
+                onStackChange={(stack, arch) => {
+                  const parts: string[] = [];
+                  if (stack) parts.push(`stack: ${stack}`);
+                  if (arch) parts.push(`architecture: ${arch}`);
+                  setAdvancedBriefText(parts.join("\n"));
+                }}
+              />
 
               {/* Description texte */}
               <div>

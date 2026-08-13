@@ -499,16 +499,28 @@ describe("ProjectContextStep", () => {
   });
 
   describe("advanced options", () => {
-    it("prepends the compiled advanced brief to the submitted text", async () => {
+    it("prepends stack/architecture hint to the submitted brief", async () => {
       const createSpy = vi.spyOn(apiClient, "createProjectContext").mockResolvedValue(undefined);
+
+      // Mock listStacks pour le nouveau composant
+      vi.spyOn(apiClient, "listStacks" as never).mockResolvedValue([
+        { id: "nextjs", label: "Next.js", language: "TypeScript", framework: "Next.js 15",
+          description: "App web.", default_architecture: "monolith",
+          recommended_for: [], quality_gate: true },
+      ] as never);
+
       renderStep();
       await waitForForm();
 
-      fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-      fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
-      fireEvent.change(screen.getByLabelText("Stack"), { target: { value: "python_django" } });
+      // Activer l'option avancée
+      fireEvent.click(screen.getByRole("checkbox"));
+      // Attendre les cartes de stack
+      await waitFor(() => screen.getByText("Next.js"));
+      // Sélectionner Next.js (archi par défaut = monolith)
+      fireEvent.click(screen.getByText("Next.js").closest("button")!);
+
       fireEvent.change(screen.getByLabelText("Description du projet"), {
-        target: { value: "Mon projet FastAPI." },
+        target: { value: "Mon projet Next.js." },
       });
 
       await act(async () => {
@@ -516,11 +528,9 @@ describe("ProjectContextStep", () => {
       });
 
       await waitFor(() => expect(createSpy).toHaveBeenCalled());
-      expect(createSpy).toHaveBeenCalledWith(
-        "alx_xxx",
-        "p1",
-        "Stack: Python + Django\nArchitecture: Monolithe\n\nMon projet FastAPI."
-      );
+      const briefArg: string = createSpy.mock.calls[0][2] as string;
+      expect(briefArg).toContain("stack: nextjs");
+      expect(briefArg).toContain("Mon projet Next.js.");
     });
 
     it("submits only the free text when advanced options is left unchecked", async () => {

@@ -11,6 +11,8 @@ import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
 import { submitNewProject } from "@/lib/submit-new-project";
 import FieldHint from "@/components/field-hint";
+import StackAdvancedOptions from "@/components/context-advanced-options";
+import type { StackId, ArchitectureId } from "@/lib/context-advanced-options";
 
 export default function RepoPage() {
   const router = useRouter();
@@ -28,6 +30,8 @@ export default function RepoPage() {
     // isByok est peuplé par le layout via getMe() — source unique de vérité.
     isByok,
     issuePrefix,
+    stack, setStack,
+    architecture, setArchitecture,
   } = useNewProject();
 
   const [validating, setValidating] = useState(false);
@@ -123,6 +127,8 @@ export default function RepoPage() {
         agentBaseUrl,
         codeReviewEnabled,
         isByok,
+        stack: stack ?? null,
+        architecture: architecture ?? null,
       },
       router,
       onStart: () => setSubmitting(true),
@@ -272,6 +278,17 @@ export default function RepoPage() {
               depuis les paramètres du projet.
             </p>
           </div>
+        )}
+
+        {/* Option avancée — stack technique (uniquement pour les projets hébergés neufs).
+            Permet au client de choisir sa stack. Sans choix → Alexis décide automatiquement. */}
+        {hosted && (
+          <StackAdvancedOptions
+            onStackChange={(s: StackId | null, a: ArchitectureId | null) => {
+              setStack(s);
+              setArchitecture(a);
+            }}
+          />
         )}
 
         {error && !validated && (

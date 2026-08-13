@@ -1,37 +1,63 @@
 /**
- * Options avancées de création de projet.
+ * Options avancées de création de projet — option avancée du wizard.
  *
- * Deux modes selon le plan du client :
- *   - Plans free / byok / solo  → mode simple (3 cartes dans ProjectContextStep)
- *   - Plan entreprise           → mode avancé (ce formulaire, architectures complexes)
+ * Le client peut choisir :
+ *   - Sa stack (nextjs | fastapi | django) — alimente `Project.stack`
+ *   - Son architecture (monolith | front_back | front_back_bff)
  *
- * Stacks supportées par le gate qualité Alexis :
- *   - TypeScript / Next.js  (runtime Node préinstallé)
- *   - Python / FastAPI      (runtime Python préinstallé)
- *   - Python / Django       (runtime Python préinstallé)
+ * Sans choix explicite → l'agent décide automatiquement (cas 3 du pipeline).
  *
- * Les autres stacks (Java, Go, Rust, Ruby, PHP, .NET) sont acceptées en "Autre"
- * mais le gate qualité sera désactivé (quality_baseline_enabled=False).
+ * Source de vérité : GET /projects/stacks (STACK_CATALOG backend).
+ * Les valeurs ici sont des alias front pour la cohérence avec la lib `context-advanced-options.ts`
+ * existante (brief textuel) — les champs `stack`/`architecture` sont désormais
+ * transmis directement au back via CreateProjectPayload.
  */
 
-export type ArchitecturePattern = "monolith" | "front_back" | "front_back_bff";
+export type StackId = "nextjs" | "fastapi" | "django";
+export type ArchitectureId = "monolith" | "front_back" | "front_back_bff";
+
+export interface ArchitectureOption {
+  value: ArchitectureId;
+  label: string;
+  description: string;
+}
+
+export const ARCHITECTURE_OPTIONS: ArchitectureOption[] = [
+  {
+    value: "monolith",
+    label: "Monolithe",
+    description: "Une seule application — idéal pour démarrer vite.",
+  },
+  {
+    value: "front_back",
+    label: "Front + Back",
+    description: "Interface et API séparées — Next.js + FastAPI, React + Django…",
+  },
+  {
+    value: "front_back_bff",
+    label: "Front + BFF + Back",
+    description: "Trois services : interface, BFF Node, API Python/autre.",
+  },
+];
+
+/** Mapping architecture label → id (pour affichage rétrocompat). */
+export const ARCHITECTURE_LABEL: Record<ArchitectureId, string> = {
+  monolith: "Monolithe",
+  front_back: "Front + Back",
+  front_back_bff: "Front + BFF + Back",
+};
+
+// ─── Legacy context-advanced-options (conservés pour rétrocompat) ─────────────
+// Utilisés uniquement pour générer le brief textuel injecté dans le contexte.
+// Les champs `stack`/`architecture` sont désormais transmis directement au back.
+
+export type ArchitecturePattern = ArchitectureId;
 
 export interface SelectOption {
   value: string;
   label: string;
 }
 
-export const ARCHITECTURE_OPTIONS: { value: ArchitecturePattern; label: string }[] = [
-  { value: "monolith", label: "Monolithe" },
-  { value: "front_back", label: "Front + Back" },
-  { value: "front_back_bff", label: "Front + Back + BFF" },
-];
-
-/**
- * Stacks backend supportées par le gate qualité.
- * Les 3 premières sont les stacks avec gate complet.
- * "Autre" est accepté mais sans gate automatique.
- */
 export const BACKEND_STACK_OPTIONS: SelectOption[] = [
   { value: "python_django", label: "Python + Django" },
   { value: "python_fastapi", label: "Python + FastAPI" },
@@ -40,10 +66,6 @@ export const BACKEND_STACK_OPTIONS: SelectOption[] = [
   { value: "other", label: "Autre (gate qualité désactivé)" },
 ];
 
-/**
- * Stacks frontend supportées.
- * Next.js est recommandé — gate complet (build + typecheck + tests).
- */
 export const FRONTEND_STACK_OPTIONS: SelectOption[] = [
   { value: "nextjs", label: "Next.js (recommandé)" },
   { value: "react", label: "React" },
@@ -72,15 +94,10 @@ export interface CompiledSelections {
   databaseLabel: string;
 }
 
-/**
- * Résout la valeur de stack normalisée pour le champ `stack:` de .alexis/project.md.
- * Ce champ est lu par VerifyStep pour choisir les checks qualité.
- */
 export function resolveStackHint(selections: CompiledSelections): string {
   const { stackMonolith, stackFrontend, stackBackend } = selections;
   const primary = stackMonolith || stackBackend || stackFrontend;
   if (!primary) return "";
-
   const mapping: Record<string, string> = {
     python_django: "django",
     python_fastapi: "python",
@@ -108,12 +125,8 @@ export function compileAdvancedBrief(s: CompiledSelections): string {
   if (s.databaseLabel && s.databaseLabel !== "Aucune") {
     lines.push(`Base de données: ${s.databaseLabel}`);
   }
-
-  // Ajouter le hint de stack pour le gate qualité
   const stackHint = resolveStackHint(s);
-  if (stackHint) {
-    lines.push(`stack: ${stackHint}`);
-  }
-
+  if (stackHint) lines.push(`stack: ${stackHint}`);
   return lines.join("\n");
 }
+

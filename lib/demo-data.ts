@@ -26,6 +26,8 @@ let demoProjects: ProjectOut[] = [
     run_timeout_seconds: 1800,
     is_active: true,
     created_at: "2026-06-01T09:00:00Z",
+    stack: null,
+    architecture: null,
   },
   {
     id: "demo-project-2",
@@ -45,6 +47,8 @@ let demoProjects: ProjectOut[] = [
     run_timeout_seconds: 1800,
     is_active: true,
     created_at: "2026-05-20T14:30:00Z",
+    stack: null,
+    architecture: null,
   },
 ];
 

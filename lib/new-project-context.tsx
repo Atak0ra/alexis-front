@@ -18,6 +18,9 @@ export interface NewProjectDraft {
   codeReviewEnabled: boolean;
   // Plan info — chargé depuis getMe() dans le layout
   isByok: boolean;
+  // Option avancée scaffolding — null = l'agent décide (cas 3)
+  stack: "nextjs" | "fastapi" | "django" | null;
+  architecture: "monolith" | "front_back" | "front_back_bff" | null;
 }
 
 interface NewProjectState extends NewProjectDraft {
@@ -33,6 +36,8 @@ interface NewProjectState extends NewProjectDraft {
   setAgentBaseUrl: (v: string) => void;
   setCodeReviewEnabled: (v: boolean) => void;
   setIsByok: (v: boolean) => void;
+  setStack: (v: "nextjs" | "fastapi" | "django" | null) => void;
+  setArchitecture: (v: "monolith" | "front_back" | "front_back_bff" | null) => void;
   reset: () => void;
 }
 
@@ -49,6 +54,8 @@ const INITIAL_DRAFT: NewProjectDraft = {
   agentBaseUrl: "",
   codeReviewEnabled: true,
   isByok: false,
+  stack: null,
+  architecture: null,
 };
 
 const NewProjectContext = createContext<NewProjectState | null>(null);
@@ -68,6 +75,8 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const setAgentBaseUrl = useCallback((v: string) => setDraft((d) => ({ ...d, agentBaseUrl: v })), []);
   const setCodeReviewEnabled = useCallback((v: boolean) => setDraft((d) => ({ ...d, codeReviewEnabled: v })), []);
   const setIsByok = useCallback((v: boolean) => setDraft((d) => ({ ...d, isByok: v })), []);
+  const setStack = useCallback((v: "nextjs" | "fastapi" | "django" | null) => setDraft((d) => ({ ...d, stack: v })), []);
+  const setArchitecture = useCallback((v: "monolith" | "front_back" | "front_back_bff" | null) => setDraft((d) => ({ ...d, architecture: v })), []);
   const reset = useCallback(() => setDraft(INITIAL_DRAFT), []);
 
   return (
@@ -86,6 +95,8 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
         setAgentBaseUrl,
         setCodeReviewEnabled,
         setIsByok,
+        setStack,
+        setArchitecture,
         reset,
       }}
     >

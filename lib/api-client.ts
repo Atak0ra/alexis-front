@@ -131,6 +131,27 @@ export interface ProjectOut {
   run_timeout_seconds: number;
   is_active: boolean;
   created_at: string;
+  /** Stack de scaffolding — null si projet existant ou sans scaffolding. */
+  stack: "nextjs" | "fastapi" | "django" | null;
+  /** Architecture Monorepo — null si projet existant ou sans scaffolding. */
+  architecture: "monolith" | "front_back" | "front_back_bff" | null;
+}
+
+// ─── Catalogue de stacks ──────────────────────────────────────────────────────
+
+export interface StackCatalogItem {
+  id: "nextjs" | "fastapi" | "django";
+  label: string;
+  language: string;
+  framework: string;
+  description: string;
+  default_architecture: "monolith" | "front_back" | "front_back_bff";
+  recommended_for: string[];
+  quality_gate: boolean;
+}
+
+export function listStacks(): Promise<StackCatalogItem[]> {
+  return request<StackCatalogItem[]>("/projects/stacks");
 }
 
 export interface ProjectStats {
@@ -498,6 +519,10 @@ export interface CreateProjectPayload {
   trigger_states: string[];
   models: Record<string, string>;
   code_review_enabled?: boolean;
+  /** Stack de scaffolding (option avancée). Absent = l'agent décide. */
+  stack?: "nextjs" | "fastapi" | "django" | null;
+  /** Architecture Monorepo. Absent = archi par défaut de la stack. */
+  architecture?: "monolith" | "front_back" | "front_back_bff" | null;
 }
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {
@@ -523,6 +548,8 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
       run_timeout_seconds: 1800,
       is_active: true,
       created_at: new Date().toISOString(),
+      stack: payload.stack ?? null,
+      architecture: payload.architecture ?? null,
     };
     addDemoProject(project);
     return Promise.resolve(project);

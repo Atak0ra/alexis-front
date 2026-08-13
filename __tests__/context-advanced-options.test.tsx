@@ -1,106 +1,118 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ContextAdvancedOptions from "@/components/context-advanced-options";
 
-describe("ContextAdvancedOptions", () => {
-  it("is collapsed by default and reports an empty compiled brief", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
+// Mock listStacks pour ne pas appeler le back dans les tests
+vi.mock("@/lib/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api-client")>();
+  return {
+    ...actual,
+    listStacks: vi.fn().mockResolvedValue([
+      { id: "nextjs", label: "Next.js", language: "TypeScript", framework: "Next.js 15",
+        description: "Application web fullstack TypeScript.", default_architecture: "monolith",
+        recommended_for: ["SaaS", "dashboard"], quality_gate: true },
+      { id: "fastapi", label: "FastAPI", language: "Python", framework: "FastAPI",
+        description: "API REST Python.", default_architecture: "front_back",
+        recommended_for: ["API REST", "IA/ML"], quality_gate: true },
+      { id: "django", label: "Django", language: "Python", framework: "Django 5",
+        description: "Framework Python.", default_architecture: "monolith",
+        recommended_for: ["CRUD", "back-office"], quality_gate: true },
+    ]),
+  };
+});
 
-    expect(screen.queryByLabelText("Architecture")).not.toBeInTheDocument();
-    expect(onChange).toHaveBeenCalledWith("");
+describe("ContextAdvancedOptions (StackAdvancedOptions)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("reveals Architecture and Database when checked", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-
-    expect(screen.getByLabelText("Architecture")).toBeInTheDocument();
-    expect(screen.getByLabelText("Base de données")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Stack")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Stack Frontend")).not.toBeInTheDocument();
+  it("est replié par défaut et n'appelle pas onStackChange", () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    // Le toggle est présent mais aucune carte de stack n'est visible
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.queryByText("Next.js")).not.toBeInTheDocument();
+    expect(onStackChange).not.toHaveBeenCalled();
   });
 
-  it("shows a single Stack select for Monolithe", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
+  it("affiche les cartes de stack après activation", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
 
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
+    fireEvent.click(screen.getByRole("checkbox"));
 
-    expect(screen.getByLabelText("Stack")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Stack Frontend")).not.toBeInTheDocument();
-  });
-
-  it("shows Stack Frontend and Stack Backend for Front + Back", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "front_back" } });
-
-    expect(screen.getByLabelText("Stack Frontend")).toBeInTheDocument();
-    expect(screen.getByLabelText("Stack Backend")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Stack BFF")).not.toBeInTheDocument();
-  });
-
-  it("also shows Stack BFF for Front + Back + BFF", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "front_back_bff" } });
-
-    expect(screen.getByLabelText("Stack Frontend")).toBeInTheDocument();
-    expect(screen.getByLabelText("Stack Backend")).toBeInTheDocument();
-    expect(screen.getByLabelText("Stack BFF")).toBeInTheDocument();
-  });
-
-  it("reveals a free-text input when 'Autre' is chosen, and its value ends up in the compiled brief", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
-
-    fireEvent.change(screen.getByLabelText("Stack"), { target: { value: "other" } });
-    expect(screen.getByPlaceholderText("Précise ta stack")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText("Précise ta stack"), {
-      target: { value: "Elixir + Phoenix" },
+    await waitFor(() => {
+      expect(screen.getAllByText("Next.js").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("FastAPI").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Django").length).toBeGreaterThan(0);
     });
-
-    expect(onChange).toHaveBeenLastCalledWith("Stack: Elixir + Phoenix\nArchitecture: Monolithe");
   });
 
-  it("compiles the full brief for a Front + Back + BFF selection with a database", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Option avancée" }));
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "front_back_bff" } });
-    fireEvent.change(screen.getByLabelText("Stack Frontend"), { target: { value: "react" } });
-    fireEvent.change(screen.getByLabelText("Stack Backend"), { target: { value: "python_django" } });
-    fireEvent.change(screen.getByLabelText("Stack BFF"), { target: { value: "node_nestjs" } });
-    fireEvent.change(screen.getByLabelText("Base de données"), { target: { value: "postgresql" } });
+  it("appelle onStackChange avec la stack sélectionnée et son archi par défaut", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    fireEvent.click(screen.getByRole("checkbox"));
 
-    expect(onChange).toHaveBeenLastCalledWith(
-      "Stack: Python + Django (backend), React (frontend), Node.js + NestJS (BFF)\n" +
-      "Architecture: Front + Back + BFF\n" +
-      "Base de données: PostgreSQL"
-    );
+    await waitFor(() => screen.getAllByText("Next.js"));
+    // Trouver le bouton qui contient "Next.js" (la carte)
+    const nextjsBtns = screen.getAllByRole("button").filter((b) => b.textContent?.includes("Next.js"));
+    fireEvent.click(nextjsBtns[0]!);
+
+    expect(onStackChange).toHaveBeenLastCalledWith("nextjs", "monolith");
   });
 
-  it("reports an empty compiled brief again after unchecking, even with fields previously filled", () => {
-    const onChange = vi.fn();
-    render(<ContextAdvancedOptions onChange={onChange} />);
-    const checkbox = screen.getByRole("checkbox", { name: "Option avancée" });
+  it("affiche les options d'architecture après sélection d'une stack", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    await waitFor(() => screen.getAllByText("FastAPI"));
+    const fastapiBtns = screen.getAllByRole("button").filter((b) => b.textContent?.includes("FastAPI"));
+    fireEvent.click(fastapiBtns[0]!);
+
+    expect(screen.getByText("Monolithe")).toBeInTheDocument();
+    expect(screen.getByText("Front + Back")).toBeInTheDocument();
+    expect(screen.getByText("Front + BFF + Back")).toBeInTheDocument();
+  });
+
+  it("appelle onStackChange avec la nouvelle archi quand l'utilisateur en choisit une", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    await waitFor(() => screen.getAllByText("FastAPI"));
+    const fastapiBtns = screen.getAllByRole("button").filter((b) => b.textContent?.includes("FastAPI"));
+    fireEvent.click(fastapiBtns[0]!);
+
+    // Choisir "Monolithe"
+    fireEvent.click(screen.getByText("Monolithe").closest("button")!);
+    expect(onStackChange).toHaveBeenLastCalledWith("fastapi", "monolith");
+  });
+
+  it("appelle onStackChange(null, null) quand on décoche après sélection", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    const checkbox = screen.getByRole("checkbox");
     fireEvent.click(checkbox);
-    fireEvent.change(screen.getByLabelText("Architecture"), { target: { value: "monolith" } });
-    fireEvent.change(screen.getByLabelText("Stack"), { target: { value: "python_django" } });
+
+    await waitFor(() => screen.getByText("Next.js"));
+    fireEvent.click(screen.getByText("Next.js").closest("button")!);
 
     fireEvent.click(checkbox);
+    expect(onStackChange).toHaveBeenLastCalledWith(null, null);
+  });
 
-    expect(onChange).toHaveBeenLastCalledWith("");
+  it("déselectionne la stack si on clique dessus une deuxième fois", async () => {
+    const onStackChange = vi.fn();
+    render(<ContextAdvancedOptions onStackChange={onStackChange} />);
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    await waitFor(() => screen.getByText("Next.js"));
+    const nextjsBtn = screen.getByText("Next.js").closest("button")!;
+    fireEvent.click(nextjsBtn);
+    fireEvent.click(nextjsBtn); // deuxième clic → désélection
+
+    expect(onStackChange).toHaveBeenLastCalledWith(null, null);
   });
 });
+

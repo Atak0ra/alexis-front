@@ -22,6 +22,8 @@ export default function AgentPage() {
     // isByok est peuplé par le layout via getMe() — source unique de vérité.
     // Cette page n'est atteinte que si isByok=true (voir repo/page.tsx).
     isByok,
+    stack,
+    architecture,
   } = useNewProject();
 
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,8 @@ export default function AgentPage() {
         agentBaseUrl,
         codeReviewEnabled,
         isByok,
+        stack: stack ?? null,
+        architecture: architecture ?? null,
       },
       router,
       onStart: () => setSubmitting(true),

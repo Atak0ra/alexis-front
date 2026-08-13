@@ -29,6 +29,9 @@ export interface NewProjectDraftForSubmit {
   agentBaseUrl: string;
   codeReviewEnabled: boolean;
   isByok: boolean;
+  /** Option avancée — null = l'agent décide automatiquement (cas 3). */
+  stack: "nextjs" | "fastapi" | "django" | null;
+  architecture: "monolith" | "front_back" | "front_back_bff" | null;
 }
 
 export interface SubmitNewProjectOptions {
@@ -85,6 +88,10 @@ export async function submitNewProject({
       // son éventuel forçage Groq. En BYOK : modèles cohérents avec l'agent.
       models: draft.isByok ? getDefaultModels(draft.agentChoice) : {},
       code_review_enabled: draft.codeReviewEnabled,
+      // Option avancée : transmis seulement pour les projets hébergés.
+      // null = l'agent choisira automatiquement la stack la plus adaptée (cas 3).
+      stack: draft.hosted ? (draft.stack ?? null) : undefined,
+      architecture: draft.hosted ? (draft.architecture ?? null) : undefined,
     });
 
     const { exists } = await getProjectContext(apiKey, project.id);
