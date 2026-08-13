@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { listStacks, type StackCatalogItem } from "@/lib/api-client";
+import { Zap, Server, Layers, type LucideIcon } from "lucide-react";
 import { ARCHITECTURE_OPTIONS, type ArchitectureId, type StackId } from "@/lib/context-advanced-options";
 
 interface Props {
@@ -9,10 +10,10 @@ interface Props {
   onStackChange: (stack: StackId | null, architecture: ArchitectureId | null) => void;
 }
 
-const STACK_ICONS: Record<StackId, string> = {
-  nextjs: "⚡",
-  fastapi: "🐍",
-  django: "🎸",
+const STACK_ICONS: Record<StackId, LucideIcon> = {
+  nextjs: Zap,
+  fastapi: Server,
+  django: Layers,
 };
 
 const STACK_FALLBACK: StackCatalogItem[] = [
@@ -109,7 +110,7 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
                         <span className="absolute right-3 top-3 text-xs font-medium text-success">✓ gate</span>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{STACK_ICONS[stack.id as StackId] ?? "🛠"}</span>
+                        {(() => { const Icon = STACK_ICONS[stack.id as StackId]; return Icon ? <Icon className="h-5 w-5 shrink-0 text-brand" /> : null; })()}
                         <span className="text-sm font-semibold text-foreground">{stack.label}</span>
                       </div>
                       <p className="text-xs text-foreground-muted leading-relaxed">{stack.description}</p>
