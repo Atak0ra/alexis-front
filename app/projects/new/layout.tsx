@@ -11,7 +11,7 @@ import EmailVerificationModal from "@/components/email-verification-modal";
 
 // Composant interne qui a accès au contexte NewProject pour y injecter isByok
 function LayoutInner({ children, pathname }: { children: ReactNode; pathname: string }) {
-  const { isByok, setIsByok } = useNewProject();
+  const { isByok, setIsByok, hosted } = useNewProject();
   const router = useRouter();
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
@@ -24,13 +24,21 @@ function LayoutInner({ children, pathname }: { children: ReactNode; pathname: st
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Calcul du numéro d'étape courant selon le plan :
-  // BYOK  : 1=choice, 2=repo, 3=agent, 4=context
-  // non-BYOK : 1=choice, 2=repo, 3=context  (agent sauté)
-  function pathToStep(p: string): 1 | 2 | 3 | 4 {
+  // isNewHosted : true si le projet est hébergé (neuf avec scaffolding + backlog).
+  // Détermine quel jeu d'étapes afficher dans le stepper.
+  const isNewHosted = hosted || pathname.includes("/scaffold");
+
+  // Calcul du numéro d'étape selon le type de projet et le plan :
+  // Projet existant BYOK    : 1=choice, 2=repo, 3=agent, 4=context
+  // Projet existant managed : 1=choice, 2=repo, 3=context
+  // Projet hébergé neuf BYOK    : 1=choice, 2=repo, 3=agent, 4=scaffold, 5=context, 6=backlog
+  // Projet hébergé neuf managed : 1=choice, 2=repo, 3=scaffold, 4=context, 5=backlog
+  function pathToStep(p: string): number {
     if (p.includes("/repo")) return 2;
-    if (p.includes("/agent")) return isByok ? 3 : 3; // agent visible seulement BYOK
-    if (p.includes("/context")) return isByok ? 4 : 3;
+    if (p.includes("/agent")) return 3;
+    if (p.includes("/scaffold")) return isByok ? 4 : 3;
+    if (p.includes("/context")) return isByok ? (isNewHosted ? 5 : 4) : (isNewHosted ? 4 : 3);
+    if (p.includes("/backlog")) return isByok ? 6 : 5;
     return 1;
   }
 
@@ -60,14 +68,14 @@ function LayoutInner({ children, pathname }: { children: ReactNode; pathname: st
           <p className="mb-8 text-xs font-semibold uppercase tracking-widest text-foreground-subtle">
             Nouveau projet
           </p>
-          <NewProjectStepper current={currentStep} isByok={isByok} orientation="vertical" />
+          <NewProjectStepper current={currentStep} isByok={isByok} isNewHosted={isNewHosted} orientation="vertical" />
         </aside>
 
         {/* ── Content ── */}
         <main className="flex flex-1 flex-col">
           {/* Mobile stepper (horizontal, compact) */}
           <div className="lg:hidden border-b border-border bg-surface-raised px-6 py-4">
-            <NewProjectStepper current={currentStep} isByok={isByok} orientation="horizontal" />
+            <NewProjectStepper current={currentStep} isByok={isByok} isNewHosted={isNewHosted} orientation="horizontal" />
           </div>
 
           {/* Page content */}

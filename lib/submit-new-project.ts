@@ -94,14 +94,19 @@ export async function submitNewProject({
       architecture: draft.hosted ? (draft.architecture ?? null) : undefined,
     });
 
+    if (draft.hosted) {
+      // Projet hébergé neuf → toujours passer par l'étape scaffolding.
+      // scaffold_project_job (ou decide_stack_job) tourne en background ;
+      // /scaffold affiche la progression et redirige vers contexte quand c'est done.
+      router.push(`/projects/new/scaffold?projectId=${project.id}&new=true`);
+      return;
+    }
+
+    // Projet existant avec code → contexte seul, pas de backlog ni scaffolding.
     const { exists } = await getProjectContext(apiKey, project.id);
     if (exists) {
-      // Repo avec code existant → étape Contexte seule (4 étapes au total).
-      // Le backlog n'est pas proposé : le code est déjà là.
       router.push(`/projects/new/context?projectId=${project.id}`);
     } else {
-      // Repo vide → étape Contexte (description obligatoire + cahier des charges
-      // optionnel), puis étape Backlog (5 étapes au total).
       router.push(`/projects/new/context?projectId=${project.id}&new=true`);
     }
   } catch (err) {

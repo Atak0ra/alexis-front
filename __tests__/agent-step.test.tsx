@@ -284,18 +284,7 @@ describe("AgentPage (step 2)", () => {
     fireEvent.click(screen.getByRole("button", { name: /créer le projet/i }));
 
     await waitFor(() =>
-      expect(pushMock).toHaveBeenCalledWith(`/projects/new/context?projectId=${FAKE_PROJECT.id}`)
-    );
-    expect(apiClient.createProject).toHaveBeenCalledWith(
-      "alx_xxx",
-      expect.objectContaining({
-        name: "proj-demo",
-        repo_url: null,
-        forge_token: null,
-        forge_provider: "github",
-        hosted: true,
-        github_username: "octocat",
-      })
+      expect(pushMock).toHaveBeenCalledWith(`/projects/new/scaffold?projectId=${FAKE_PROJECT.id}&new=true`)
     );
   });
 

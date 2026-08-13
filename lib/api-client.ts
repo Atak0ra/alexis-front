@@ -1701,3 +1701,23 @@ export function commitBacklog(
     body: JSON.stringify({ tickets }),
   });
 }
+
+// ─── Scaffolding status ────────────────────────────────────────────────────────
+// Statuts Redis écrits par scaffold_project_job et decide_stack_job.
+
+export interface ScaffoldStatusOut {
+  /** null = job pas encore démarré | "pending" | "in_progress" | "done" | "failed" */
+  status: "pending" | "in_progress" | "done" | "failed" | null;
+  error?: string | null;
+}
+
+export async function getScaffoldStatus(
+  apiKey: string,
+  projectId: string
+): Promise<ScaffoldStatusOut> {
+  if (isLocalMode()) return { status: "done" };
+  return request<ScaffoldStatusOut>(`/projects/${projectId}/scaffold/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
