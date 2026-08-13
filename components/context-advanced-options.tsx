@@ -132,6 +132,8 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
                           </div>
                         )}
                       </button>
+
+                      {/* Bouton "Idéal pour…" — en bas à gauche de la carte */}
                       <button type="button"
                         aria-label={`Cas d'usage pour ${stack.label}`}
                         onClick={(e) => toggleTooltip(e, stack.id as StackId)}
@@ -140,25 +142,33 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
                         <Info className="h-3 w-3" />
                         <span>Idéal pour…</span>
                       </button>
-
-                      {tooltipOpen && (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 rounded-xl border border-brand/30 bg-surface shadow-lg p-4">
-                          <p className="mb-2 text-xs font-semibold text-foreground">Idéal pour {stack.label} :</p>
-                          <ul className="space-y-1.5">
-                            {stack.recommended_for.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2 text-xs text-foreground-muted">
-                                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
               </div>
             )}
+
+            {/* Panneau "Idéal pour…" — affiché sous toute la grille, dans le flux normal.
+                Pas de position:absolute, pas de débordement, pas de déplacement de layout. */}
+            {openTooltip && (() => {
+              const info = stacks.find((s) => s.id === openTooltip);
+              if (!info) return null;
+              return (
+                <div className="mt-3 rounded-xl border border-brand/30 bg-surface p-4 animate-in fade-in duration-150">
+                  <p className="mb-2.5 text-xs font-semibold text-foreground">
+                    Idéal pour {info.label} :
+                  </p>
+                  <ul className="space-y-2">
+                    {info.recommended_for.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground-muted">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
 
           {selectedStack && (
