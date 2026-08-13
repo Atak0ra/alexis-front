@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { listStacks, type StackCatalogItem } from "@/lib/api-client";
-import { Zap, Server, Layers, type LucideIcon } from "lucide-react";
+import { Info, Zap, Server, Layers, type LucideIcon } from "lucide-react";
 import { ARCHITECTURE_OPTIONS, type ArchitectureId, type StackId } from "@/lib/context-advanced-options";
 
 interface Props {
-  /** Appelé chaque fois que la sélection change — stack + architecture. */
   onStackChange: (stack: StackId | null, architecture: ArchitectureId | null) => void;
 }
 
@@ -17,39 +16,53 @@ const STACK_ICONS: Record<StackId, LucideIcon> = {
 };
 
 const STACK_FALLBACK: StackCatalogItem[] = [
-  { id: "nextjs", label: "Next.js", language: "TypeScript", framework: "Next.js 15",
-    description: "Application web fullstack TypeScript avec rendu hybride.",
-    default_architecture: "monolith", recommended_for: ["SaaS", "dashboard", "application web"], quality_gate: true },
-  { id: "fastapi", label: "FastAPI", language: "Python", framework: "FastAPI",
-    description: "API REST Python haute performance, idéale pour un back-end découplé.",
-    default_architecture: "front_back", recommended_for: ["API REST", "microservice", "IA/ML"], quality_gate: true },
-  { id: "django", label: "Django", language: "Python", framework: "Django 5",
-    description: "Framework Python batteries-included : ORM, admin, auth.",
-    default_architecture: "monolith", recommended_for: ["CRUD", "back-office", "CMS"], quality_gate: true },
+  {
+    id: "nextjs", label: "Next.js", language: "TypeScript", framework: "Next.js 15",
+    description: "Tu veux un site ou une app avec une interface visible : tableau de bord, page d'accueil, espace client. Next.js gère le front et le back ensemble, dans un seul projet.",
+    default_architecture: "monolith", quality_gate: true,
+    recommended_for: [
+      "Une app web avec des pages et une interface (SaaS, tableau de bord, e-commerce)",
+      "Un site vitrine ou une landing page avec un peu de logique",
+      "Un outil interne où l'interface compte autant que la logique",
+    ],
+  },
+  {
+    id: "fastapi", label: "FastAPI", language: "Python", framework: "FastAPI",
+    description: "Tu veux exposer une API consommée par une app mobile, un autre service, ou un frontend séparé. FastAPI est Python pur, rapide à écrire, idéal si tu fais aussi de l'IA ou de la data.",
+    default_architecture: "front_back", quality_gate: true,
+    recommended_for: [
+      "Un back-end API consommé par une app mobile ou un frontend React/Vue",
+      "Un service d'IA, de traitement de données ou d'automatisation",
+      "Un microservice ou une intégration entre plusieurs outils",
+    ],
+  },
+  {
+    id: "django", label: "Django", language: "Python", framework: "Django 5",
+    description: "Tu veux une app Python complète avec une base de données, un espace admin, et des formulaires. Django inclut tout d'office — tu n'assembles rien, tu construis directement.",
+    default_architecture: "monolith", quality_gate: true,
+    recommended_for: [
+      "Une app métier avec beaucoup de modèles, de formulaires et de règles",
+      "Un back-office ou un outil d'administration avec interface intégrée",
+      "Un CMS, un ERP léger ou tout projet où Django Admin est un gain de temps",
+    ],
+  },
 ];
-
 export default function StackAdvancedOptions({ onStackChange }: Props) {
   const [enabled, setEnabled] = useState(false);
   const [stacks, setStacks] = useState<StackCatalogItem[]>([]);
   const [selectedStack, setSelectedStack] = useState<StackId | null>(null);
   const [selectedArch, setSelectedArch] = useState<ArchitectureId | null>(null);
   const [loading, setLoading] = useState(false);
+  const [openTooltip, setOpenTooltip] = useState<StackId | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    listStacks()
-      .then(setStacks)
-      .catch(() => setStacks(STACK_FALLBACK))
-      .finally(() => setLoading(false));
+    listStacks().then(setStacks).catch(() => setStacks(STACK_FALLBACK)).finally(() => setLoading(false));
   }, []);
 
   function handleToggle(checked: boolean) {
     setEnabled(checked);
-    if (!checked) {
-      setSelectedStack(null);
-      setSelectedArch(null);
-      onStackChange(null, null);
-    }
+    if (!checked) { setSelectedStack(null); setSelectedArch(null); setOpenTooltip(null); onStackChange(null, null); }
   }
 
   function handleSelectStack(stackId: StackId) {
@@ -57,39 +70,32 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
     const info = stacks.find((s) => s.id === stackId);
     const defaultArch = (info?.default_architecture ?? "monolith") as ArchitectureId;
     const newArch = newStack ? (selectedArch ?? defaultArch) : null;
-    setSelectedStack(newStack);
-    setSelectedArch(newArch);
+    setSelectedStack(newStack); setSelectedArch(newArch); setOpenTooltip(null);
     onStackChange(newStack, newArch);
   }
 
   function handleSelectArch(arch: ArchitectureId) {
-    setSelectedArch(arch);
-    onStackChange(selectedStack, arch);
+    setSelectedArch(arch); onStackChange(selectedStack, arch);
+  }
+
+  function toggleTooltip(e: React.MouseEvent, stackId: StackId) {
+    e.stopPropagation();
+    setOpenTooltip(openTooltip === stackId ? null : stackId);
   }
 
   const selectedStackInfo = stacks.find((s) => s.id === selectedStack);
   const selectedArchInfo = ARCHITECTURE_OPTIONS.find((a) => a.value === selectedArch);
 
-
   return (
     <div>
-      {/* Toggle "Option avancée" */}
       <label className="flex items-center gap-2.5 text-sm font-medium text-foreground cursor-pointer">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => handleToggle(e.target.checked)}
-          className="h-4 w-4 rounded border-border accent-brand"
-        />
+        <input type="checkbox" checked={enabled} onChange={(e) => handleToggle(e.target.checked)} className="h-4 w-4 rounded border-border accent-brand" />
         <span>Option avancée</span>
-        <span className="text-xs font-normal text-foreground-subtle">
-          — choisir ma stack (sinon Alexis décide)
-        </span>
+        <span className="text-xs font-normal text-foreground-subtle">— choisir ma stack (sinon Alexis décide)</span>
       </label>
 
       {enabled && (
         <div className="mt-4 space-y-5 rounded-xl border border-border bg-surface-raised p-5">
-          {/* Sélection de la stack */}
           <div>
             <p className="mb-3 text-sm font-semibold text-foreground">Stack technique</p>
             {loading ? (
@@ -101,39 +107,60 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {stacks.map((stack) => {
                   const isSelected = selectedStack === stack.id;
+                  const tooltipOpen = openTooltip === stack.id;
+                  const Icon = STACK_ICONS[stack.id as StackId];
                   return (
-                    <button key={stack.id} type="button"
-                      onClick={() => handleSelectStack(stack.id as StackId)}
-                      className={`relative flex flex-col gap-2 rounded-xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${isSelected ? "border-brand bg-brand-light shadow-sm" : "border-border bg-surface hover:border-brand/50 hover:bg-brand-light/30"}`}
-                    >
-                      {stack.quality_gate && (
-                        <span className="absolute right-3 top-3 text-xs font-medium text-success">✓ gate</span>
-                      )}
-                      <div className="flex items-center gap-2">
-                        {(() => { const Icon = STACK_ICONS[stack.id as StackId]; return Icon ? <Icon className="h-5 w-5 shrink-0 text-brand" /> : null; })()}
-                        <span className="text-sm font-semibold text-foreground">{stack.label}</span>
-                      </div>
-                      <p className="text-xs text-foreground-muted leading-relaxed">{stack.description}</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <span className="rounded-md bg-surface px-2 py-0.5 text-xs text-foreground-subtle border border-border">{stack.language}</span>
-                        <span className="rounded-md bg-surface px-2 py-0.5 text-xs text-foreground-subtle border border-border">{stack.framework}</span>
-                      </div>
-                      <p className="text-xs text-foreground-subtle">Idéal pour : {stack.recommended_for.slice(0, 3).join(", ")}</p>
-                      {isSelected && (
-                        <div className="absolute right-3 bottom-3">
-                          <svg className="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
+                    <div key={stack.id} className="relative">
+                      <button type="button" onClick={() => handleSelectStack(stack.id as StackId)}
+                        className={`relative w-full flex flex-col gap-2 rounded-xl border p-4 pb-8 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${isSelected ? "border-brand bg-brand-light shadow-sm" : "border-border bg-surface hover:border-brand/50 hover:bg-brand-light/30"}`}
+                      >
+                        {stack.quality_gate && (
+                          <span className="absolute right-3 top-3 text-xs font-medium text-success">✓ gate</span>
+                        )}
+                        <div className="flex items-center gap-2 pr-10">
+                          {Icon && <Icon className="h-5 w-5 shrink-0 text-brand" />}
+                          <span className="text-sm font-semibold text-foreground">{stack.label}</span>
+                        </div>
+                        <p className="text-xs text-foreground-muted leading-relaxed">{stack.description}</p>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="rounded-md bg-surface px-2 py-0.5 text-xs text-foreground-subtle border border-border">{stack.language}</span>
+                          <span className="rounded-md bg-surface px-2 py-0.5 text-xs text-foreground-subtle border border-border">{stack.framework}</span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute right-3 bottom-3">
+                            <svg className="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                        )}
+                      </button>
+                      <button type="button"
+                        aria-label={`Cas d'usage pour ${stack.label}`}
+                        onClick={(e) => toggleTooltip(e, stack.id as StackId)}
+                        className={`absolute left-3 bottom-3 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand ${tooltipOpen ? "bg-brand text-white" : "text-foreground-subtle hover:text-brand hover:bg-brand-light"}`}
+                      >
+                        <Info className="h-3 w-3" />
+                        <span>Idéal pour…</span>
+                      </button>
+
+                      {tooltipOpen && (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 rounded-xl border border-brand/30 bg-surface shadow-lg p-4">
+                          <p className="mb-2 text-xs font-semibold text-foreground">Idéal pour {stack.label} :</p>
+                          <ul className="space-y-1.5">
+                            {stack.recommended_for.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2 text-xs text-foreground-muted">
+                                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             )}
           </div>
 
-          {/* Sélection de l'architecture */}
           {selectedStack && (
             <div>
               <p className="mb-3 text-sm font-semibold text-foreground">Architecture</p>
@@ -141,8 +168,7 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
                 {ARCHITECTURE_OPTIONS.map((arch) => {
                   const isSelected = selectedArch === arch.value;
                   return (
-                    <button key={arch.value} type="button"
-                      onClick={() => handleSelectArch(arch.value)}
+                    <button key={arch.value} type="button" onClick={() => handleSelectArch(arch.value)}
                       className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${isSelected ? "border-brand bg-brand-light" : "border-border bg-surface hover:border-brand/50"}`}
                     >
                       <span className="text-sm font-medium text-foreground">{arch.label}</span>
@@ -154,7 +180,6 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
             </div>
           )}
 
-          {/* Résumé */}
           {selectedStack && selectedStackInfo && (
             <div className="rounded-lg border border-brand/20 bg-brand-light/40 px-4 py-2.5 text-xs text-foreground-muted">
               <span className="font-medium text-foreground">Sélection : </span>
@@ -168,5 +193,3 @@ export default function StackAdvancedOptions({ onStackChange }: Props) {
     </div>
   );
 }
-
-
