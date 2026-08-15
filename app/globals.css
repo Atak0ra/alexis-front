@@ -41,3 +41,10 @@
     border-radius: 3px;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-watermark-fade {
+    animation: none;
+    opacity: 0.12;
+  }
+}

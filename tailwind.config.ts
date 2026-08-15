@@ -66,6 +66,17 @@ const config: Config = {
         xl: "0.625rem",
         "2xl": "0.75rem",
       },
+      keyframes: {
+        "watermark-fade": {
+          "0%":   { opacity: "0" },
+          "15%":  { opacity: "1" },
+          "70%":  { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+      },
+      animation: {
+        "watermark-fade": "watermark-fade 9s ease-in-out infinite",
+      },
     },
   },
   plugins: [],
