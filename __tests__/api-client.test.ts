@@ -13,6 +13,7 @@ import {
   commitProjectContext,
   uploadIssueAsset,
   listIssueAssets,
+  refineBrief,
   AlexisApiError,
 } from "@/lib/api-client";
 
@@ -305,5 +306,38 @@ describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("refineBrief", () => {
+  it("posts idea with Bearer auth and returns refined text", async () => {
+    mockFetchOnce(200, { refined: "**Objectif :** App structurée." });
+    const result = await refineBrief("alx_xxx", "une idée brute de projet");
+    expect(result).toEqual({ refined: "**Objectif :** App structurée." });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/projects/refine-brief"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ idea: "une idée brute de projet" }),
+      })
+    );
+  });
+
+  it("throws AlexisApiError on 503", async () => {
+    mockFetchOnce(503, { detail: "Aucune clé gérée active." });
+    try {
+      await refineBrief("alx_xxx", "une idée");
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(AlexisApiError);
+      expect((err as AlexisApiError).status).toBe(503);
+    }
+  });
+
+  it("in demo mode, returns a structured brief without calling fetch", async () => {
+    vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
+    const result = await refineBrief("demo-api-key", "une app de livraison");
+    expect(result.refined).toContain("Objectif");
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

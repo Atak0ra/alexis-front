@@ -8,26 +8,20 @@ import { Label } from "@/components/ui/label";
 import { getMe } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
-import { submitNewProject } from "@/lib/submit-new-project";
 import FieldHint from "@/components/field-hint";
 
 export default function AgentPage() {
   const router = useRouter();
   const {
-    name, hosted, repoUrl, forgeProvider, forgeToken, githubUsername, issuePrefix,
     agentChoice, setAgentChoice,
     agentApiKey, setAgentApiKey,
     agentBaseUrl, setAgentBaseUrl,
     codeReviewEnabled, setCodeReviewEnabled,
     // isByok est peuplé par le layout via getMe() — source unique de vérité.
-    // Cette page n'est atteinte que si isByok=true (voir repo/page.tsx).
+    // Cette page n'est atteinte que si isByok=true (voir repo/page.tsx).\
     isByok,
-    stack,
-    architecture,
   } = useNewProject();
 
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   // forcedAgentChoice : uniquement pour l'affichage du hint informatif.
   // Ne sert pas à décider du flux — c'est le back qui force l'agent au moment
   // de la création (cf. create_project → forced_agent_choice).
@@ -47,35 +41,10 @@ export default function AgentPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      setError("Session absente");
-      return;
-    }
-    await submitNewProject({
-      apiKey,
-      draft: {
-        name,
-        hosted,
-        repoUrl,
-        forgeProvider,
-        forgeToken,
-        githubUsername,
-        issuePrefix,
-        agentChoice,
-        agentApiKey,
-        agentBaseUrl,
-        codeReviewEnabled,
-        isByok,
-        stack: stack ?? null,
-        architecture: architecture ?? null,
-      },
-      router,
-      onStart: () => setSubmitting(true),
-      onError: (msg) => setError(msg),
-      onFinally: () => setSubmitting(false),
-    });
+    // Plan BYOK → étape Description (saisie du brief métier).
+    // La création effective du projet n'a lieu qu'après la description,
+    // pour que le brief soit disponible dès le scaffolding.
+    router.push("/projects/new/description");
   }
 
   return (
@@ -193,8 +162,6 @@ export default function AgentPage() {
           </div>
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
-
         <div className="flex items-center justify-between pt-2">
           <Button
             type="button"
@@ -203,8 +170,8 @@ export default function AgentPage() {
           >
             ← Précédent
           </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Création…" : "Créer le projet →"}
+          <Button type="submit">
+            Suivant →
           </Button>
         </div>
       </form>

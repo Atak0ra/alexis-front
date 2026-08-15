@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { validateForge, getMe, AlexisApiError } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
 import { useNewProject } from "@/lib/new-project-context";
-import { submitNewProject } from "@/lib/submit-new-project";
 import FieldHint from "@/components/field-hint";
 import StackAdvancedOptions from "@/components/context-advanced-options";
 import type { StackId, ArchitectureId } from "@/lib/context-advanced-options";
@@ -38,7 +37,6 @@ export default function RepoPage() {
   const [validated, setValidated] = useState(false);
   const [validatedAccount, setValidatedAccount] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   // Pré-remplit le pseudo GitHub avec celui déjà enregistré côté client (mémorisé
   // par le backend lors d'un précédent projet hébergé), sans écraser une saisie
@@ -103,38 +101,10 @@ export default function RepoPage() {
       return;
     }
 
-    // Plan géré (non-BYOK) → créer le projet directement via le helper partagé.
-    // Le helper envoie models:{} pour que le back applique ses propres défauts
-    // (et son forçage éventuel d'agent/Groq), sans risque de désalignement.
-    setError(null);
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      setError("Session absente");
-      return;
-    }
-    await submitNewProject({
-      apiKey,
-      draft: {
-        name,
-        hosted,
-        repoUrl,
-        forgeProvider,
-        forgeToken,
-        githubUsername,
-        issuePrefix,
-        agentChoice,
-        agentApiKey,
-        agentBaseUrl,
-        codeReviewEnabled,
-        isByok,
-        stack: stack ?? null,
-        architecture: architecture ?? null,
-      },
-      router,
-      onStart: () => setSubmitting(true),
-      onError: (msg) => setError(msg),
-      onFinally: () => setSubmitting(false),
-    });
+    // Plan géré (non-BYOK) → étape Description (saisie du brief métier).
+    // La création effective du projet n'a lieu qu'après la description,
+    // pour que le brief soit disponible dès le scaffolding.
+    router.push("/projects/new/description");
   }
 
   const canNext = hosted
@@ -296,8 +266,8 @@ export default function RepoPage() {
         )}
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={!canNext || submitting}>
-            {submitting ? "Création…" : "Suivant →"}
+          <Button type="submit" disabled={!canNext}>
+            {"Suivant →"}
           </Button>
         </div>
       </form>

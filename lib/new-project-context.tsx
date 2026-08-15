@@ -21,6 +21,10 @@ export interface NewProjectDraft {
   // Option avancée scaffolding — null = l'agent décide (cas 3)
   stack: "nextjs" | "fastapi" | "django" | null;
   architecture: "monolith" | "front_back" | "front_back_bff" | null;
+  // Brief métier — saisi à l'étape «Décris ton projet», avant la création.
+  // Propagé dans context_content côté backend → alimente decide_stack,
+  // generate_context et generate_backlog avec l'intention réelle du client.
+  brief: string;
 }
 
 interface NewProjectState extends NewProjectDraft {
@@ -38,6 +42,7 @@ interface NewProjectState extends NewProjectDraft {
   setIsByok: (v: boolean) => void;
   setStack: (v: "nextjs" | "fastapi" | "django" | null) => void;
   setArchitecture: (v: "monolith" | "front_back" | "front_back_bff" | null) => void;
+  setBrief: (v: string) => void;
   reset: () => void;
 }
 
@@ -56,6 +61,7 @@ const INITIAL_DRAFT: NewProjectDraft = {
   isByok: false,
   stack: null,
   architecture: null,
+  brief: "",
 };
 
 const NewProjectContext = createContext<NewProjectState | null>(null);
@@ -77,6 +83,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const setIsByok = useCallback((v: boolean) => setDraft((d) => ({ ...d, isByok: v })), []);
   const setStack = useCallback((v: "nextjs" | "fastapi" | "django" | null) => setDraft((d) => ({ ...d, stack: v })), []);
   const setArchitecture = useCallback((v: "monolith" | "front_back" | "front_back_bff" | null) => setDraft((d) => ({ ...d, architecture: v })), []);
+  const setBrief = useCallback((v: string) => setDraft((d) => ({ ...d, brief: v })), []);
   const reset = useCallback(() => setDraft(INITIAL_DRAFT), []);
 
   return (
@@ -97,6 +104,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
         setIsByok,
         setStack,
         setArchitecture,
+        setBrief,
         reset,
       }}
     >

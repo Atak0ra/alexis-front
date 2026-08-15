@@ -11,6 +11,7 @@ interface Step {
 const STEPS_EXISTING_MANAGED: Step[] = [
   { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
+  { label: "Décris ton projet", description: "Brief métier" },
   { label: "Contexte", description: "Description du projet" },
 ];
 
@@ -18,6 +19,7 @@ const STEPS_EXISTING_BYOK: Step[] = [
   { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
   { label: "Agent", description: "Modèle IA" },
+  { label: "Décris ton projet", description: "Brief métier" },
   { label: "Contexte", description: "Description du projet" },
 ];
 
@@ -25,8 +27,9 @@ const STEPS_EXISTING_BYOK: Step[] = [
 const STEPS_NEW_MANAGED: Step[] = [
   { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
+  { label: "Décris ton projet", description: "Brief métier" },
   { label: "Initialisation", description: "Scaffolding & qualité" },
-  { label: "Contexte", description: "Description du projet" },
+  { label: "Contexte", description: "Documentation auto" },
   { label: "Backlog", description: "Tickets de départ" },
 ];
 
@@ -34,8 +37,9 @@ const STEPS_NEW_BYOK: Step[] = [
   { label: "Origine", description: "Dépôt existant ou hébergé" },
   { label: "Dépôt", description: "Forge & token d'accès" },
   { label: "Agent", description: "Modèle IA" },
+  { label: "Décris ton projet", description: "Brief métier" },
   { label: "Initialisation", description: "Scaffolding & qualité" },
-  { label: "Contexte", description: "Description du projet" },
+  { label: "Contexte", description: "Documentation auto" },
   { label: "Backlog", description: "Tickets de départ" },
 ];
 

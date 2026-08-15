@@ -523,6 +523,13 @@ export interface CreateProjectPayload {
   stack?: "nextjs" | "fastapi" | "django" | null;
   /** Architecture Monorepo. Absent = archi par défaut de la stack. */
   architecture?: "monolith" | "front_back" | "front_back_bff" | null;
+  /**
+   * Brief métier libre saisi par le client à l'étape «Décris ton projet».
+   * Persisté dans context_content et propagé à decide_stack, generate_context
+   * et generate_backlog pour des résultats ancrés dans le vrai besoin client.
+   * Optionnel : le pipeline fonctionne sans, avec des résultats moins personnalisés.
+   */
+  brief?: string | null;
 }
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {
@@ -558,6 +565,27 @@ export function createProject(apiKey: string, payload: CreateProjectPayload): Pr
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(payload),
+  });
+}
+
+export function refineBrief(
+  apiKey: string,
+  idea: string
+): Promise<{ refined: string }> {
+  if (isLocalMode()) {
+    // En mode démo : retourne une version factice structurée
+    return Promise.resolve({
+      refined:
+        `**Objectif :** ${idea.slice(0, 80)}...\n\n` +
+        `**Utilisateurs cibles :** À préciser.\n\n` +
+        `**Fonctionnalités clés :**\n- Fonctionnalité principale\n- Gestion des utilisateurs\n\n` +
+        `**Contraintes connues :** Aucune mentionnée.`,
+    });
+  }
+  return request("/projects/refine-brief", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ idea }),
   });
 }
 

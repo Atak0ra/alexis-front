@@ -29,16 +29,17 @@ function LayoutInner({ children, pathname }: { children: ReactNode; pathname: st
   const isNewHosted = hosted || pathname.includes("/scaffold");
 
   // Calcul du numéro d'étape selon le type de projet et le plan :
-  // Projet existant BYOK    : 1=choice, 2=repo, 3=agent, 4=context
-  // Projet existant managed : 1=choice, 2=repo, 3=context
-  // Projet hébergé neuf BYOK    : 1=choice, 2=repo, 3=agent, 4=scaffold, 5=context, 6=backlog
-  // Projet hébergé neuf managed : 1=choice, 2=repo, 3=scaffold, 4=context, 5=backlog
+  // Projet existant BYOK    : 1=choice, 2=repo, 3=agent, 4=description, 5=context
+  // Projet existant managed : 1=choice, 2=repo, 3=description, 4=context
+  // Projet hébergé neuf BYOK    : 1=choice, 2=repo, 3=agent, 4=description, 5=scaffold, 6=context, 7=backlog
+  // Projet hébergé neuf managed : 1=choice, 2=repo, 3=description, 4=scaffold, 5=context, 6=backlog
   function pathToStep(p: string): number {
     if (p.includes("/repo")) return 2;
     if (p.includes("/agent")) return 3;
-    if (p.includes("/scaffold")) return isByok ? 4 : 3;
-    if (p.includes("/context")) return isByok ? (isNewHosted ? 5 : 4) : (isNewHosted ? 4 : 3);
-    if (p.includes("/backlog")) return isByok ? 6 : 5;
+    if (p.includes("/description")) return isByok ? 4 : 3;
+    if (p.includes("/scaffold")) return isByok ? 5 : 4;
+    if (p.includes("/context")) return isByok ? (isNewHosted ? 6 : 5) : (isNewHosted ? 5 : 4);
+    if (p.includes("/backlog")) return isByok ? 7 : 6;
     return 1;
   }
 

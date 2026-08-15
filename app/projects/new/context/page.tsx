@@ -41,8 +41,8 @@ export default function ContextPage() {
       projectId={projectId}
       onDone={handleContextDone}
       onSkip={handleContextSkip}
-      // Repo vide : étape 4 sur 5 (backlog suit). Repo avec code : 4 sur 4.
-      stepLabel={isNew ? "4 sur 5" : "4 sur 4"}
+      // Repo vide hébergé : étape 5 sur 6 (backlog suit). Repo avec code : 4 sur 4.
+      stepLabel={isNew ? "5 sur 6" : "4 sur 4"}
     />
   );
 }

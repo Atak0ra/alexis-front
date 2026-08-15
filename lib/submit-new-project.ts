@@ -6,11 +6,11 @@
  * - les modèles par défaut (vide en non-BYOK → le back applique ses propres
  *   défauts, cohérent avec le forçage Groq/aider côté serveur)
  * - la redirection post-création :
- *     • repo avec code (exists=true)  → /projects/new/context (étape 4/4)
- *     • repo vide    (exists=false)   → /projects/new/context?new=true (étape 4/5)
- *       puis context → /projects/new/backlog (étape 5/5)
+ *     • repo avec code (exists=true)  → /projects/new/context (étape 5/5)
+ *     • repo vide    (exists=false)   → /projects/new/context?new=true (étape 5/6)
+ *       puis context → /projects/new/backlog (étape 6/6)
  *
- * Utilisé par repo/page.tsx (plan géré) et agent/page.tsx (plan BYOK).
+ * Utilisé par description/page.tsx (déclenché après la saisie du brief).
  */
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { createProject, getProjectContext, friendlyError } from "@/lib/api-client";
@@ -32,6 +32,8 @@ export interface NewProjectDraftForSubmit {
   /** Option avancée — null = l'agent décide automatiquement (cas 3). */
   stack: "nextjs" | "fastapi" | "django" | null;
   architecture: "monolith" | "front_back" | "front_back_bff" | null;
+  /** Brief métier saisi à l'étape «Décris ton projet». Optionnel. */
+  brief: string;
 }
 
 export interface SubmitNewProjectOptions {
@@ -47,11 +49,12 @@ export interface SubmitNewProjectOptions {
 }
 
 /**
- * Crée le projet puis redirige vers l'étape Contexte.
+ * Crée le projet puis redirige vers l'étape scaffold (hébergé) ou contexte (existant).
  *
  * Règle de routage :
- * - exists=false (repo vide) → context?new=true → backlog (wizard 5 étapes)
- * - exists=true  (repo avec code) → context (wizard 4 étapes, pas de backlog)
+ * - hosted=true              → scaffold → context?new=true → backlog (wizard 6 étapes)
+ * - exists=false (repo vide) → context?new=true → backlog
+ * - exists=true  (repo avec code) → context (wizard 5 étapes, pas de backlog)
  *
  * Règle BYOK :
  * - isByok=true  → envoie agent_choice, agent_api_key, agent_base_url, models
@@ -92,6 +95,8 @@ export async function submitNewProject({
       // null = l'agent choisira automatiquement la stack la plus adaptée (cas 3).
       stack: draft.hosted ? (draft.stack ?? null) : undefined,
       architecture: draft.hosted ? (draft.architecture ?? null) : undefined,
+      // Brief métier : toujours envoyé (vide = falsy → le back ignore).
+      brief: draft.brief.trim() || null,
     });
 
     if (draft.hosted) {

@@ -8,38 +8,22 @@ import {
   getProjectContextDraft,
   getProjectContextContent,
   commitProjectContext,
-  enqueueRepoSummary,
-  getRepoSummaryStatus,
-  uploadProjectReference,
   AlexisApiError,
-  type RepoSummaryResult,
   type ContextGenerationPhase,
 } from "@/lib/api-client";
 import { getApiKey } from "@/lib/session";
-import ContextAdvancedOptions from "@/components/context-advanced-options";
-import AgentTemplateHint from "@/components/agent-template-hint";
-import type { StackId, ArchitectureId } from "@/lib/context-advanced-options";
 
 interface Props {
   projectId: string;
-  /** Appelé quand le commit est terminé (done). Défaut : push("/dashboard") */
   onDone?: () => void;
-  /** Appelé quand l'utilisateur clique "Passer cette étape". Défaut : push("/dashboard") */
   onSkip?: () => void;
-  /** Intervalle de polling en ms. Défaut : 2000. Passer 0 dans les tests. */
   _pollIntervalMs?: number;
-  /** Rendu compact (pas de plein-écran ni numérotation d'étape) pour un usage
-   * intégré dans une autre page (settings, modal projet) plutôt que
-   * l'assistant de création autonome. */
   embedded?: boolean;
-  /**
-   * Numérotation de l'étape affichée dans le wizard (ex: "4 sur 5").
-   * Ignoré si embedded=true. Défaut : "4 sur 4".
-   */
   stepLabel?: string;
 }
 
-type Phase = "detecting" | "form" | "polling" | "review" | "done" | "failed";
+// Phase "form" supprimée — l'objectif fait foi.
+type Phase = "detecting" | "polling" | "review" | "done" | "failed";
 
 const GENERATION_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] = [
   { key: "cloning", label: "Clonage du dépôt" },
@@ -47,14 +31,6 @@ const GENERATION_PHASE_STEPS: { key: ContextGenerationPhase; label: string }[] =
   { key: "reading_result", label: "Lecture du résultat" },
 ];
 
-const ALLOWED_TYPES = [
-  "text/plain",
-  "text/markdown",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
 
 function PhaseChecklist({
   steps,
@@ -73,24 +49,11 @@ function PhaseChecklist({
         const isCurrent = idx === currentIdx;
         return (
           <li key={step.key} className="flex items-center gap-2 text-sm">
-            <span
-              className={
-                isDone ? "text-success" : isCurrent ? "text-brand" : "text-foreground-subtle"
-              }
-            >
+            <span className={isDone ? "text-success" : isCurrent ? "text-brand" : "text-foreground-subtle"}>
               {isDone ? "✓" : isCurrent ? "●" : "○"}
             </span>
-            <span
-              className={
-                isCurrent
-                  ? "font-medium text-foreground"
-                  : isDone
-                  ? "text-foreground-muted"
-                  : "text-foreground-subtle"
-              }
-            >
-              {step.label}
-              {isCurrent && ` (${elapsedSec}s)`}
+            <span className={isCurrent ? "font-medium text-foreground" : isDone ? "text-foreground-muted" : "text-foreground-subtle"}>
+              {step.label}{isCurrent && ` (${elapsedSec}s)`}
             </span>
           </li>
         );
@@ -105,486 +68,157 @@ export default function ProjectContextStep({
   onSkip,
   _pollIntervalMs = 2000,
   embedded = false,
-  stepLabel = "4 sur 4",
+  stepLabel = "5 sur 6",
 }: Props) {
   const router = useRouter();
-  const [brief, setBrief] = useState("");
-  // L'option avancée dans le contexte produit un texte additionnel pour le brief agent.
-  // Les champs stack/architecture du projet ont déjà été transmis à la création.
-  const [advancedBriefText, setAdvancedBriefText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("detecting");
-  const [repoSummary, setRepoSummary] = useState<RepoSummaryResult | null>(null);
   const [draftContent, setDraftContent] = useState("");
+  const [editedContent, setEditedContent] = useState("");
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [currentGenPhase, setCurrentGenPhase] = useState<ContextGenerationPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [genPhase, setGenPhase] = useState<ContextGenerationPhase | null>(null);
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Chrono de la phase en cours (remis à zéro à chaque changement de phase) ──
+  async function startGeneration() {
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    try {
+      // brief vide → le backend réutilise project.context_content (l'objectif saisi)
+      await createProjectContext(apiKey, projectId, "");
+      setPhase("polling");
+    } catch (err) {
+      setError(err instanceof AlexisApiError ? err.detail : "Impossible de lancer la génération.");
+      setPhase("failed");
+    }
+  }
+
+  // ── Phase detecting : vérifier contexte existant ou lancer génération ──
+  useEffect(() => {
+    if (phase !== "detecting") return;
+    const apiKey = getApiKey();
+    if (!apiKey) { startGeneration(); return; }
+    (async () => {
+      try {
+        const content = await getProjectContextContent(apiKey, projectId);
+        if (content.status === "ready" && content.content) {
+          setDraftContent(content.content); setEditedContent(content.content); setPhase("review"); return;
+        }
+        const status = await getProjectContextStatus(apiKey, projectId);
+        if (status.status === "draft_ready") {
+          const draft = await getProjectContextDraft(apiKey, projectId);
+          if (draft.content) { setDraftContent(draft.content); setEditedContent(draft.content); setPhase("review"); return; }
+        }
+        if (status.status === "in_progress") { setPhase("polling"); return; }
+        await startGeneration();
+      } catch { await startGeneration(); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // ── Chrono pendant le polling ──
   useEffect(() => {
     if (phase !== "polling") return;
     const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, [phase]);
 
-  // ── Reprendre un job en cours, ou détecter le repo si rien à reprendre ─────
+  // ── Polling statut génération ──
   useEffect(() => {
-    let cancelled = false;
-
-    async function detectRepo(apiKey: string) {
+    if (phase !== "polling" || _pollIntervalMs === 0) return;
+    const apiKey = getApiKey();
+    if (!apiKey) return;
+    pollRef.current = setInterval(async () => {
       try {
-        const { job_id } = await enqueueRepoSummary(apiKey, projectId);
-
-        let attempts = 0;
-        const maxAttempts = 30;
-        await new Promise<void>((resolve) => {
-          async function tick() {
-            if (cancelled) { resolve(); return; }
-            attempts++;
-            try {
-              const res = await getRepoSummaryStatus(apiKey, projectId, job_id);
-              if (res.status === "done") {
-                if (!cancelled && res.result) setRepoSummary(res.result);
-                resolve(); return;
-              } else if (res.status === "failed" || attempts >= maxAttempts) {
-                resolve(); return;
-              }
-            } catch {
-              if (attempts >= maxAttempts) { resolve(); return; }
-            }
-            setTimeout(tick, 2000);
-          }
-          tick();
-        });
-
-        if (!cancelled) setPhase("form");
-      } catch {
-        if (!cancelled) setPhase("form");
-      }
-    }
-
-    async function loadExistingContent(apiKey: string) {
-      try {
-        const { status: contentStatus, content } = await getProjectContextContent(apiKey, projectId);
-        if (!cancelled) {
-          if (contentStatus === "ready" && content) {
-            setDraftContent(content);
-            setPhase("review");
-          } else {
-            await detectRepo(apiKey);
-          }
-        }
-      } catch {
-        if (!cancelled) await detectRepo(apiKey);
-      }
-    }
-
-    async function resumeOrDetect() {
-      const apiKey = getApiKey();
-      if (!apiKey) { setPhase("form"); return; }
-
-      try {
-        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
-        if (cancelled) return;
-
-        if (status === "done") {
-          await loadExistingContent(apiKey);
-          return;
-        }
-
-        if (status === "in_progress") {
-          setGenPhase(statusPhase ?? null);
-          setPhase("polling");
-          startPolling();
-          return;
-        }
-
-        if (status === "draft_ready") {
-          try {
-            const { content } = await getProjectContextDraft(apiKey, projectId);
-            if (cancelled) return;
-            setDraftContent(content);
-            setPhase("review");
-          } catch {
-            if (!cancelled) await detectRepo(apiKey);
-          }
-          return;
-        }
-
-        if (status === "failed") {
-          setError(
-            statusError
-              ? `La génération précédente a échoué : ${statusError}`
-              : "La génération précédente a échoué. Vous pouvez réessayer ou passer cette étape."
-          );
+        const s = await getProjectContextStatus(apiKey, projectId);
+        setCurrentGenPhase((s.phase as ContextGenerationPhase) ?? null);
+        if (s.status === "draft_ready") {
+          clearInterval(pollRef.current!);
+          const draft = await getProjectContextDraft(apiKey, projectId);
+          setDraftContent(draft.content ?? ""); setEditedContent(draft.content ?? "");
+          setPhase("review");
+        } else if (s.status === "failed") {
+          clearInterval(pollRef.current!);
+          setError(s.error ?? "La génération a échoué.");
           setPhase("failed");
-          return;
         }
-      } catch {
-        // Pas de statut lisible — on repart sur la détection normale ci-dessous.
-      }
-
-      if (!cancelled) await detectRepo(apiKey);
-    }
-
-    resumeOrDetect();
-    return () => { cancelled = true; };
-  }, [projectId]);
-
-  // ── Clean up polling on unmount ────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  // ── Poll statut génération (in_progress → draft_ready | failed) ───────────
-  function startPolling() {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(async () => {
-      try {
-        const apiKey = getApiKey();
-        if (!apiKey) return;
-        const { status, error: statusError, phase: statusPhase } = await getProjectContextStatus(apiKey, projectId);
-        if (statusPhase) {
-          setGenPhase((prev) => {
-            if (statusPhase !== prev) setElapsedSec(0);
-            return statusPhase;
-          });
-        }
-        if (status === "draft_ready") {
-          clearInterval(intervalRef.current!);
-          try {
-            const { content } = await getProjectContextDraft(apiKey, projectId);
-            setDraftContent(content);
-            setPhase("review");
-          } catch {
-            setPhase("failed");
-            setError("Impossible de récupérer le draft généré.");
-          }
-        } else if (status === "failed") {
-          clearInterval(intervalRef.current!);
-          setPhase("failed");
-          setError(
-            statusError
-              ? `La génération du fichier de contexte a échoué : ${statusError}`
-              : "La génération du fichier de contexte a échoué. Vous pouvez réessayer ou passer cette étape."
-          );
-        }
-      } catch {
-        // network error — keep polling silently
-      }
+      } catch { /* réseau → continuer */ }
     }, _pollIntervalMs);
-  }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [phase, projectId, _pollIntervalMs]);
 
-  // ── Valider le draft ──────────────────────────────────────────────────────
   async function handleCommit() {
-    setError(null);
+    const apiKey = getApiKey();
+    if (!apiKey) return;
     setSubmitting(true);
     try {
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("Session absente");
-      await commitProjectContext(apiKey, projectId, draftContent);
+      await commitProjectContext(apiKey, projectId, editedContent);
       setPhase("done");
     } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue lors de la validation.");
-    } finally {
-      setSubmitting(false);
-    }
+      setError(err instanceof AlexisApiError ? err.detail : "Erreur lors de l'enregistrement.");
+    } finally { setSubmitting(false); }
   }
 
-  // ── Valider le fichier sélectionné ────────────────────────────────────────
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFileError(null);
-    const f = e.target.files?.[0] ?? null;
-    if (!f) { setFile(null); return; }
-    if (f.size > MAX_FILE_SIZE) {
-      setFileError("Fichier trop volumineux (max 10 Mo).");
-      setFile(null);
-      return;
-    }
-    if (!ALLOWED_TYPES.includes(f.type) && !f.name.match(/\.(pdf|docx?|md|txt)$/i)) {
-      setFileError("Format non supporté. Utilisez PDF, Word, Markdown ou texte.");
-      setFile(null);
-      return;
-    }
-    setFile(f);
-  }
-
-  // ── Soumettre le brief → lancer la génération ─────────────────────────────
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("Session absente");
-      setGenPhase(null);
-      setElapsedSec(0);
-
-      // Upload du cahier des charges si fourni — disponible comme référence projet
-      // pour la génération du contexte ET du backlog ultérieur.
-      let fileMention = "";
-      if (file) {
-        try {
-          await uploadProjectReference(apiKey, projectId, file);
-          fileMention = `\n\n[Cahier des charges joint : ${file.name}]`;
-        } catch {
-          // Upload échoué — on continue avec le brief texte seul
-        }
-      }
-
-      const finalBrief = advancedBriefText
-        ? [advancedBriefText, brief.trim() + fileMention].filter(Boolean).join("\n\n")
-        : (brief.trim() + fileMention).trim();
-
-      await createProjectContext(apiKey, projectId, finalBrief);
-      setPhase("polling");
-      startPolling();
-    } catch (err) {
-      setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue lors de la soumission.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function handleRegenerate() {
-    setDraftContent("");
-    setError(null);
-    setPhase("form");
+  async function handleRegenerate() {
+    setError(null); setElapsedSec(0); setCurrentGenPhase(null);
+    await startGeneration();
   }
 
   function handleSkip() {
-    if (onSkip) onSkip();
-    else router.push("/dashboard");
+    if (onSkip) onSkip(); else router.push("/dashboard");
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  const hasCode = repoSummary?.has_code ?? false;
-  const langBadges = repoSummary?.languages ?? [];
-  const formTitle = hasCode ? "Contexte du projet" : "Décris ton nouveau projet";
-  const textareaLabel = hasCode ? "Contexte supplémentaire (optionnel)" : "Description du projet";
-  const submitLabel = hasCode ? "Générer depuis le code" : "Générer";
-
-  const formSubtitle = hasCode ? (
-    <>
-      Alexis a détecté{" "}
-      <strong>{repoSummary!.file_count} fichier{repoSummary!.file_count !== 1 ? "s" : ""}</strong>
-      {langBadges.length > 0 && <> ({langBadges.join(", ")})</>}{" "}
-      dans votre repo. Il va lire votre code et générer{" "}
-      <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>{" "}
-      automatiquement. Ajoutez un contexte supplémentaire ou un cahier des charges si besoin.
-    </>
-  ) : (
-    <>
-      Votre repo est vide ou tout nouveau. Décrivez votre projet (stack souhaitée, objectif,
-      contraintes) et joignez votre cahier des charges si vous en avez un. Alexis génère{" "}
-      <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>{" "}
-      et prépare le backlog de départ.
-    </>
-  );
+  const wrapper = embedded ? "w-full" : "flex min-h-screen flex-col items-center justify-start bg-surface px-4 pt-12 pb-24 sm:px-6";
 
   return (
-    <div
-      className={
-        embedded
-          ? "w-full"
-          : "flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-12"
-      }
-    >
-      <div className="w-full max-w-lg">
+    <div className={wrapper}>
+      <div className="w-full max-w-2xl space-y-6">
         {!embedded && (
-          <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-brand">
-            Étape {stepLabel}
-          </p>
+          <span className="text-xs text-foreground-subtle font-medium uppercase tracking-widest">Étape {stepLabel}</span>
         )}
 
         {/* ── DETECTING ── */}
         {phase === "detecting" && (
-          <div className="mt-8 flex items-center gap-3 text-sm text-foreground-muted">
-            <svg className="h-4 w-4 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Analyse du repo en cours…
+          <div className="flex items-center gap-3 text-sm text-foreground-muted">
+            <Spinner label="Analyse du projet en cours…" />
           </div>
         )}
 
-        {/* ── FORM ── */}
-        {(phase === "form" || phase === "failed") && (
-          <>
-            <h1 className="text-2xl font-bold text-foreground">{formTitle}</h1>
-            <p className="mt-2 text-sm text-foreground-muted">{formSubtitle}</p>
-
-            {hasCode && langBadges.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {langBadges.map((lang: string) => (
-                  <span key={lang} className="rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-foreground-muted">
-                    {lang}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <AgentTemplateHint />
-
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {/* Option avancée — sélection de stack pour enrichir le contexte.
-                  Note : dans ce wizard, la stack/archi ont déjà été transmises à la
-                  création du projet. Ici on s'en sert seulement pour enrichir le brief. */}
-              <ContextAdvancedOptions
-                onStackChange={(stack, arch) => {
-                  const parts: string[] = [];
-                  if (stack) parts.push(`stack: ${stack}`);
-                  if (arch) parts.push(`architecture: ${arch}`);
-                  setAdvancedBriefText(parts.join("\n"));
-                }}
-              />
-
-              {/* Description texte */}
-              <div>
-                <label htmlFor="brief" className="mb-1.5 block text-sm font-medium text-foreground">
-                  {textareaLabel}
-                  {!hasCode && (
-                    <span className="ml-1 text-danger text-xs" aria-hidden="true">*</span>
-                  )}
-                </label>
-                {!hasCode && (
-                  <p className="mb-2 text-xs text-foreground-subtle">
-                    Stack technique, objectif principal, contraintes particulières. Texte libre.
-                  </p>
-                )}
-                <textarea
-                  id="brief"
-                  aria-label={textareaLabel}
-                  value={brief}
-                  onChange={(e) => setBrief(e.target.value)}
-                  rows={6}
-                  required={!hasCode && !file}
-                  placeholder={
-                    hasCode
-                      ? "Ex : Ne pas modifier les migrations existantes. Tests obligatoires avant chaque PR."
-                      : "Ex : API Python/FastAPI + frontend Next.js. Base PostgreSQL. Déployé sur Railway."
-                  }
-                  className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
-                />
-              </div>
-
-              {/* Upload cahier des charges */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Cahier des charges{" "}
-                  <span className="font-normal text-foreground-subtle">(optionnel)</span>
-                </label>
-                <p className="mb-2 text-xs text-foreground-subtle">
-                  PDF, Word, Markdown ou texte (max 10 Mo). Alexis l&apos;utilisera pour générer le contexte et le backlog.
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.md,.txt,text/plain,text/markdown,application/pdf"
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-foreground-muted file:mr-4 file:rounded-lg file:border-0 file:bg-surface-raised file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-sunken"
-                />
-                {file && (
-                  <p className="mt-1 text-xs text-success">✓ {file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
-                )}
-                {fileError && <p className="mt-1 text-xs text-danger">{fileError}</p>}
-              </div>
-
-              {error && <ErrorBanner message={error} />}
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="submit"
-                  disabled={submitting || (!hasCode && !brief.trim() && !file)}
-                  className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-                >
-                  {submitting ? <Spinner label="Envoi…" /> : phase === "failed" ? "Réessayer" : submitLabel}
-                </button>
-                <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                  Passer cette étape →
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-
-        {/* ── POLLING (génération en cours) ── */}
+        {/* ── POLLING ── */}
         {phase === "polling" && (
-          <div className="mt-8 space-y-6">
-            <h1 className="text-2xl font-bold text-foreground">Génération en cours…</h1>
-            <div className="flex items-start gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4">
-              <svg className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  {hasCode ? "Alexis lit votre code et rédige le contexte…" : "Alexis rédige le contexte…"}
-                </p>
-                <p className="mt-0.5 mb-3 text-xs text-foreground-muted">
-                  Vous pourrez relire et modifier avant de valider. Ça peut prendre une à deux minutes.
-                </p>
-                <PhaseChecklist steps={GENERATION_PHASE_STEPS} currentPhase={genPhase} elapsedSec={elapsedSec} />
-              </div>
-            </div>
-            <div className="text-right">
-              <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                Passer cette étape →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── REVIEW (prévisualisation + édition) ── */}
-        {phase === "review" && (
-          <div className="mt-8 space-y-6">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Relire et valider</h1>
-              <p className="mt-2 text-sm text-foreground-muted">
-                Alexis a généré le fichier{" "}
-                <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-foreground">.alexis/project.md</code>.
-                Relisez et modifiez si besoin, puis cliquez <strong>Valider</strong> pour enregistrer.
+              <h1 className="text-2xl font-bold text-foreground">Génération du contexte…</h1>
+              <p className="mt-1 text-sm text-foreground-muted">
+                Alexis analyse ton projet et génère le fichier de contexte.
+                {elapsedSec > 20 && <> Cela peut prendre une minute.</>}
               </p>
             </div>
+            <PhaseChecklist steps={GENERATION_PHASE_STEPS} currentPhase={currentGenPhase} elapsedSec={elapsedSec} />
+          </div>
+        )}
 
+        {/* ── REVIEW ── */}
+        {phase === "review" && (
+          <div className="space-y-6">
             <div>
-              <label htmlFor="draft" className="mb-1.5 block text-sm font-medium text-foreground">
-                Contenu de <code className="font-mono text-xs">.alexis/project.md</code>
-              </label>
-              <textarea
-                id="draft"
-                value={draftContent}
-                onChange={(e) => setDraftContent(e.target.value)}
-                rows={20}
-                className="w-full resize-y rounded-xl border border-border bg-surface-raised px-4 py-3 font-mono text-xs text-foreground focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition-colors"
-              />
+              <h1 className="text-2xl font-bold text-foreground">Contexte du projet</h1>
+              <p className="mt-1 text-sm text-foreground-muted">
+                Alexis a généré ce fichier à partir de ton objectif et du code. Tu peux le modifier avant de valider.
+              </p>
             </div>
-
             {error && <ErrorBanner message={error} />}
-
+            <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} rows={20}
+              className="w-full rounded-xl border border-border bg-surface-raised px-4 py-3 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand resize-y" />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCommit}
-                  disabled={submitting || !draftContent.trim()}
-                  className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-                >
-                  {submitting ? <Spinner label="Envoi…" /> : "Valider"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRegenerate}
-                  disabled={submitting}
-                  className="rounded-xl border border-border px-5 py-3 text-sm font-medium text-foreground hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-50 transition-colors"
-                >
-                  Régénérer
-                </button>
-              </div>
+              <button type="button" onClick={handleCommit} disabled={submitting || !editedContent.trim()}
+                className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:opacity-50 transition-colors">
+                {submitting ? <Spinner label="Enregistrement…" /> : "Valider →"}
+              </button>
+              <button type="button" onClick={handleRegenerate} disabled={submitting}
+                className="rounded-xl border border-border px-5 py-3 text-sm font-medium text-foreground hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-50 transition-colors">
+                Régénérer
+              </button>
               <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
                 Passer cette étape →
               </button>
@@ -594,7 +228,7 @@ export default function ProjectContextStep({
 
         {/* ── DONE ── */}
         {phase === "done" && (
-          <div className="mt-8 space-y-6">
+          <div className="space-y-6">
             <h1 className="text-2xl font-bold text-foreground">Contexte enregistré ✓</h1>
             <div className="flex items-start gap-4 rounded-xl border border-success-border bg-success-bg px-5 py-4">
               <svg className="mt-0.5 h-5 w-5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -602,20 +236,33 @@ export default function ProjectContextStep({
               </svg>
               <div>
                 <p className="text-sm font-medium text-foreground">Fichier de contexte enregistré avec succès</p>
-                <p className="mt-0.5 text-xs text-foreground-muted">
-                  Le contexte a été sauvegardé. Alexis l&apos;utilisera dès le prochain run.
-                </p>
+                <p className="mt-0.5 text-xs text-foreground-muted">Alexis l&apos;utilisera dès le prochain run.</p>
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="button"
-                onClick={() => { if (onDone) onDone(); else router.push("/dashboard"); }}
-                className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors"
-              >
+              <button type="button" onClick={() => { if (onDone) onDone(); else router.push("/dashboard"); }}
+                className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors">
                 {onDone ? "Continuer →" : "Aller au tableau de bord"}
               </button>
               <button type="button" onClick={handleSkip} className="text-sm text-foreground-muted hover:text-foreground transition-colors">
+                Passer cette étape →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── FAILED ── */}
+        {phase === "failed" && (
+          <div className="space-y-4">
+            <h1 className="text-2xl font-bold text-foreground">Génération échouée</h1>
+            {error && <ErrorBanner message={error} />}
+            <div className="flex gap-3">
+              <button type="button" onClick={handleRegenerate}
+                className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/30 transition-colors">
+                Réessayer →
+              </button>
+              <button type="button" onClick={handleSkip}
+                className="rounded-xl border border-border px-5 py-3 text-sm font-medium text-foreground hover:bg-surface-raised transition-colors">
                 Passer cette étape →
               </button>
             </div>
@@ -625,8 +272,6 @@ export default function ProjectContextStep({
     </div>
   );
 }
-
-// ── Sous-composants ────────────────────────────────────────────────────────────
 
 function Spinner({ label }: { label: string }) {
   return (
