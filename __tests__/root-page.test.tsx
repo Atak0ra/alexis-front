@@ -77,4 +77,10 @@ describe("RootPage", () => {
       "/pricing"
     );
   });
+
+  it("shows the decorative icon watermark in the hero and the final CTA", () => {
+    render(<RootPage />);
+    expect(screen.getByTestId("icon-field-light")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-field-dark")).toBeInTheDocument();
+  });
 });

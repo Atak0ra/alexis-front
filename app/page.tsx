@@ -6,6 +6,7 @@ import LandingNav from "@/components/landing-nav";
 import LandingPipelineSteps from "@/components/landing-pipeline-steps";
 import LandingBillingSection from "@/components/landing-billing-section";
 import LandingDashboardPreview from "@/components/landing-dashboard-preview";
+import LandingIconField from "@/components/landing-icon-field";
 
 export default function RootPage() {
   return (
@@ -14,7 +15,8 @@ export default function RootPage() {
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center px-6 pb-24 pt-20 text-center">
+        <LandingIconField variant="light" />
+        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center px-6 pb-24 pt-20 text-center">
 
           <h1 className="max-w-3xl text-5xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
             Du code testé,{" "}
@@ -99,8 +101,9 @@ export default function RootPage() {
       <LandingBillingSection />
 
       {/* ── CTA final ── */}
-      <section className="border-t border-border bg-foreground">
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-20 text-center">
+      <section className="relative overflow-hidden border-t border-border bg-foreground">
+        <LandingIconField variant="dark" />
+        <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-20 text-center">
           <h2 className="text-3xl font-bold text-white sm:text-4xl">
             Créez votre premier projet
           </h2>
