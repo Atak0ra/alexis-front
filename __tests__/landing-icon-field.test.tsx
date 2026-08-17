@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import LandingIconField, { SPOTS } from "@/components/landing-icon-field";
+import tailwindConfig from "@/tailwind.config";
 
 describe("LandingIconField", () => {
   it("defines exactly 6 decorative spots", () => {
@@ -40,5 +41,13 @@ describe("LandingIconField", () => {
       expect(icon.style.animationDelay).toBe(`${SPOTS[i].delay}s`);
       expect(icon.style.animationDuration).toBe(`${SPOTS[i].duration}s`);
     });
+  });
+
+  it("defines the watermark-fade keyframe and animation in Tailwind config", () => {
+    const extend = tailwindConfig.theme?.extend as
+      | { keyframes?: Record<string, unknown>; animation?: Record<string, unknown> }
+      | undefined;
+    expect(extend?.keyframes?.["watermark-fade"]).toBeDefined();
+    expect(extend?.animation?.["watermark-fade"]).toBeDefined();
   });
 });

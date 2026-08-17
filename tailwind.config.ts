@@ -69,8 +69,8 @@ const config: Config = {
       keyframes: {
         "watermark-fade": {
           "0%":   { opacity: "0" },
-          "15%":  { opacity: "1" },
-          "70%":  { opacity: "1" },
+          "20%":  { opacity: "1" },
+          "45%":  { opacity: "1" },
           "100%": { opacity: "0" },
         },
       },
