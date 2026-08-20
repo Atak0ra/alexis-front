@@ -72,7 +72,7 @@ export default function ProjectContextStep({
 }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("detecting");
-  const [draftContent, setDraftContent] = useState("");
+  const [_draftContent, setDraftContent] = useState("");
   const [editedContent, setEditedContent] = useState("");
   const [elapsedSec, setElapsedSec] = useState(0);
   const [currentGenPhase, setCurrentGenPhase] = useState<ContextGenerationPhase | null>(null);

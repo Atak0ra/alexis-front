@@ -382,7 +382,7 @@ export function deleteDemoIssue(projectId: string, issueId: string): void {
 
 // ─── Demo issue assets ────────────────────────────────────────────────────────
 
-let demoIssueAssets: Record<string, IssueAsset[]> = {};
+const demoIssueAssets: Record<string, IssueAsset[]> = {};
 
 function _fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -418,7 +418,7 @@ export function getDemoIssueAssetDataUrl(issueId: string, assetId: string): stri
 
 // ─── Demo project references ──────────────────────────────────────────────────
 
-let demoProjectReferences: Record<string, ProjectReference[]> = {};
+const demoProjectReferences: Record<string, ProjectReference[]> = {};
 
 export async function addDemoProjectReference(projectId: string, file: File): Promise<ProjectReference> {
   const dataUrl = await _fileToDataUrl(file);

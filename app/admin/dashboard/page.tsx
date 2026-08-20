@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
         setCostByStep(cbs); setSuccessByStep(sbs); setTopClients(tc);
       })
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"));
-  }, [range.start, range.end]);
+  }, [range]);
 
   // Aperçu des 5 derniers runs — liste complète filtrable sur /admin/runs.
   useEffect(() => {

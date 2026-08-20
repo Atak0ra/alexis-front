@@ -87,7 +87,7 @@ export default function RootPage() {
               De l&apos;idée à la livraison, en 4 étapes
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-foreground-muted">
-              Vous décrivez, vous validez aux moments clés. Alexis fait le reste —
+              Vous décrivez, vous validez aux moments clés. Alexis fait le reste 
               et ne vous livre que ce qui fonctionne vraiment.
             </p>
           </div>

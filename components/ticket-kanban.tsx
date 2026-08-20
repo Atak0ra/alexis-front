@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bug,
   CheckCircle2,
   Code2,
+  Eye,
   FileText,
   GitMerge,
   Info,
   Inbox,
   ListTodo,
+  Loader2,
   Lock,
   MessageCircle,
   Ruler,
@@ -22,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Issue } from "@/lib/api-client";
+import { getPreviewStatus, startPreview, type PreviewStatus } from "@/lib/api-client";
 
 // ─── Tag de type de demande ───────────────────────────────────────────────────
 
@@ -139,6 +142,12 @@ export interface TicketSummary {
   error_hint: string | null;
   /** True si Alexis est en train de répondre à un message de raffinement sur ce ticket. */
   chat_active?: boolean;
+  /** URL de la preview « Voir le résultat » (live uniquement) */
+  preview_url: string | null;
+  /** Statut de la preview — building | live | failed | stopped | null */
+  preview_status: "building" | "live" | "failed" | "stopped" | null;
+  /** True si une preview PROJET tourne — les boutons carte sont désactivés */
+  project_preview_active: boolean;
 }
 
 interface Column {
@@ -255,16 +264,84 @@ interface TicketKanbanProps {
   issues: Issue[];
   states: Record<string, string>;
   projectId: string;
+  /** Clé API du client — nécessaire pour les appels preview */
+  apiKey: string;
   /** Appelé au drop d'une carte sur une colonne, avec le libellé d'état cible. */
   onMoveIssue: (issueId: string, newState: string) => void;
   ticketsByIdentifier?: Record<string, TicketSummary>;
 }
 
 export default function TicketKanban({
-  issues, states, projectId, onMoveIssue, ticketsByIdentifier,
+  issues, states, projectId, apiKey, onMoveIssue, ticketsByIdentifier,
 }: TicketKanbanProps) {
   const router = useRouter();
   const [justRetried, setJustRetried] = useState<string | null>(null);
+
+  // ── State local de preview — statut et URL par identifier ────────────────
+  // Permet de déclencher la preview et suivre son état sans quitter la page.
+  const [previewStates, setPreviewStates] = useState<
+    Record<string, { status: PreviewStatus | null; url: string | null; loading: boolean }>
+  >({});
+  const previewPollRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+
+  // Nettoyage des polling à démontage
+  useEffect(() => {
+    const refs = previewPollRefs.current;
+    return () => { Object.values(refs).forEach(clearInterval); };
+  }, []);
+
+  const startPollingPreview = useCallback(
+    (identifier: string) => {
+      if (previewPollRefs.current[identifier]) return; // déjà en cours
+      const poll = setInterval(async () => {
+        try {
+          const res = await getPreviewStatus(apiKey, projectId, identifier);
+          setPreviewStates((prev) => ({
+            ...prev,
+            [identifier]: { status: res.status, url: res.url, loading: false },
+          }));
+          if (res.status === "live" || res.status === "failed" || res.status === "stopped") {
+            clearInterval(previewPollRefs.current[identifier]);
+            delete previewPollRefs.current[identifier];
+          }
+        } catch {
+          // réseau — on continue à poller
+        }
+      }, 2500);
+      previewPollRefs.current[identifier] = poll;
+    },
+    [apiKey, projectId]
+  );
+
+  const handleStartPreview = useCallback(
+    async (identifier: string) => {
+      setPreviewStates((prev) => ({
+        ...prev,
+        [identifier]: { status: "building", url: null, loading: true },
+      }));
+      try {
+        await startPreview(apiKey, projectId, identifier);
+        startPollingPreview(identifier);
+      } catch {
+        setPreviewStates((prev) => ({
+          ...prev,
+          [identifier]: { status: "failed", url: null, loading: false },
+        }));
+      }
+    },
+    [apiKey, projectId, startPollingPreview]
+  );
+
+  // Reprend le polling pour les previews déjà en cours (building) au montage
+  useEffect(() => {
+    if (!ticketsByIdentifier) return;
+    for (const [id, t] of Object.entries(ticketsByIdentifier)) {
+      if (t.preview_status === "building" && !previewPollRefs.current[id]) {
+        setPreviewStates((prev) => ({ ...prev, [id]: { status: "building", url: null, loading: false } }));
+        startPollingPreview(id);
+      }
+    }
+  }, [ticketsByIdentifier, startPollingPreview]);
 
   const byColumn: Record<string, Issue[]> = {};
   for (const col of COLUMNS) byColumn[col.key] = [];
@@ -487,6 +564,90 @@ export default function TicketKanban({
                     </div>
                   )}
                 </button>
+
+                {/* Zone « Voir le résultat » — toujours visible, état adapté
+                    Hors du <button> principal (pas d'imbrication button>button) */}
+                {ticket && (() => {
+                  const ps = previewStates[issue.identifier];
+                  const currentStatus = ps?.status ?? ticket.preview_status;
+                  const currentUrl = ps?.url ?? ticket.preview_url;
+                  const isProjectActive = ticket.project_preview_active;
+                  const isBuilding = currentStatus === "building";
+                  const isLive = currentStatus === "live";
+                  const isFailed = currentStatus === "failed";
+                  const hasPr = Boolean(ticket.pr_url);
+                  const notStarted = hasPr && !currentStatus;
+
+                  return (
+                    <div className="flex items-center gap-1.5 px-3 pb-2" onClick={(e) => e.stopPropagation()}>
+                      {/* Pas encore de PR → grisé non-cliquable */}
+                      {!hasPr && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5 text-[11px] font-medium text-foreground-subtle cursor-default"
+                          title="L'aperçu sera disponible une fois le développement terminé"
+                        >
+                          <Eye className="h-3 w-3" aria-hidden="true" />
+                          Aperçu pas encore disponible
+                        </span>
+                      )}
+
+                      {/* PR présente mais preview projet active → grisé avec tooltip */}
+                      {hasPr && isProjectActive && !isLive && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-border/50 px-2 py-0.5 text-[11px] font-medium text-foreground-subtle cursor-not-allowed"
+                          title="L'aperçu du projet complet est en cours — attendez qu'il se termine pour apercevoir cette tâche"
+                        >
+                          <Eye className="h-3 w-3" aria-hidden="true" />
+                          Aperçu de la tâche
+                        </span>
+                      )}
+
+                      {/* Pas encore démarrée ou échec → bouton actif */}
+                      {hasPr && !isProjectActive && (notStarted || isFailed) && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartPreview(issue.identifier)}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                            isFailed
+                              ? "border-danger/30 bg-danger/5 text-danger hover:bg-danger/10"
+                              : "border-brand/30 bg-brand/5 text-brand hover:bg-brand/10"
+                          )}
+                          title={isFailed ? "L'aperçu a échoué — réessayer" : "Voir ce que cette tâche a produit"}
+                        >
+                          <Eye className="h-3 w-3" aria-hidden="true" />
+                          {isFailed ? "Voir le résultat ↺" : "Voir le résultat"}
+                        </button>
+                      )}
+
+                      {/* En préparation */}
+                      {hasPr && isBuilding && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/5 px-2 py-0.5 text-[11px] font-medium text-brand"
+                          aria-label="Préparation de l'aperçu en cours"
+                        >
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          Préparation…
+                        </span>
+                      )}
+
+                      {/* Prêt → lien cliquable */}
+                      {hasPr && isLive && currentUrl && (
+                        <a
+                          href={currentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/5 px-2 py-0.5 text-[11px] font-medium text-success transition-colors hover:bg-success/10"
+                          title="Ouvrir le résultat dans un nouvel onglet"
+                        >
+                          <Eye className="h-3 w-3" aria-hidden="true" />
+                          Voir le résultat ↗
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
                 </div>
               );
             })}
@@ -497,3 +658,4 @@ export default function TicketKanban({
     </div>
   );
 }
+

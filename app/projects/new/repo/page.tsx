@@ -22,15 +22,15 @@ export default function RepoPage() {
     forgeProvider, setForgeProvider,
     forgeToken, setForgeToken,
     githubUsername, setGithubUsername,
-    agentChoice,
-    agentApiKey,
-    agentBaseUrl,
-    codeReviewEnabled,
+    agentChoice: _agentChoice,
+    agentApiKey: _agentApiKey,
+    agentBaseUrl: _agentBaseUrl,
+    codeReviewEnabled: _codeReviewEnabled,
     // isByok est peuplé par le layout via getMe() — source unique de vérité.
     isByok,
-    issuePrefix,
-    stack, setStack,
-    architecture, setArchitecture,
+    issuePrefix: _issuePrefix,
+    stack: _stack, setStack,
+    architecture: _architecture, setArchitecture,
   } = useNewProject();
 
   const [validating, setValidating] = useState(false);

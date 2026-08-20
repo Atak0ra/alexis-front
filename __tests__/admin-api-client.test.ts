@@ -69,14 +69,13 @@ describe("admin api-client", () => {
   it("adminListManagedSecrets and adminUpdateManagedSecret hit the right endpoints", async () => {
     mockFetchOnce([{ key: "anthropic", has_value: true, updated_at: "2026-07-26T00:00:00Z" }]);
     await adminListManagedSecrets("alx_admin_xxx");
-    let [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/admin/managed-secrets");
 
     mockFetchOnce({ key: "anthropic", has_value: true, updated_at: "2026-07-26T00:00:00Z" });
     await adminUpdateManagedSecret("alx_admin_xxx", "anthropic", "sk-ant-new");
-    let options;
-    [url, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toContain("/admin/managed-secrets/anthropic");
+    const [updatedUrl, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(updatedUrl).toContain("/admin/managed-secrets/anthropic");
     expect(options.method).toBe("PUT");
     expect(JSON.parse(options.body)).toEqual({ value: "sk-ant-new" });
   });

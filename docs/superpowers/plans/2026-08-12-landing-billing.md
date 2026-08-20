@@ -421,8 +421,8 @@ Replace:
                 À 199 €/mois, Alexis fournit la clé d&apos;inférence — vous n&apos;avez rien à configurer.
                 Un budget d&apos;inférence de 100 €/mois est inclus. Au-delà, les runs sont mis en pause
                 jusqu&apos;au mois suivant. Contactez-nous à{" "}
-                <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
-                  contact@alexis.dev
+                <a href="mailto:alexis@compeel.com" className="text-brand hover:underline">
+                  alexis@compeel.com
                 </a>{" "}
                 pour activer votre plan.
               </dd>
@@ -459,8 +459,8 @@ With:
                 Claude (Anthropic) fourni par Alexis — vous n&apos;avez rien à configurer. Vous rechargez
                 un solde (wallet) et chaque run débite le coût réel mesuré, marge de la plateforme
                 comprise. Aucun abonnement fixe. Contactez-nous à{" "}
-                <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
-                  contact@alexis.dev
+                <a href="mailto:alexis@compeel.com" className="text-brand hover:underline">
+                  alexis@compeel.com
                 </a>{" "}
                 pour activer votre wallet.
               </dd>

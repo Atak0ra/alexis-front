@@ -163,7 +163,7 @@ export default function ScaffoldPage() {
           </svg>
           <div>
             <p className="text-sm font-medium text-foreground">Structure générée et poussée sur la branche principale</p>
-            <p className="mt-0.5 text-xs text-foreground-muted">Redirection vers l'étape contexte…</p>
+            <p className="mt-0.5 text-xs text-foreground-muted">Redirection vers l&apos;étape contexte…</p>
           </div>
         </div>
       )}

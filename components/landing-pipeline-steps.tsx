@@ -38,7 +38,7 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: "livraison",
     label: "Livraison sur votre dépôt",
-    body: "Votre fonctionnalité est prête sur votre propre compte GitHub ou GitLab. Pas une sandbox, pas un export — votre code, dans votre historique, que vous contrôlez.",
+    body: "Votre fonctionnalité est prête sur votre propre compte GitHub ou GitLab. Votre code, dans votre historique, que vous contrôlez.",
     gate: true,
   },
 ];

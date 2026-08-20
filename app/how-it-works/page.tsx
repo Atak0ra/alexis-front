@@ -182,7 +182,7 @@ export default function HowItWorksPage() {
             <Link href="/login?mode=signup" className={cn(buttonVariants("primary"), "px-6 py-3 text-sm")}>
               Créer un compte gratuit
             </Link>
-            <a href="mailto:contact@alexis.dev"
+            <a href="mailto:alexis@compeel.com"
               className="rounded-xl border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 hover:border-white/40 hover:text-white transition-colors">
               Nous contacter
             </a>

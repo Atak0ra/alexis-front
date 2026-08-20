@@ -708,6 +708,9 @@ export async function downloadProject(apiKey: string, projectId: string, project
 
 // ─── Tickets (vue agrégée run/PR/coût, dérivée de TicketRun côté backend) ──────
 
+/** Statut d'une preview — cohérent avec preview_status sur TicketRun côté back. */
+export type PreviewStatus = "building" | "live" | "failed" | "stopped";
+
 export interface TicketOut {
   id: string; // identifier de l'issue (ex: PROJ-42)
   title: string;
@@ -724,6 +727,12 @@ export interface TicketOut {
   error_hint: string | null;
   /** True si Alexis est en train de répondre à un message de raffinement sur ce ticket. */
   chat_active?: boolean;
+  /** URL de la preview « Voir le résultat » — null si aucune preview démarrée */
+  preview_url?: string | null;
+  /** Statut de la preview — cohérent avec PreviewStatus */
+  preview_status?: PreviewStatus | null;
+  /** True si une preview projet (vs ticket) est active — retourné par l'API */
+  project_preview_active?: boolean;
 }
 
 export function listTickets(apiKey: string, projectId: string): Promise<TicketOut[]> {
@@ -1747,5 +1756,85 @@ export async function getScaffoldStatus(
   return request<ScaffoldStatusOut>(`/projects/${projectId}/scaffold/status`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
+}
+
+// ─── Preview « Voir le résultat » ─────────────────────────────────────────────
+
+export interface PreviewStatusOut {
+  /** null = aucune preview démarrée */
+  status: PreviewStatus | null;
+  /** URL HTTPS de la preview */
+  url: string | null;
+  /** Message d'erreur si status === "failed" */
+  error: string | null;
+  /** true = cette preview appartient bien au ticket demandé */
+  is_mine?: boolean;
+}
+
+export interface ProjectPreviewStatusOut {
+  status: PreviewStatus | null;
+  url: string | null;
+  error: string | null;
+  /** true = au moins un ticket a été mergé → bouton activable */
+  has_merged: boolean;
+}
+
+/**
+ * Déclenche la preview pour un ticket.
+ * force=true : remplace une éventuelle preview projet active (après confirmation).
+ */
+export async function startPreview(
+  apiKey: string,
+  projectId: string,
+  identifier: string,
+  force = false
+): Promise<{ status: "building" }> {
+  if (isLocalMode()) return { status: "building" };
+  const url = `/projects/${projectId}/tickets/${identifier}/preview${force ? "?force=true" : ""}`;
+  return request<{ status: "building" }>(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
+/** Statut de la preview d'un ticket — polled toutes les 2s. */
+export async function getPreviewStatus(
+  apiKey: string,
+  projectId: string,
+  identifier: string
+): Promise<PreviewStatusOut> {
+  if (isLocalMode()) {
+    return { status: "live", url: "https://demo.preview.alexis.compeel.com", error: null, is_mine: true };
+  }
+  return request<PreviewStatusOut>(
+    `/projects/${projectId}/tickets/${identifier}/preview/status`,
+    { headers: { Authorization: `Bearer ${apiKey}` } }
+  );
+}
+
+/** Déclenche la preview du projet global (develop). */
+export async function startProjectPreview(
+  apiKey: string,
+  projectId: string
+): Promise<{ status: "building" }> {
+  if (isLocalMode()) return { status: "building" };
+  return request<{ status: "building" }>(
+    `/projects/${projectId}/preview`,
+    { method: "POST", headers: { Authorization: `Bearer ${apiKey}` } }
+  );
+}
+
+/** Statut de la preview projet — polled toutes les 2s. */
+export async function getProjectPreviewStatus(
+  apiKey: string,
+  projectId: string
+): Promise<ProjectPreviewStatusOut> {
+  if (isLocalMode()) {
+    return { status: "live", url: "https://demo.preview.alexis.compeel.com", error: null, has_merged: true };
+  }
+  return request<ProjectPreviewStatusOut>(
+    `/projects/${projectId}/preview/status`,
+    { headers: { Authorization: `Bearer ${apiKey}` } }
+  );
 }
 

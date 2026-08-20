@@ -135,7 +135,7 @@ function PlanCard({
         ) : loggedIn ? (
           isEntreprise ? (
             <a
-              href="mailto:contact@alexis.dev?subject=Plan%20Entreprise"
+              href="mailto:alexis@compeel.com?subject=Plan%20Entreprise"
               className={cn(
                 "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors",
                 "border border-brand text-brand hover:bg-brand hover:text-white"
@@ -160,7 +160,7 @@ function PlanCard({
           )
         ) : isEntreprise ? (
           <a
-            href="mailto:contact@alexis.dev?subject=Plan%20Entreprise"
+            href="mailto:alexis@compeel.com?subject=Plan%20Entreprise"
             className={cn(
               "block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors",
               "border border-brand text-brand hover:bg-brand hover:text-white"
@@ -284,11 +284,11 @@ export default function PricingPage() {
             <div>
               <dt className="font-semibold text-foreground">Comment fonctionne le plan Solo Preneur ?</dt>
               <dd className="mt-1 text-sm text-foreground-muted">
-                La clé d&apos;inférence est fournie par Alexis — vous n&apos;avez rien à configurer. Vous rechargez
+                La clé d&apos;inférence est fournie par Alexis, vous n&apos;avez rien à configurer. Vous rechargez
                 un solde (wallet) et chaque run débite le coût réel mesuré, marge de la plateforme
                 comprise. Aucun abonnement fixe. Contactez-nous à{" "}
-                <a href="mailto:contact@alexis.dev" className="text-brand hover:underline">
-                  contact@alexis.dev
+                <a href="mailto:alexis@compeel.com" className="text-brand hover:underline">
+                  alexis@compeel.com
                 </a>{" "}
                 pour activer votre wallet.
               </dd>

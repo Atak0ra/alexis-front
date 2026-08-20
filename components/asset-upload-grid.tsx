@@ -39,6 +39,7 @@ export default function AssetUploadGrid({ assets, onUpload, contentUrl, uploadin
               className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface-raised p-2"
             >
               {asset.content_type.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element -- URL d'API dynamique, next/image non applicable ici
                 <img
                   src={contentUrl(asset.id)}
                   alt={asset.filename}

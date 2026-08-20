@@ -35,7 +35,7 @@ function makeNotif(overrides: Partial<Notification> = {}): Notification {
 }
 
 // ReadableStream minimal pour simuler SSE
-function makeSseStream(events: string[]): ReadableStream<Uint8Array> {
+function _makeSseStream(events: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   let idx = 0;
   return new ReadableStream({

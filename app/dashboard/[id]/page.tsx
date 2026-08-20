@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getApiKey } from "@/lib/session";
@@ -17,6 +17,9 @@ import {
   uploadIssueAsset,
   AlexisApiError,
   friendlyError,
+  startProjectPreview,
+  getProjectPreviewStatus,
+  type ProjectPreviewStatusOut,
   type ProjectOut,
   type ProjectStats,
   type Issue,
@@ -26,7 +29,7 @@ import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import AssetUploadGrid from "@/components/asset-upload-grid";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useNotificationsContext } from "@/lib/notifications-context";
-import { Bug, MessageCircle, Plus, Stethoscope, Sparkles, Wrench } from "lucide-react";
+import { Bug, Eye, Loader2, MessageCircle, Plus, Stethoscope, Sparkles, Wrench } from "lucide-react";
 import AuditPanel from "@/components/audit-panel";
 
 // ─── KPI strip ────────────────────────────────────────────────────────────────
@@ -270,7 +273,68 @@ export default function ProjectDetailPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [showAudit, setShowAudit] = useState(false);
 
+  // ── Preview projet « Voir le résultat » ─────────────────────────────────
+  const [projectPreview, setProjectPreview] = useState<ProjectPreviewStatusOut>({
+    status: null, url: null, error: null, has_merged: false,
+  });
+  const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
+  const projectPreviewPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const apiKey = getApiKey() ?? "";
+
+  // ── Polling preview projet ─────────────────────────────────────────────
+  const stopProjectPreviewPoll = useCallback(() => {
+    if (projectPreviewPollRef.current) {
+      clearInterval(projectPreviewPollRef.current);
+      projectPreviewPollRef.current = null;
+    }
+  }, []);
+
+  const startProjectPreviewPoll = useCallback(() => {
+    stopProjectPreviewPoll();
+    projectPreviewPollRef.current = setInterval(async () => {
+      try {
+        const res = await getProjectPreviewStatus(apiKey, projectId);
+        setProjectPreview(res);
+        if (res.status === "live" || res.status === "failed" || res.status === "stopped") {
+          stopProjectPreviewPoll();
+        }
+      } catch { /* réseau — on continue */ }
+    }, 2500);
+  }, [apiKey, projectId, stopProjectPreviewPoll]);
+
+  // Charger le statut initial + reprendre le polling si déjà building
+  useEffect(() => {
+    if (!apiKey) return;
+    getProjectPreviewStatus(apiKey, projectId)
+      .then((res) => {
+        setProjectPreview(res);
+        if (res.status === "building") startProjectPreviewPoll();
+      })
+      .catch(() => {});
+    return stopProjectPreviewPoll;
+  }, [projectId, apiKey, startProjectPreviewPoll, stopProjectPreviewPoll]);
+
+  const handleStartProjectPreview = useCallback(async (force = false) => {
+    if (!force) {
+      // Si une preview de tâche tourne, demander confirmation
+      const currentTarget = tickets.find(t =>
+        t.preview_status === "building" || t.preview_status === "live"
+      );
+      if (currentTarget) {
+        setShowReplaceConfirm(true);
+        return;
+      }
+    }
+    setShowReplaceConfirm(false);
+    setProjectPreview(prev => ({ ...prev, status: "building" }));
+    try {
+      await startProjectPreview(apiKey, projectId);
+      startProjectPreviewPoll();
+    } catch {
+      setProjectPreview(prev => ({ ...prev, status: "failed" }));
+    }
+  }, [apiKey, projectId, tickets, startProjectPreviewPoll]);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -336,6 +400,9 @@ export default function ProjectDetailPage() {
       error_message: t.error_message,
       error_hint: t.error_hint,
       chat_active: t.chat_active ?? false,
+      preview_url: t.preview_url ?? null,
+      preview_status: (t.preview_status as TicketSummary["preview_status"]) ?? null,
+      project_preview_active: t.project_preview_active ?? false,
     };
   }
 
@@ -482,6 +549,64 @@ export default function ProjectDetailPage() {
                   Analyse votre projet sur la sécurité, la conformité RGPD et l&apos;accessibilité, puis génère des tickets prêts à traiter.
                 </div>
               </div>
+
+              {/* ── Bouton « Voir le résultat » — preview projet global ── */}
+              {project.stack && (() => {
+                const { status, url, has_merged } = projectPreview;
+                const isBuilding = status === "building";
+                const isLive = status === "live";
+                const isFailed = status === "failed";
+                const notStarted = !status;
+
+                if (!has_merged && notStarted) {
+                  return (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-surface-raised px-3 py-1.5 text-sm font-medium text-foreground-subtle cursor-default"
+                      title="Aucune tâche intégrée pour le moment — revenez après le premier merge"
+                    >
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                      Voir le résultat
+                    </span>
+                  );
+                }
+                if (isBuilding) {
+                  return (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Préparation…
+                    </span>
+                  );
+                }
+                if (isLive && url) {
+                  return (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-success/30 bg-success/5 px-3 py-1.5 text-sm font-medium text-success hover:bg-success/10 transition-colors"
+                    >
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                      Voir le résultat ↗
+                    </a>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleStartProjectPreview()}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                      isFailed
+                        ? "border-danger/30 bg-danger/5 text-danger hover:bg-danger/10"
+                        : "border-brand/30 bg-brand/5 text-brand hover:bg-brand/10"
+                    )}
+                  >
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                    {isFailed ? "Voir le résultat ↺" : "Voir le résultat"}
+                  </button>
+                );
+              })()}
+
               {project.is_active && (
                 <button
                   type="button"
@@ -543,6 +668,7 @@ export default function ProjectDetailPage() {
                 issues={issues}
                 states={project.states}
                 projectId={projectId}
+                apiKey={apiKey}
                 onMoveIssue={handleMoveIssue}
                 ticketsByIdentifier={ticketsByIdentifier}
               />
@@ -589,6 +715,34 @@ export default function ProjectDetailPage() {
               .catch(() => {});
           }}
         />
+      </Modal>
+
+      {/* ── Modale de confirmation — remplacer preview de tâche par preview projet ── */}
+      <Modal
+        open={showReplaceConfirm}
+        onClose={() => setShowReplaceConfirm(false)}
+        title="Remplacer l'aperçu en cours ?"
+        maxWidth="max-w-sm"
+      >
+        <p className="text-sm text-foreground-muted">
+          Un aperçu d&apos;une tâche est en cours. Le remplacer par l&apos;aperçu complet de votre projet ?
+        </p>
+        <ModalFooter>
+          <button
+            type="button"
+            onClick={() => setShowReplaceConfirm(false)}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-sunken transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStartProjectPreview(true)}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover transition-colors"
+          >
+            Voir le projet
+          </button>
+        </ModalFooter>
       </Modal>
     </div>
   );
