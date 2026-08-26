@@ -2,7 +2,7 @@ import type { ProjectOut, Issue, IssueAsset, ProjectReference } from "@/lib/api-
 import { DEFAULT_MODELS, DEFAULT_STATES, DEFAULT_TRIGGER_STATES } from "@/lib/project-defaults";
 
 export function isLocalMode(): boolean {
-  return process.env.NEXT_PUBLIC_IS_LOCAL === "true";
+  return process.env.IS_DEMO === "true";
 }
 
 export const DEMO_CREDENTIALS = { email: "demo", password: "passer" };

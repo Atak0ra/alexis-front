@@ -208,9 +208,9 @@ describe("uploadIssueAsset", () => {
   });
 });
 
-describe("demo mode (NEXT_PUBLIC_IS_LOCAL=true)", () => {
+describe("demo mode (IS_DEMO=true)", () => {
   beforeEach(() => {
-    vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
+    vi.stubEnv("IS_DEMO", "true");
     global.fetch = vi.fn();
   });
 
@@ -335,7 +335,7 @@ describe("refineBrief", () => {
   });
 
   it("in demo mode, returns a structured brief without calling fetch", async () => {
-    vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
+    vi.stubEnv("IS_DEMO", "true");
     const result = await refineBrief("demo-api-key", "une app de livraison");
     expect(result.refined).toContain("Objectif");
     expect(global.fetch).not.toHaveBeenCalled();

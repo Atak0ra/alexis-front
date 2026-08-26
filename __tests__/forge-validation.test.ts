@@ -41,7 +41,7 @@ describe("validateForge", () => {
 
   it("returns demo result in local mode without calling fetch", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    vi.stubEnv("NEXT_PUBLIC_IS_LOCAL", "true");
+    vi.stubEnv("IS_DEMO", "true");
 
     const result = await apiClient.validateForge("demo-api-key", {
       forge_provider: "github",

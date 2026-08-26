@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.SERVER_API_URL ?? "http://localhost:8000";
 const POLL_INTERVAL_MS = 30_000; // fallback polling toutes les 30 s
 const MAX_NOTIFICATIONS = 50;    // on garde les 50 plus récentes en mémoire
 

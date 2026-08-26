@@ -8,7 +8,7 @@ install:
 dev-front: install
 	@echo ""
 	@echo "  Front dispo sur http://localhost:3000"
-	@echo "  API backend attendue sur $${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
+	@echo "  API backend attendue sur $${SERVER_API_URL:-http://localhost:8000}"
 	@echo ""
 	@npm run dev
 
