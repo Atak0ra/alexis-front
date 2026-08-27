@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import AdminClientsPage from "@/app/admin/clients/page";
 import AdminClientDetailPage from "@/app/admin/clients/[id]/page";
 import * as apiClient from "@/lib/api-client";
@@ -10,6 +10,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/clients",
   useParams: () => ({ id: "client-1" }),
 }));
+
+const SEEDED_PLAN: apiClient.PlanOut = {
+  id: "plan-1", name: "standard", display_name: null, description: null, features: null,
+  monthly_price_usd: 0, forced_agent_choice: null, free_monthly_credit_usd: 0,
+  overdraft_limit_usd: 0, requires_own_key: false, max_members: 1, is_public: true, sort_order: 0,
+};
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -35,6 +41,63 @@ describe("AdminClientsPage", () => {
     render(<AdminClientsPage />);
 
     await waitFor(() => expect(screen.getByText("Erreur serveur")).toBeInTheDocument());
+  });
+
+  it("creates a client from the form and shows the email-sent confirmation", async () => {
+    vi.spyOn(apiClient, "adminListClients").mockResolvedValue([]);
+    vi.spyOn(apiClient, "adminListPlans").mockResolvedValue([SEEDED_PLAN]);
+    const createSpy = vi.spyOn(apiClient, "adminCreateClient").mockResolvedValue({
+      id: "client-new", email: "tester@b.com", plan_name: "standard", temp_password: null,
+    });
+
+    render(<AdminClientsPage />);
+    await waitFor(() => expect(screen.getByText(/aucun client/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /créer un client/i }));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "tester@b.com" } });
+    fireEvent.change(screen.getByLabelText("Plan"), { target: { value: "plan-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^créer$/i }));
+
+    await waitFor(() =>
+      expect(createSpy).toHaveBeenCalledWith("alx_admin_xxx", { email: "tester@b.com", plan_id: "plan-1" })
+    );
+    expect(await screen.findByText(/email avec un mot de passe temporaire a été envoyé/i)).toBeInTheDocument();
+  });
+
+  it("shows the temporary password when the email could not be sent", async () => {
+    vi.spyOn(apiClient, "adminListClients").mockResolvedValue([]);
+    vi.spyOn(apiClient, "adminListPlans").mockResolvedValue([SEEDED_PLAN]);
+    vi.spyOn(apiClient, "adminCreateClient").mockResolvedValue({
+      id: "client-new", email: "tester@b.com", plan_name: null, temp_password: "Fallback-123",
+    });
+
+    render(<AdminClientsPage />);
+    await waitFor(() => expect(screen.getByText(/aucun client/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /créer un client/i }));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "tester@b.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /^créer$/i }));
+
+    expect(await screen.findByText("Fallback-123")).toBeInTheDocument();
+  });
+
+  it("shows a conflict error in the form without closing it", async () => {
+    vi.spyOn(apiClient, "adminListClients").mockResolvedValue([]);
+    vi.spyOn(apiClient, "adminListPlans").mockResolvedValue([SEEDED_PLAN]);
+    vi.spyOn(apiClient, "adminCreateClient").mockRejectedValue(
+      new apiClient.AlexisApiError(409, "Cette adresse email est déjà associée à un compte.")
+    );
+
+    render(<AdminClientsPage />);
+    await waitFor(() => expect(screen.getByText(/aucun client/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /créer un client/i }));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "dupe@b.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /^créer$/i }));
+
+    expect(await screen.findByText(/déjà associée à un compte/i)).toBeInTheDocument();
+    // Le formulaire reste ouvert après une erreur
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
   });
 });
 

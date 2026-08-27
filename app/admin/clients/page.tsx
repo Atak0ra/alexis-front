@@ -2,30 +2,161 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { adminListClients, AdminClientListItem, AlexisApiError } from "@/lib/api-client";
+import {
+  adminListClients, adminCreateClient, adminListPlans,
+  AdminClientListItem, AdminClientCreated, PlanOut, AlexisApiError,
+} from "@/lib/api-client";
 import { getAdminApiKey } from "@/lib/session";
-import { AdminCard } from "../_components/chrome";
+import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } from "../_components/chrome";
 
 export default function AdminClientsPage() {
   const [clients, setClients] = useState<AdminClientListItem[]>([]);
+  const [plans, setPlans] = useState<PlanOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPlanId, setCreatePlanId] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createdAccount, setCreatedAccount] = useState<AdminClientCreated | null>(null);
+
+  function load() {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
     adminListClients(apiKey)
       .then(setClients)
       .catch((err) => setError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue"))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  useEffect(() => {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    adminListPlans(apiKey).then(setPlans).catch(() => {});
   }, []);
+
+  function openCreateForm() {
+    setCreateEmail("");
+    setCreatePlanId("");
+    setCreateError(null);
+    setCreatedAccount(null);
+    setShowCreateForm(true);
+  }
+
+  async function handleCreate() {
+    const apiKey = getAdminApiKey();
+    if (!apiKey) return;
+    setCreateError(null);
+    setCreating(true);
+    try {
+      const created = await adminCreateClient(apiKey, {
+        email: createEmail,
+        plan_id: createPlanId || null,
+      });
+      setCreatedAccount(created);
+      setShowCreateForm(false);
+      load();
+    } catch (err) {
+      setCreateError(err instanceof AlexisApiError ? err.detail : "Erreur inattendue");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-      <p className="mt-1 text-sm text-foreground-muted">{clients.length} client(s)</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+          <p className="mt-1 text-sm text-foreground-muted">{clients.length} client(s)</p>
+        </div>
+        <button type="button" onClick={openCreateForm} className={adminButtonClass}>
+          + Créer un client
+        </button>
+      </div>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
+      {createdAccount && (
+        <AdminCard className="mt-4 border-brand/30 bg-brand-light p-4">
+          <p className="text-sm font-medium text-foreground">
+            Compte créé pour {createdAccount.email}.
+          </p>
+          {createdAccount.temp_password ? (
+            <p className="mt-1 text-sm text-foreground-muted">
+              L&apos;email n&apos;a pas pu être envoyé — mot de passe temporaire à transmettre
+              manuellement : <span className="font-mono font-semibold text-foreground">{createdAccount.temp_password}</span>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-foreground-muted">
+              Un email avec un mot de passe temporaire a été envoyé.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setCreatedAccount(null)}
+            className="mt-2 text-sm font-medium text-brand hover:text-brand-hover"
+          >
+            Fermer
+          </button>
+        </AdminCard>
+      )}
+
+      {showCreateForm && (
+        <AdminCard className="mt-6 max-w-md p-6">
+          <h2 className="text-lg font-semibold text-foreground">Créer un client</h2>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="create-client-email" className="mb-1.5 block text-sm font-medium text-foreground">
+                Email
+              </label>
+              <input
+                id="create-client-email"
+                type="email"
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                className={adminInputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="create-client-plan" className="mb-1.5 block text-sm font-medium text-foreground">
+                Plan
+              </label>
+              <select
+                id="create-client-plan"
+                value={createPlanId}
+                onChange={(e) => setCreatePlanId(e.target.value)}
+                className={adminInputClass}
+              >
+                <option value="">Aucun plan (illimité)</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.display_name ?? plan.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {createError && <p className="text-sm text-danger">{createError}</p>}
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button type="button" onClick={() => setShowCreateForm(false)} className={adminGhostButtonClass}>
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={creating || !createEmail}
+              className={adminButtonClass}
+            >
+              {creating ? "Création..." : "Créer"}
+            </button>
+          </div>
+        </AdminCard>
+      )}
 
       {loading && (
         <div className="mt-6 space-y-2">
