@@ -12,6 +12,7 @@ import { AdminCard, adminButtonClass, adminGhostButtonClass, adminInputClass } f
 export default function AdminClientsPage() {
   const [clients, setClients] = useState<AdminClientListItem[]>([]);
   const [plans, setPlans] = useState<PlanOut[]>([]);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +37,9 @@ export default function AdminClientsPage() {
   useEffect(() => {
     const apiKey = getAdminApiKey();
     if (!apiKey) return;
-    adminListPlans(apiKey).then(setPlans).catch(() => {});
+    adminListPlans(apiKey)
+      .then(setPlans)
+      .catch((err) => setPlansError(err instanceof AlexisApiError ? err.detail : "Impossible de charger les plans."));
   }, []);
 
   function openCreateForm() {
@@ -132,13 +135,14 @@ export default function AdminClientsPage() {
                 onChange={(e) => setCreatePlanId(e.target.value)}
                 className={adminInputClass}
               >
-                <option value="">Aucun plan (illimité)</option>
+                <option value="">Aucun plan (wallet à 0$, à approvisionner)</option>
                 {plans.map((plan) => (
                   <option key={plan.id} value={plan.id}>
                     {plan.display_name ?? plan.name}
                   </option>
                 ))}
               </select>
+              {plansError && <p className="mt-1.5 text-sm text-danger">{plansError}</p>}
             </div>
             {createError && <p className="text-sm text-danger">{createError}</p>}
           </div>
