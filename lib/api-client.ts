@@ -1305,6 +1305,29 @@ export function adminDeleteClient(adminApiKey: string, clientId: string): Promis
   });
 }
 
+export interface AdminClientCreatePayload {
+  email: string;
+  plan_id: string | null;
+}
+
+export interface AdminClientCreated {
+  id: string;
+  email: string;
+  plan_name: string | null;
+  temp_password: string | null;
+}
+
+export function adminCreateClient(
+  adminApiKey: string,
+  payload: AdminClientCreatePayload
+): Promise<AdminClientCreated> {
+  return request("/admin/clients", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${adminApiKey}` },
+  });
+}
+
 export interface PlanOut {
   id: string;
   name: string;
