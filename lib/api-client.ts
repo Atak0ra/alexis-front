@@ -887,6 +887,45 @@ export function listIssueAssets(
   });
 }
 
+// ─── Import de code (ZIP) ────────────────────────────────────────────────────
+
+export interface ImportZipEnqueueOut {
+  status: string;
+  warnings: string[];
+}
+
+export interface ImportZipStatusOut {
+  status: "idle" | "in_progress" | "done" | "failed";
+  error?: string | null;
+}
+
+/**
+ * Importe un ZIP de code existant dans le repo hébergé d'un projet.
+ * Le backend valide l'archive (zip-slip, zip-bomb, symlinks) puis pousse le
+ * code et enchaîne la génération du contexte.
+ */
+export async function importProjectZip(
+  apiKey: string,
+  projectId: string,
+  file: File
+): Promise<ImportZipEnqueueOut> {
+  if (isLocalMode()) return Promise.resolve({ status: "in_progress", warnings: [] });
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/projects/${projectId}/import`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+}
+
+export function getImportStatus(apiKey: string, projectId: string): Promise<ImportZipStatusOut> {
+  if (isLocalMode()) return Promise.resolve({ status: "idle" });
+  return request(`/projects/${projectId}/import/status`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+}
+
 // ─── Project references (documents de référence attachés au projet) ──────────
 
 export function projectReferenceContentUrl(projectId: string, referenceId: string): string {

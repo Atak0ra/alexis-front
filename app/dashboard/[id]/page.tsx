@@ -27,6 +27,7 @@ import {
 } from "@/lib/api-client";
 import TicketKanban, { type TicketSummary } from "@/components/ticket-kanban";
 import AssetUploadGrid from "@/components/asset-upload-grid";
+import ImportCodeButton from "@/components/import-code-button";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { useNotificationsContext } from "@/lib/notifications-context";
 import { Bug, Eye, Loader2, MessageCircle, Plus, Stethoscope, Sparkles, Wrench } from "lucide-react";
@@ -645,6 +646,15 @@ export default function ProjectDetailPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                   Générer un backlog
                 </a>
+                {project.is_hosted && (
+                  <ImportCodeButton
+                    apiKey={apiKey}
+                    projectId={projectId}
+                    onImported={() => {
+                      listIssues(apiKey, projectId).then(setIssues).catch(() => {});
+                    }}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => setShowNewIssue(true)}
