@@ -17,11 +17,13 @@ export default function DescriptionPage() {
     repoUrl, forgeProvider, forgeToken, githubUsername, issuePrefix,
     agentChoice, agentApiKey, agentBaseUrl, codeReviewEnabled,
     isByok, stack, architecture,
+    hasOwnCode,
     brief, setBrief,
   } = useNewProject();
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [zipFile, setZipFile] = useState<File | null>(null);
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   // Résultat IA — affiché en prévisualisation, pas encore accepté
@@ -38,7 +40,7 @@ export default function DescriptionPage() {
         name, hosted, repoUrl, forgeProvider, forgeToken, githubUsername, issuePrefix,
         agentChoice, agentApiKey, agentBaseUrl, codeReviewEnabled, isByok,
         stack: stack ?? null, architecture: architecture ?? null,
-        brief,
+        brief, hasOwnCode, zipFile,
       },
       router,
       onStart: () => setSubmitting(true),
@@ -94,7 +96,7 @@ export default function DescriptionPage() {
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
             rows={5}
-            required
+            required={!hasOwnCode}
             placeholder={
               `Exemple :\n« Une application web de gestion de tâches pour les équipes de 5 à 20 personnes. ` +
               `Elle doit permettre de créer des projets, assigner des tickets, suivre l'avancement ` +
@@ -166,13 +168,31 @@ export default function DescriptionPage() {
           )}
         </div>
 
+        {hasOwnCode && (
+          <div className="space-y-2">
+            <label htmlFor="project-zip" className="block text-sm font-medium text-foreground">
+              Ton code (ZIP)
+            </label>
+            <input
+              id="project-zip"
+              type="file"
+              accept=".zip"
+              onChange={(e) => setZipFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-brand-hover"
+            />
+            <p className="text-xs text-foreground-subtle">
+              Alexis pousse ce code sur la branche principale à la place de générer une structure de démarrage.
+            </p>
+          </div>
+        )}
+
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex items-center justify-between pt-2">
           <Button type="button" variant="secondary" onClick={handleBack}>
             ← Précédent
           </Button>
-          <Button type="submit" disabled={submitting || !brief.trim()}>
+          <Button type="submit" disabled={submitting || (hasOwnCode ? !zipFile : !brief.trim())}>
             {submitting ? "Création…" : "Créer le projet →"}
           </Button>
         </div>

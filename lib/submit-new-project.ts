@@ -9,11 +9,13 @@
  *     • repo avec code (exists=true)  → /projects/new/context (étape 5/5)
  *     • repo vide    (exists=false)   → /projects/new/context?new=true (étape 5/6)
  *       puis context → /projects/new/backlog (étape 6/6)
+ *     • hasOwnCode=true (ZIP)         → /projects/new/context?new=true directement
+ *       (skip_scaffold : /scaffold attendrait indéfiniment un job jamais enqueué)
  *
  * Utilisé par description/page.tsx (déclenché après la saisie du brief).
  */
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { createProject, getProjectContext, friendlyError } from "@/lib/api-client";
+import { createProject, getProjectContext, importProjectZip, friendlyError } from "@/lib/api-client";
 import { DEFAULT_STATES, DEFAULT_TRIGGER_STATES, getDefaultModels } from "@/lib/project-defaults";
 
 export interface NewProjectDraftForSubmit {
@@ -34,6 +36,10 @@ export interface NewProjectDraftForSubmit {
   architecture: "monolith" | "front_back" | "front_back_bff" | null;
   /** Brief métier saisi à l'étape «Décris ton projet». Optionnel. */
   brief: string;
+  /** Le client a déjà du code à importer en ZIP (décidé à l'étape repo). */
+  hasOwnCode: boolean;
+  /** Archive fournie à l'étape description quand hasOwnCode=true. */
+  zipFile: File | null;
 }
 
 export interface SubmitNewProjectOptions {
@@ -52,8 +58,9 @@ export interface SubmitNewProjectOptions {
  * Crée le projet puis redirige vers l'étape scaffold (hébergé) ou contexte (existant).
  *
  * Règle de routage :
- * - hosted=true              → scaffold → context?new=true → backlog (wizard 6 étapes)
- * - exists=false (repo vide) → context?new=true → backlog
+ * - hosted=true, hasOwnCode=true  → import ZIP (arrière-plan) → context?new=true → backlog
+ * - hosted=true, hasOwnCode=false → scaffold → context?new=true → backlog (wizard 6 étapes)
+ * - exists=false (repo vide)      → context?new=true → backlog
  * - exists=true  (repo avec code) → context (wizard 5 étapes, pas de backlog)
  *
  * Règle BYOK :
@@ -97,7 +104,26 @@ export async function submitNewProject({
       architecture: draft.hosted ? (draft.architecture ?? null) : undefined,
       // Brief métier : toujours envoyé (vide = falsy → le back ignore).
       brief: draft.brief.trim() || null,
+      // Scaffold et choix de stack inutiles si le client importe son propre code —
+      // seraient de toute façon écrasés par l'import. Ignoré si hosted=false.
+      skip_scaffold: draft.hosted ? draft.hasOwnCode : undefined,
     });
+
+    if (draft.hosted && draft.hasOwnCode) {
+      // Code déjà existant → import ZIP à la place du scaffolding. L'import
+      // tourne en arrière-plan (best-effort) ; on ne passe pas par /scaffold
+      // qui attendrait indéfiniment un scaffold_project_job jamais enqueué.
+      if (draft.zipFile) {
+        try {
+          await importProjectZip(apiKey, project.id, draft.zipFile);
+        } catch (err) {
+          onError?.(friendlyError(err));
+          return;
+        }
+      }
+      router.push(`/projects/new/context?projectId=${project.id}&new=true`);
+      return;
+    }
 
     if (draft.hosted) {
       // Projet hébergé neuf → toujours passer par l'étape scaffolding.

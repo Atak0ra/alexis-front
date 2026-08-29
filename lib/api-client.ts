@@ -530,6 +530,12 @@ export interface CreateProjectPayload {
    * Optionnel : le pipeline fonctionne sans, avec des résultats moins personnalisés.
    */
   brief?: string | null;
+  /**
+   * Le client va importer son propre code (ZIP) juste après la création
+   * (ex : export Lovable). Scaffold et choix de stack inutiles — seraient
+   * écrasés par l'import. Ignoré si hosted=false.
+   */
+  skip_scaffold?: boolean;
 }
 
 export function createProject(apiKey: string, payload: CreateProjectPayload): Promise<ProjectOut> {

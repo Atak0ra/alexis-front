@@ -21,6 +21,10 @@ export interface NewProjectDraft {
   // Option avancée scaffolding — null = l'agent décide (cas 3)
   stack: "nextjs" | "fastapi" | "django" | null;
   architecture: "monolith" | "front_back" | "front_back_bff" | null;
+  // Décidé à l'étape repo (hosted uniquement) : le client a déjà du code à importer
+  // (ex: export Lovable) → masque le choix de stack (inutile, sera écrasé par
+  // l'import) et affiche l'upload ZIP à l'étape description.
+  hasOwnCode: boolean;
   // Brief métier — saisi à l'étape «Décris ton projet», avant la création.
   // Propagé dans context_content côté backend → alimente decide_stack,
   // generate_context et generate_backlog avec l'intention réelle du client.
@@ -42,6 +46,7 @@ interface NewProjectState extends NewProjectDraft {
   setIsByok: (v: boolean) => void;
   setStack: (v: "nextjs" | "fastapi" | "django" | null) => void;
   setArchitecture: (v: "monolith" | "front_back" | "front_back_bff" | null) => void;
+  setHasOwnCode: (v: boolean) => void;
   setBrief: (v: string) => void;
   reset: () => void;
 }
@@ -61,6 +66,7 @@ const INITIAL_DRAFT: NewProjectDraft = {
   isByok: false,
   stack: null,
   architecture: null,
+  hasOwnCode: false,
   brief: "",
 };
 
@@ -83,6 +89,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
   const setIsByok = useCallback((v: boolean) => setDraft((d) => ({ ...d, isByok: v })), []);
   const setStack = useCallback((v: "nextjs" | "fastapi" | "django" | null) => setDraft((d) => ({ ...d, stack: v })), []);
   const setArchitecture = useCallback((v: "monolith" | "front_back" | "front_back_bff" | null) => setDraft((d) => ({ ...d, architecture: v })), []);
+  const setHasOwnCode = useCallback((v: boolean) => setDraft((d) => ({ ...d, hasOwnCode: v })), []);
   const setBrief = useCallback((v: string) => setDraft((d) => ({ ...d, brief: v })), []);
   const reset = useCallback(() => setDraft(INITIAL_DRAFT), []);
 
@@ -104,6 +111,7 @@ export function NewProjectProvider({ children }: { children: ReactNode }) {
         setIsByok,
         setStack,
         setArchitecture,
+        setHasOwnCode,
         setBrief,
         reset,
       }}

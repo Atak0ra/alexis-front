@@ -31,6 +31,7 @@ export default function RepoPage() {
     issuePrefix: _issuePrefix,
     stack: _stack, setStack,
     architecture: _architecture, setArchitecture,
+    hasOwnCode, setHasOwnCode,
   } = useNewProject();
 
   const [validating, setValidating] = useState(false);
@@ -250,9 +251,38 @@ export default function RepoPage() {
           </div>
         )}
 
-        {/* Option avancée — stack technique (uniquement pour les projets hébergés neufs).
-            Permet au client de choisir sa stack. Sans choix → Alexis décide automatiquement. */}
+        {/* Code déjà existant (ex : export Lovable) — le client l'importera en ZIP
+            juste après la création. Pas de scaffold, pas de choix de stack : les
+            deux seraient écrasés par l'import. */}
         {hosted && (
+          <label className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-raised px-4 py-3">
+            <input
+              type="checkbox"
+              checked={hasOwnCode}
+              onChange={(e) => {
+                setHasOwnCode(e.target.checked);
+                if (e.target.checked) {
+                  setStack(null);
+                  setArchitecture(null);
+                }
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-border"
+            />
+            <span>
+              <span className="block text-sm font-medium text-foreground">
+                J&apos;ai déjà mon code
+              </span>
+              <span className="block text-xs text-foreground-subtle">
+                Tu pourras l&apos;importer en ZIP juste après. Alexis ne génère pas de code de démarrage.
+              </span>
+            </span>
+          </label>
+        )}
+
+        {/* Option avancée — stack technique (uniquement pour les projets hébergés neufs
+            sans code existant). Permet au client de choisir sa stack. Sans choix →
+            Alexis décide automatiquement. */}
+        {hosted && !hasOwnCode && (
           <StackAdvancedOptions
             onStackChange={(s: StackId | null, a: ArchitectureId | null) => {
               setStack(s);
