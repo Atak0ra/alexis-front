@@ -126,7 +126,7 @@ export default function ImportCodeButton({
             </p>
             <p className="mt-2 text-xs text-foreground-subtle">
               Exclus <code>node_modules</code> et les fichiers de build. Ne mets pas de secrets
-              (<code>.env</code>) dans l'archive.
+              (<code>.env</code>) dans l&apos;archive.
             </p>
 
             <div className="mt-4">
