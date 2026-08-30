@@ -43,4 +43,25 @@ describe("MarkdownLite", () => {
     expect(screen.getByText("premier").tagName).toBe("LI");
     expect(screen.getByText("second").tagName).toBe("LI");
   });
+
+  it("hides HTML comment blocks (e.g. the hidden error_detail block from run_step.py)", () => {
+    render(
+      <MarkdownLite
+        text={
+          "**Modèle IA indisponible**\n\nLe modèle IA configuré n'est plus disponible.\n" +
+          "<!-- alexis:error_detail -->\nlitellm.NotFoundError: GroqException - raw stack trace\n<!-- /alexis:error_detail -->"
+        }
+      />
+    );
+    expect(screen.getByText("Le modèle IA configuré n'est plus disponible.")).toBeInTheDocument();
+    expect(screen.queryByText(/litellm/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/alexis:error_detail/)).not.toBeInTheDocument();
+  });
+
+  it("hides a single-line HTML comment mixed into normal text", () => {
+    render(<MarkdownLite text={"Avant.\n<!-- note interne -->\nAprès."} />);
+    expect(screen.getByText("Avant.")).toBeInTheDocument();
+    expect(screen.getByText("Après.")).toBeInTheDocument();
+    expect(screen.queryByText(/note interne/)).not.toBeInTheDocument();
+  });
 });

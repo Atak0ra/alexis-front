@@ -26,7 +26,17 @@ function renderInline(text: string): React.ReactNode {
 }
 
 function renderMarkdown(md: string): React.ReactNode[] {
-  const lines = md.split("\n");
+  // Blocs <!-- nom --> ... <!-- /nom --> — deux commentaires HTML utilisés
+  // comme marqueurs de section pour cacher du détail technique (ex :
+  // <!-- alexis:error_detail --> dans run_step.py) sans l'exposer au client.
+  // Ce ne sont PAS des commentaires imbriqués (le HTML ne le permet pas) :
+  // ce sont deux commentaires distincts entourant le contenu à masquer, d'où
+  // le strip explicite de la section avant le strip générique ci-dessous.
+  const withoutMarkedSections = md.replace(/<!--\s*([\w:.-]+)\s*-->[\s\S]*?<!--\s*\/\1\s*-->/g, "");
+  // Commentaires HTML simples restants (sans paire de marqueurs) — invisibles
+  // en HTML standard, mais ce renderer n'a pas de notion de HTML sans ce strip.
+  const withoutComments = withoutMarkedSections.replace(/<!--[\s\S]*?-->/g, "");
+  const lines = withoutComments.split("\n");
   const nodes: React.ReactNode[] = [];
   let listItems: string[] = [];
   let codeBlockLines: string[] | null = null;
